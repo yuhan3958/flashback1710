@@ -15,6 +15,15 @@ Flashback1710 records inbound client packets and replays them in an isolated
 - `/flashback camera free` detaches the view into a no-clip camera.
 - `/flashback camera player` returns the view to the replay player.
 - `/flashback camera speed <value>` sets free-camera movement speed.
+- `/flashback ui` reopens the ModularUI2 replay controls after they are closed.
+
+## Replay UI
+
+Playback opens a ModularUI2 control screen with replay time, duration, speed,
+a visual timeline, playback controls, and player/free-camera controls. The
+timeline is display-only until replay seeking is implemented. Free camera
+movement remains available while the UI is open; hold the right mouse button
+and drag to look around.
 
 Replay format version 3 stores a world snapshot before the timestamped packet
 stream. The snapshot contains world and weather time, player transform, loaded

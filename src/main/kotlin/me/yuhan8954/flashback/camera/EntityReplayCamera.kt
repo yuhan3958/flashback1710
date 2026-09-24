@@ -37,6 +37,5 @@ class EntityReplayCamera(
         stack: ItemStack?,
     ) {}
 
-    override fun getLastActiveItems(): Array<ItemStack?> =
-        emptyArray()
+    override fun getLastActiveItems(): Array<ItemStack?> = emptyArray()
 }

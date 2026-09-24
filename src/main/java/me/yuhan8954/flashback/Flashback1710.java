@@ -13,6 +13,7 @@ import cpw.mods.fml.common.event.FMLServerStartingEvent;
     modid = Flashback1710.MODID,
     version = Flashback1710.VERSION,
     name = "Flashback 1710",
+    dependencies = "required-after:modularui2",
     acceptedMinecraftVersions = "[1.7.10]",
     acceptableRemoteVersions = "*")
 public class Flashback1710 {

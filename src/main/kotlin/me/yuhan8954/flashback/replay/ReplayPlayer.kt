@@ -4,6 +4,7 @@ import cpw.mods.fml.common.network.internal.FMLProxyPacket
 import cpw.mods.fml.relauncher.Side
 import io.netty.buffer.Unpooled
 import me.yuhan8954.flashback.io.ReplayReader
+import me.yuhan8954.flashback.ui.ReplayUiController
 import net.minecraft.client.Minecraft
 import net.minecraft.network.Packet
 import net.minecraft.network.PacketBuffer
@@ -28,6 +29,9 @@ object ReplayPlayer {
     private var stopRequested =
         false
 
+    private var durationNanos =
+        0L
+
     var playing =
         false
         private set
@@ -48,6 +52,9 @@ object ReplayPlayer {
 
     val totalPacketCount: Int
         get() = packets.size
+
+    val totalDurationNanos: Long
+        get() = durationNanos
 
     val freeCameraActive: Boolean
         get() =
@@ -72,6 +79,10 @@ object ReplayPlayer {
         packets =
             reader.packets
 
+        durationNanos =
+            packets.lastOrNull()
+                ?.timestampNanos ?: 0L
+
         session =
             ReplaySession(
                 Minecraft.getMinecraft(),
@@ -90,6 +101,8 @@ object ReplayPlayer {
 
         playing =
             true
+
+        ReplayUiController.open()
 
         println(
             "[Flashback] Playback started: " +
@@ -177,6 +190,8 @@ object ReplayPlayer {
         stopRequested =
             false
 
+        ReplayUiController.close()
+
         session?.close()
 
         session =
@@ -187,6 +202,9 @@ object ReplayPlayer {
 
         index =
             0
+
+        durationNanos =
+            0L
 
         clock.stop()
     }
@@ -283,13 +301,21 @@ object ReplayPlayer {
         deltaX: Int,
         deltaY: Int,
         wheelDelta: Int,
-    ): Boolean =
-        session?.cameraController
-            ?.handleMouseInput(
-                deltaX,
-                deltaY,
-                wheelDelta,
-            ) == true
+    ): Boolean = session?.cameraController
+        ?.handleMouseInput(
+            deltaX,
+            deltaY,
+            wheelDelta,
+        ) == true
+
+    fun handleUiCameraInput(
+        deltaX: Int,
+        deltaY: Int,
+    ): Boolean = session?.cameraController
+        ?.handleUiMouseInput(
+            deltaX,
+            deltaY,
+        ) == true
 
     private fun decode(
         recorded: RecordedPacket,

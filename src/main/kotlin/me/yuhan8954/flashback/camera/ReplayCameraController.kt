@@ -1,6 +1,7 @@
 package me.yuhan8954.flashback.camera
 
 import me.yuhan8954.flashback.replay.ReplaySession
+import me.yuhan8954.flashback.ui.ReplayUiScreen
 import net.minecraft.client.Minecraft
 import net.minecraft.client.settings.GameSettings
 import net.minecraft.client.settings.KeyBinding
@@ -52,8 +53,8 @@ class ReplayCameraController(
         }
 
         val view =
-            minecraft.renderViewEntity ?:
-                session.player
+            minecraft.renderViewEntity
+                ?: session.player
 
         camera =
             EntityReplayCamera(
@@ -138,9 +139,16 @@ class ReplayCameraController(
         restorePlayerRotation()
         prepareCameraTick()
 
+        val replayUiOpen =
+            minecraft.currentScreen is
+                ReplayUiScreen
+
         if (
-            !minecraft.inGameHasFocus ||
-            minecraft.currentScreen != null
+            (
+                !minecraft.inGameHasFocus ||
+                    minecraft.currentScreen != null
+                ) &&
+            !replayUiOpen
         ) {
             pendingMouseX = 0
             pendingMouseY = 0
@@ -149,6 +157,19 @@ class ReplayCameraController(
 
         updateRotation()
         updatePosition()
+    }
+
+    fun handleUiMouseInput(
+        deltaX: Int,
+        deltaY: Int,
+    ): Boolean {
+        if (!state.active) {
+            return false
+        }
+
+        pendingMouseX += deltaX
+        pendingMouseY += deltaY
+        return true
     }
 
     fun handleMouseInput(

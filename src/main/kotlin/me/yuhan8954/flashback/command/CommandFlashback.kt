@@ -4,6 +4,7 @@ import me.yuhan8954.flashback.camera.ReplayCameraController
 import me.yuhan8954.flashback.recording.ReplayRecorder
 import me.yuhan8954.flashback.replay.ReplayClock
 import me.yuhan8954.flashback.replay.ReplayPlayer
+import me.yuhan8954.flashback.ui.ReplayUiController
 import net.minecraft.client.Minecraft
 import net.minecraft.command.CommandBase
 import net.minecraft.command.ICommandSender
@@ -23,8 +24,7 @@ class CommandFlashback : CommandBase() {
 
     override fun getCommandName(): String = "flashback"
 
-    override fun getCommandUsage(sender: ICommandSender): String =
-        "/flashback <record|stop|play|pause|resume|toggle|speed|step|camera>"
+    override fun getCommandUsage(sender: ICommandSender): String = "/flashback <record|stop|play|pause|resume|toggle|speed|step|camera|ui>"
 
     override fun getRequiredPermissionLevel(): Int = 0
 
@@ -138,6 +138,15 @@ class CommandFlashback : CommandBase() {
                 )
             }
 
+            "ui" -> {
+                if (!ReplayPlayer.playing) {
+                    send("No replay is playing")
+                    return
+                }
+
+                ReplayUiController.open()
+            }
+
             else -> {
                 send("Unknown subcommand: ${args[0]}")
             }
@@ -160,6 +169,7 @@ class CommandFlashback : CommandBase() {
                 "speed",
                 "step",
                 "camera",
+                "ui",
             )
         }
 

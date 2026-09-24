@@ -17,5 +17,8 @@ repositories {
 }
 
 dependencies {
+    implementation(
+        "com.github.GTNewHorizons:ModularUI2:2.3.89-1.7.10:dev"
+    )
     testImplementation(kotlin("test"))
 }
