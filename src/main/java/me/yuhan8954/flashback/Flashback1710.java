@@ -23,12 +23,12 @@ public class Flashback1710 {
 
     @Mod.EventHandler
     public void preInit(FMLPreInitializationEvent event) {
-
+        FlashbackRuntime.initialize();
     }
 
     @Mod.EventHandler
     public void init(FMLInitializationEvent event) {
-
+        FlashbackRuntime.onInitialized();
     }
 
     @Mod.EventHandler

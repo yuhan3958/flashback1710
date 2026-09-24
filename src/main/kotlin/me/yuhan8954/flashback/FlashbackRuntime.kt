@@ -1,0 +1,36 @@
+package me.yuhan8954.flashback
+
+import cpw.mods.fml.common.FMLCommonHandler
+import cpw.mods.fml.common.eventhandler.SubscribeEvent
+import cpw.mods.fml.common.gameevent.TickEvent
+import me.yuhan8954.flashback.command.CommandFlashback
+import me.yuhan8954.flashback.replay.ReplayPlayer
+import net.minecraftforge.client.ClientCommandHandler
+import net.minecraftforge.common.MinecraftForge
+
+object FlashbackRuntime {
+
+    @JvmStatic
+    fun initialize() {
+        println("[Flashback1710] Kotlin runtime initialized")
+
+        MinecraftForge.EVENT_BUS.register(this)
+        FMLCommonHandler.instance().bus().register(this)
+    }
+
+    @JvmStatic
+    fun onInitialized() {
+        ClientCommandHandler.instance.registerCommand(
+            CommandFlashback(),
+        )
+
+        println("[Flashback1710] Bootstrap complete")
+    }
+
+    @SubscribeEvent
+    fun onClientTick(event: TickEvent.ClientTickEvent) {
+        if (event.phase == TickEvent.Phase.END) {
+            ReplayPlayer.tick()
+        }
+    }
+}
