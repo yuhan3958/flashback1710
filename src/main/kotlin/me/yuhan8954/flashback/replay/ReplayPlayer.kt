@@ -18,8 +18,8 @@ object ReplayPlayer {
     private var index =
         0
 
-    private var startTime =
-        0L
+    private val clock =
+        ReplayClock()
 
     private var session:
         ReplaySession? =
@@ -31,6 +31,14 @@ object ReplayPlayer {
     var playing =
         false
         private set
+
+    val paused: Boolean
+        get() =
+            playing &&
+                clock.paused
+
+    val speed: Double
+        get() = clock.speed
 
     fun play(file: File) {
         stop()
@@ -54,8 +62,7 @@ object ReplayPlayer {
 
         index = 0
 
-        startTime =
-            System.nanoTime()
+        clock.reset()
 
         stopRequested =
             false
@@ -86,14 +93,13 @@ object ReplayPlayer {
         val currentSession =
             session ?: return
 
-        val elapsed =
-            System.nanoTime() -
-                startTime
+        clock.update()
 
         while (
             index < packets.size &&
             packets[index]
-                .timestampNanos <= elapsed
+                .timestampNanos <=
+            clock.currentTimeNanos
         ) {
             val recorded =
                 packets[index]
@@ -129,6 +135,16 @@ object ReplayPlayer {
         }
     }
 
+    fun beginTick() {
+        if (!playing) {
+            return
+        }
+
+        session?.world?.beginReplayTick(
+            clock.paused,
+        )
+    }
+
     fun stop() {
         playing =
             false
@@ -146,6 +162,67 @@ object ReplayPlayer {
 
         index =
             0
+
+        clock.stop()
+    }
+
+    fun pause(): Boolean {
+        if (!playing) {
+            return false
+        }
+
+        clock.pause()
+        return true
+    }
+
+    fun resume(): Boolean {
+        if (!playing) {
+            return false
+        }
+
+        clock.resume()
+        return true
+    }
+
+    fun togglePause(): Boolean {
+        if (!playing) {
+            return false
+        }
+
+        clock.togglePause()
+        return true
+    }
+
+    fun setSpeed(speed: Double): Boolean {
+        if (
+            !playing ||
+            !ReplayClock.isSupportedSpeed(
+                speed,
+            )
+        ) {
+            return false
+        }
+
+        clock.setSpeed(
+            speed,
+        )
+
+        return true
+    }
+
+    fun step(): Boolean {
+        if (
+            !playing ||
+            !clock.paused
+        ) {
+            return false
+        }
+
+        clock.step()
+
+        session?.world?.requestStep()
+
+        return true
     }
 
     private fun decode(

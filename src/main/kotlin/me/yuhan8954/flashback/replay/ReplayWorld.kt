@@ -17,4 +17,35 @@ class ReplayWorld(
     dimension,
     difficulty,
     profiler,
-)
+) {
+
+    private var advanceSimulation =
+        true
+
+    private var stepRequested =
+        false
+
+    fun beginReplayTick(paused: Boolean) {
+        advanceSimulation =
+            !paused ||
+                stepRequested
+
+        stepRequested = false
+    }
+
+    fun requestStep() {
+        stepRequested = true
+    }
+
+    override fun tick() {
+        if (advanceSimulation) {
+            super.tick()
+        }
+    }
+
+    override fun updateEntities() {
+        if (advanceSimulation) {
+            super.updateEntities()
+        }
+    }
+}

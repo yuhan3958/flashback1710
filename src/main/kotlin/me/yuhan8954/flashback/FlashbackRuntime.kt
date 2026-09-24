@@ -29,8 +29,12 @@ object FlashbackRuntime {
 
     @SubscribeEvent
     fun onClientTick(event: TickEvent.ClientTickEvent) {
-        if (event.phase == TickEvent.Phase.END) {
-            ReplayPlayer.tick()
+        when (event.phase) {
+            TickEvent.Phase.START ->
+                ReplayPlayer.beginTick()
+
+            TickEvent.Phase.END ->
+                ReplayPlayer.tick()
         }
     }
 }
