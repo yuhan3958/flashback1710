@@ -1,5 +1,6 @@
 package me.yuhan8954.flashback.replay
 
+import me.yuhan8954.flashback.camera.ReplayCameraController
 import me.yuhan8954.flashback.mixin.AccessorNetHandlerPlayClient
 import me.yuhan8954.flashback.snapshot.ReplaySnapshot
 import me.yuhan8954.flashback.snapshot.SnapshotRestorer
@@ -29,6 +30,10 @@ class ReplaySession(
 
     lateinit var player:
         EntityClientPlayerMP
+        private set
+
+    lateinit var cameraController:
+        ReplayCameraController
         private set
 
     private val statFileWriter =
@@ -112,6 +117,11 @@ class ReplaySession(
             snapshot,
         )
 
+        cameraController =
+            ReplayCameraController(
+                this,
+            )
+
         active =
             true
     }
@@ -121,8 +131,9 @@ class ReplaySession(
             return
         }
 
-        active =
-            false
+        cameraController.close()
+
+        active = false
 
         minecraft.loadWorld(
             null,

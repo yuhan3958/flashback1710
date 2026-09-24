@@ -1,5 +1,6 @@
 package me.yuhan8954.flashback.command
 
+import me.yuhan8954.flashback.camera.ReplayCameraController
 import me.yuhan8954.flashback.recording.ReplayRecorder
 import me.yuhan8954.flashback.replay.ReplayClock
 import me.yuhan8954.flashback.replay.ReplayPlayer
@@ -22,7 +23,8 @@ class CommandFlashback : CommandBase() {
 
     override fun getCommandName(): String = "flashback"
 
-    override fun getCommandUsage(sender: ICommandSender): String = "/flashback <record|stop|play|pause|resume|toggle|speed|step>"
+    override fun getCommandUsage(sender: ICommandSender): String =
+        "/flashback <record|stop|play|pause|resume|toggle|speed|step|camera>"
 
     override fun getRequiredPermissionLevel(): Int = 0
 
@@ -64,7 +66,7 @@ class CommandFlashback : CommandBase() {
 
                 ReplayPlayer.play(testReplay)
 
-                send("Playback started")
+                send("Playback started paused")
             }
 
             "pause" -> {
@@ -130,6 +132,12 @@ class CommandFlashback : CommandBase() {
                 send("Playback advanced by one tick")
             }
 
+            "camera" -> {
+                controlCamera(
+                    args,
+                )
+            }
+
             else -> {
                 send("Unknown subcommand: ${args[0]}")
             }
@@ -151,6 +159,22 @@ class CommandFlashback : CommandBase() {
                 "toggle",
                 "speed",
                 "step",
+                "camera",
+            )
+        }
+
+        if (
+            args.size == 2 &&
+            args[0].equals(
+                "camera",
+                ignoreCase = true,
+            )
+        ) {
+            return getListOfStringsMatchingLastWord(
+                args,
+                "free",
+                "player",
+                "speed",
             )
         }
 
@@ -171,6 +195,79 @@ class CommandFlashback : CommandBase() {
         }
 
         return null
+    }
+
+    private fun controlCamera(args: Array<String>) {
+        if (!ReplayPlayer.playing) {
+            send("No replay is playing")
+            return
+        }
+
+        when (
+            args.getOrNull(
+                1,
+            )?.lowercase()
+        ) {
+            "free" -> {
+                if (ReplayPlayer.freeCameraActive) {
+                    send("Free camera is already active")
+                    return
+                }
+
+                ReplayPlayer.enableFreeCamera()
+                send("Free camera enabled")
+            }
+
+            "player" -> {
+                if (!ReplayPlayer.freeCameraActive) {
+                    send("Player camera is already active")
+                    return
+                }
+
+                ReplayPlayer.disableFreeCamera()
+                send("Player camera enabled")
+            }
+
+            "speed" ->
+                setCameraSpeed(
+                    args,
+                )
+
+            else ->
+                send(
+                    "Usage: /flashback camera <free|player|speed>",
+                )
+        }
+    }
+
+    private fun setCameraSpeed(args: Array<String>) {
+        val speed =
+            args.getOrNull(
+                2,
+            )?.toDoubleOrNull()
+
+        if (
+            speed == null ||
+            speed < ReplayCameraController.MIN_MOVEMENT_SPEED ||
+            speed > ReplayCameraController.MAX_MOVEMENT_SPEED ||
+            speed.isNaN() ||
+            speed.isInfinite()
+        ) {
+            send(
+                "Invalid camera speed. Use ${ReplayCameraController.MIN_MOVEMENT_SPEED} to " +
+                    ReplayCameraController.MAX_MOVEMENT_SPEED,
+            )
+
+            return
+        }
+
+        ReplayPlayer.setCameraSpeed(
+            speed,
+        )
+
+        send(
+            "Free camera speed set to $speed",
+        )
     }
 
     private fun setPlaybackSpeed(args: Array<String>) {

@@ -16,7 +16,7 @@ class ReplayClock(
         get() = speedMultiplier
 
     var paused =
-        false
+        true
         private set
 
     private var lastUpdateNanos =
@@ -25,7 +25,7 @@ class ReplayClock(
     fun reset() {
         currentTimeNanos = 0L
         speedMultiplier = DEFAULT_SPEED
-        paused = false
+        paused = true
         lastUpdateNanos =
             timeSource()
     }

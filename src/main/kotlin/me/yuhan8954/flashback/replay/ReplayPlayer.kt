@@ -40,6 +40,18 @@ object ReplayPlayer {
     val speed: Double
         get() = clock.speed
 
+    val freeCameraActive: Boolean
+        get() =
+            session?.cameraController
+                ?.state
+                ?.active == true
+
+    val cameraSpeed: Double?
+        get() =
+            session?.cameraController
+                ?.state
+                ?.movementSpeed
+
     fun play(file: File) {
         stop()
 
@@ -93,6 +105,8 @@ object ReplayPlayer {
         val currentSession =
             session ?: return
 
+        currentSession.cameraController.tick()
+
         clock.update()
 
         while (
@@ -143,6 +157,8 @@ object ReplayPlayer {
         session?.world?.beginReplayTick(
             clock.paused,
         )
+
+        session?.cameraController?.beginTick()
     }
 
     fun stop() {
@@ -224,6 +240,47 @@ object ReplayPlayer {
 
         return true
     }
+
+    fun enableFreeCamera(): Boolean {
+        if (!playing) {
+            return false
+        }
+
+        return session?.cameraController
+            ?.enable() == true
+    }
+
+    fun disableFreeCamera(): Boolean {
+        if (!playing) {
+            return false
+        }
+
+        return session?.cameraController
+            ?.disable() == true
+    }
+
+    fun setCameraSpeed(speed: Double): Boolean {
+        if (!playing) {
+            return false
+        }
+
+        return session?.cameraController
+            ?.setMovementSpeed(
+                speed,
+            ) == true
+    }
+
+    fun handleMouseInput(
+        deltaX: Int,
+        deltaY: Int,
+        wheelDelta: Int,
+    ): Boolean =
+        session?.cameraController
+            ?.handleMouseInput(
+                deltaX,
+                deltaY,
+                wheelDelta,
+            ) == true
 
     private fun decode(
         recorded: RecordedPacket,
