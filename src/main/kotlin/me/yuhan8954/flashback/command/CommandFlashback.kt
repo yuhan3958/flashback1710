@@ -19,14 +19,11 @@ class CommandFlashback : CommandBase() {
     private val testReplay: File
         get() = File(replayDirectory, "latest.fbr")
 
-    override fun getCommandName(): String =
-        "flashback"
+    override fun getCommandName(): String = "flashback"
 
-    override fun getCommandUsage(sender: ICommandSender): String =
-        "/flashback <record|stop|play>"
+    override fun getCommandUsage(sender: ICommandSender): String = "/flashback <record|stop|play>"
 
-    override fun getRequiredPermissionLevel(): Int =
-        0
+    override fun getRequiredPermissionLevel(): Int = 0
 
     override fun processCommand(
         sender: ICommandSender,

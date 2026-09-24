@@ -14,7 +14,8 @@ class ReplayReader(
     val packets: List<RecordedPacket>
 
     init {
-        val result = mutableListOf<RecordedPacket>()
+        val result =
+            mutableListOf<RecordedPacket>()
 
         DataInputStream(
             BufferedInputStream(
@@ -22,44 +23,100 @@ class ReplayReader(
             ),
         ).use { input ->
 
-            val magic = input.readInt()
+            val magic =
+                input.readInt()
 
-            require(magic == ReplayWriter.MAGIC) {
+            require(
+                magic == ReplayWriter.MAGIC,
+            ) {
                 "Invalid Flashback replay"
             }
 
-            val version = input.readInt()
+            val version =
+                input.readInt()
 
-            require(version == ReplayWriter.FORMAT_VERSION) {
+            require(
+                version == ReplayWriter.FORMAT_VERSION,
+            ) {
                 "Unsupported replay version: $version"
             }
 
             while (true) {
                 try {
-                    val timestamp = input.readLong()
+                    val timestamp =
+                        input.readLong()
 
-                    val classLength = input.readInt()
-                    require(classLength in 1..4096)
-
-                    val classBytes = ByteArray(classLength)
-                    input.readFully(classBytes)
-
-                    val payloadLength = input.readInt()
+                    val classLength =
+                        input.readInt()
 
                     require(
-                        payloadLength in 0..64 * 1024 * 1024
+                        classLength in 1..4096,
                     )
 
-                    val payload = ByteArray(payloadLength)
-                    input.readFully(payload)
+                    val classBytes =
+                        ByteArray(
+                            classLength,
+                        )
 
-                    result += RecordedPacket(
-                        timestampNanos = timestamp,
-                        packetClass = classBytes.toString(
-                            Charsets.UTF_8,
-                        ),
-                        payload = payload,
+                    input.readFully(
+                        classBytes,
                     )
+
+                    val channelLength =
+                        input.readInt()
+
+                    val channel =
+                        if (channelLength < 0) {
+                            null
+                        } else {
+                            require(
+                                channelLength <= 4096,
+                            )
+
+                            val channelBytes =
+                                ByteArray(
+                                    channelLength,
+                                )
+
+                            input.readFully(
+                                channelBytes,
+                            )
+
+                            channelBytes.toString(
+                                Charsets.UTF_8,
+                            )
+                        }
+
+                    val payloadLength =
+                        input.readInt()
+
+                    require(
+                        payloadLength in
+                            0..64 * 1024 * 1024,
+                    )
+
+                    val payload =
+                        ByteArray(
+                            payloadLength,
+                        )
+
+                    input.readFully(
+                        payload,
+                    )
+
+                    result +=
+                        RecordedPacket(
+                            timestampNanos =
+                            timestamp,
+                            packetClass =
+                            classBytes.toString(
+                                Charsets.UTF_8,
+                            ),
+                            payload =
+                            payload,
+                            channel =
+                            channel,
+                        )
                 } catch (_: EOFException) {
                     break
                 }

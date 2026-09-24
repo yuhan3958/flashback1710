@@ -12,21 +12,27 @@ class ReplaySession(
     val minecraft: Minecraft,
 ) {
 
-    lateinit var networkManager: ReplayNetworkManager
+    lateinit var networkManager:
+        ReplayNetworkManager
         private set
 
-    lateinit var handler: ReplayNetHandler
+    lateinit var handler:
+        ReplayNetHandler
         private set
 
-    lateinit var world: ReplayWorld
+    lateinit var world:
+        ReplayWorld
         private set
 
-    lateinit var player: EntityClientPlayerMP
+    lateinit var player:
+        EntityClientPlayerMP
         private set
 
-    private val statFileWriter = StatFileWriter()
+    private val statFileWriter =
+        StatFileWriter()
 
-    var active = false
+    var active =
+        false
         private set
 
     fun open(
@@ -35,57 +41,76 @@ class ReplaySession(
     ) {
         close()
 
-        networkManager = ReplayNetworkManager()
+        networkManager =
+            ReplayNetworkManager()
 
-        handler = ReplayNetHandler(
-            minecraft,
-            networkManager,
+        handler =
+            ReplayNetHandler(
+                minecraft,
+                networkManager,
+            )
+
+        networkManager.setNetHandler(
+            handler,
         )
 
-        networkManager.setNetHandler(handler)
+        val settings =
+            WorldSettings(
+                seed,
+                WorldSettings.GameType.CREATIVE,
+                false,
+                false,
+                WorldType.DEFAULT,
+            )
 
-        val settings = WorldSettings(
-            seed,
-            WorldSettings.GameType.CREATIVE,
-            false,
-            false,
-            WorldType.DEFAULT,
+        world =
+            ReplayWorld(
+                handler =
+                handler,
+                settings =
+                settings,
+                dimension =
+                dimension,
+                difficulty =
+                EnumDifficulty.NORMAL,
+                profiler =
+                minecraft.mcProfiler,
+            )
+
+        (
+            handler as
+                AccessorNetHandlerPlayClient
+            ).setReplayWorld(
+            world,
         )
-
-        world = ReplayWorld(
-            handler = handler,
-            settings = settings,
-            dimension = dimension,
-            difficulty = EnumDifficulty.NORMAL,
-            profiler = minecraft.mcProfiler,
-        )
-
-
-        (handler as AccessorNetHandlerPlayClient)
-            .`flashback$setClientWorldController`(world)
 
         minecraft.loadWorld(
             world,
             "Loading replay...",
         )
 
-        player = EntityClientPlayerMP(
-            minecraft,
-            world,
-            minecraft.session,
-            handler,
-            statFileWriter,
-        )
+        player =
+            EntityClientPlayerMP(
+                minecraft,
+                world,
+                minecraft.session,
+                handler,
+                statFileWriter,
+            )
 
-        minecraft.thePlayer = player
-        minecraft.renderViewEntity = player
+        minecraft.thePlayer =
+            player
+
+        minecraft.renderViewEntity =
+            player
 
         world.addEntityToWorld(
             player.entityId,
             player,
         )
 
-        active = true
+        active =
+            true
     }
 
     fun close() {
@@ -93,10 +118,11 @@ class ReplaySession(
             return
         }
 
-        active = false
+        active =
+            false
 
-        minecraft.renderViewEntity = null
-        minecraft.thePlayer = null
-        minecraft.loadWorld(null)
+        minecraft.loadWorld(
+            null,
+        )
     }
 }

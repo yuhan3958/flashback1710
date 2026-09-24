@@ -44,6 +44,25 @@ class ReplayWriter(
             classBytes,
         )
 
+        val channel = packet.channel
+
+        if (channel == null) {
+            output.writeInt(-1)
+        } else {
+            val channelBytes =
+                channel.toByteArray(
+                    Charsets.UTF_8,
+                )
+
+            output.writeInt(
+                channelBytes.size,
+            )
+
+            output.write(
+                channelBytes,
+            )
+        }
+
         output.writeInt(
             packet.payload.size,
         )
@@ -59,7 +78,9 @@ class ReplayWriter(
     }
 
     companion object {
+
         const val MAGIC = 0x46425231
-        const val FORMAT_VERSION = 1
+
+        const val FORMAT_VERSION = 2
     }
 }

@@ -1,5 +1,6 @@
 package me.yuhan8954.flashback.replay
 
+import cpw.mods.fml.common.network.internal.FMLProxyPacket
 import io.netty.buffer.Unpooled
 import me.yuhan8954.flashback.io.ReplayReader
 import net.minecraft.client.Minecraft
@@ -13,22 +14,30 @@ object ReplayPlayer {
         List<RecordedPacket> =
         emptyList()
 
-    private var index = 0
+    private var index =
+        0
 
-    private var startTime = 0L
+    private var startTime =
+        0L
 
     private var session:
         ReplaySession? =
         null
 
-    var playing = false
+    private var stopRequested =
+        false
+
+    var playing =
+        false
         private set
 
     fun play(file: File) {
         stop()
 
         packets =
-            ReplayReader(file).packets
+            ReplayReader(
+                file,
+            ).packets
 
         session =
             ReplaySession(
@@ -42,10 +51,28 @@ object ReplayPlayer {
         startTime =
             System.nanoTime()
 
-        playing = true
+        stopRequested =
+            false
+
+        playing =
+            true
+
+        println(
+            "[Flashback] Playback started: " +
+                "${packets.size} packets",
+        )
     }
 
     fun tick() {
+        if (stopRequested) {
+            stopRequested =
+                false
+
+            stop()
+
+            return
+        }
+
         if (!playing) {
             return
         }
@@ -59,20 +86,23 @@ object ReplayPlayer {
 
         while (
             index < packets.size &&
-            packets[index].timestampNanos <= elapsed
+            packets[index]
+                .timestampNanos <= elapsed
         ) {
             val recorded =
                 packets[index]
 
             try {
                 val packet =
-                    decode(recorded)
+                    decode(
+                        recorded,
+                    )
 
                 packet.processPacket(
                     currentSession.handler,
                 )
             } catch (
-                throwable: Throwable
+                throwable: Throwable,
             ) {
                 System.err.println(
                     "[Flashback] Failed replay packet: " +
@@ -85,24 +115,44 @@ object ReplayPlayer {
             index++
         }
 
-        if (index >= packets.size) {
-            stop()
+        if (
+            index >= packets.size
+        ) {
+            stopRequested =
+                true
         }
     }
 
     fun stop() {
-        playing = false
+        playing =
+            false
+
+        stopRequested =
+            false
 
         session?.close()
-        session = null
 
-        packets = emptyList()
-        index = 0
+        session =
+            null
+
+        packets =
+            emptyList()
+
+        index =
+            0
     }
 
     private fun decode(
         recorded: RecordedPacket,
     ): Packet {
+        if (
+            recorded.packetClass ==
+            FMLProxyPacket::class.java.name
+        ) {
+            return decodeFmlProxyPacket(
+                recorded,
+            )
+        }
 
         val clazz =
             Class.forName(
@@ -112,7 +162,8 @@ object ReplayPlayer {
         val constructor =
             clazz.getDeclaredConstructor()
 
-        constructor.isAccessible = true
+        constructor.isAccessible =
+            true
 
         val packet =
             constructor.newInstance()
@@ -134,5 +185,26 @@ object ReplayPlayer {
         }
 
         return packet
+    }
+
+    private fun decodeFmlProxyPacket(
+        recorded: RecordedPacket,
+    ): Packet {
+        val channel =
+            requireNotNull(
+                recorded.channel,
+            ) {
+                "FMLProxyPacket missing channel"
+            }
+
+        val payload =
+            Unpooled.wrappedBuffer(
+                recorded.payload,
+            )
+
+        return FMLProxyPacket(
+            payload,
+            channel,
+        )
     }
 }

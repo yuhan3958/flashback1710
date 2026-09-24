@@ -4,4 +4,5 @@ data class RecordedPacket(
     val timestampNanos: Long,
     val packetClass: String,
     val payload: ByteArray,
+    val channel: String? = null,
 )
