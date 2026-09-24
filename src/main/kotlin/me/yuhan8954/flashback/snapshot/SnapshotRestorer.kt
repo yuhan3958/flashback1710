@@ -327,8 +327,7 @@ object SnapshotRestorer {
         x: Int,
         y: Int,
         z: Int,
-    ): Int =
-        (y * CHUNK_WIDTH + z) *
-            CHUNK_WIDTH +
-            x
+    ): Int = (y * CHUNK_WIDTH + z) *
+        CHUNK_WIDTH +
+        x
 }

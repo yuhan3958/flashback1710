@@ -28,7 +28,7 @@ class ReplayWorld(
     fun beginReplayTick(paused: Boolean) {
         advanceSimulation =
             !paused ||
-                stepRequested
+            stepRequested
 
         stepRequested = false
     }

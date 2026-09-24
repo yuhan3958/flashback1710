@@ -128,18 +128,17 @@ object SnapshotReader {
 
     private fun readPlayer(
         input: DataInput,
-    ): ReplayPlayerSnapshot =
-        ReplayPlayerSnapshot(
-            entityId = input.readInt(),
-            x = input.readDouble(),
-            y = input.readDouble(),
-            z = input.readDouble(),
-            yaw = input.readFloat(),
-            pitch = input.readFloat(),
-            motionX = input.readDouble(),
-            motionY = input.readDouble(),
-            motionZ = input.readDouble(),
-        )
+    ): ReplayPlayerSnapshot = ReplayPlayerSnapshot(
+        entityId = input.readInt(),
+        x = input.readDouble(),
+        y = input.readDouble(),
+        z = input.readDouble(),
+        yaw = input.readFloat(),
+        pitch = input.readFloat(),
+        motionX = input.readDouble(),
+        motionY = input.readDouble(),
+        motionZ = input.readDouble(),
+    )
 
     private fun readChunk(
         input: DataInput,
@@ -193,9 +192,9 @@ object SnapshotReader {
             }
 
             for (
-                index in
-                blockIndex until
-                    blockIndex + runLength
+            index in
+            blockIndex until
+                blockIndex + runLength
             ) {
                 blockIds[index] =
                     blockId

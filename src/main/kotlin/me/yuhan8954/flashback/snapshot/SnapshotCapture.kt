@@ -197,12 +197,12 @@ object SnapshotCapture {
             mutableListOf<ReplayChunkSnapshot>()
 
         for (
-            chunkX in
-            centerX - radius..centerX + radius
+        chunkX in
+        centerX - radius..centerX + radius
         ) {
             for (
-                chunkZ in
-                centerZ - radius..centerZ + radius
+            chunkZ in
+            centerZ - radius..centerZ + radius
             ) {
                 if (
                     !provider.chunkExists(
@@ -289,15 +289,13 @@ object SnapshotCapture {
         x: Int,
         y: Int,
         z: Int,
-    ): Int =
-        (y * CHUNK_WIDTH + z) *
-            CHUNK_WIDTH +
-            x
+    ): Int = (y * CHUNK_WIDTH + z) *
+        CHUNK_WIDTH +
+        x
 
     private fun chunkKey(
         chunkX: Int,
         chunkZ: Int,
-    ): Long =
-        (chunkX.toLong() shl 32) xor
-            (chunkZ.toLong() and 0xffffffffL)
+    ): Long = (chunkX.toLong() shl 32) xor
+        (chunkZ.toLong() and 0xffffffffL)
 }

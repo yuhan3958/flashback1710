@@ -22,8 +22,7 @@ class CommandFlashback : CommandBase() {
 
     override fun getCommandName(): String = "flashback"
 
-    override fun getCommandUsage(sender: ICommandSender): String =
-        "/flashback <record|stop|play|pause|resume|toggle|speed|step>"
+    override fun getCommandUsage(sender: ICommandSender): String = "/flashback <record|stop|play|pause|resume|toggle|speed|step>"
 
     override fun getRequiredPermissionLevel(): Int = 0
 

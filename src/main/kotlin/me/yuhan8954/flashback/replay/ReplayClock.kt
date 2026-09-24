@@ -125,7 +125,6 @@ class ReplayClock(
                 4.0,
             )
 
-        fun isSupportedSpeed(speed: Double): Boolean =
-            speed in SUPPORTED_SPEEDS
+        fun isSupportedSpeed(speed: Double): Boolean = speed in SUPPORTED_SPEEDS
     }
 }
