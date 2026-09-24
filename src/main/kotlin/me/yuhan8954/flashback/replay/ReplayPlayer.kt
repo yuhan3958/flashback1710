@@ -40,6 +40,15 @@ object ReplayPlayer {
     val speed: Double
         get() = clock.speed
 
+    val currentTimeNanos: Long
+        get() = clock.currentTimeNanos
+
+    val processedPacketCount: Int
+        get() = index
+
+    val totalPacketCount: Int
+        get() = packets.size
+
     val freeCameraActive: Boolean
         get() =
             session?.cameraController
