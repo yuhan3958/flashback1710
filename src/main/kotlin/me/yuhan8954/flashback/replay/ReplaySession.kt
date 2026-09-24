@@ -1,5 +1,6 @@
 package me.yuhan8954.flashback.replay
 
+import me.yuhan8954.flashback.mixin.AccessorNetHandlerPlayClient
 import net.minecraft.client.Minecraft
 import net.minecraft.client.entity.EntityClientPlayerMP
 import net.minecraft.stats.StatFileWriter
@@ -23,10 +24,10 @@ class ReplaySession(
     lateinit var player: EntityClientPlayerMP
         private set
 
+    private val statFileWriter = StatFileWriter()
+
     var active = false
         private set
-
-    private val statFileWriter = StatFileWriter()
 
     fun open(
         dimension: Int = 0,
@@ -40,6 +41,8 @@ class ReplaySession(
             minecraft,
             networkManager,
         )
+
+        networkManager.setNetHandler(handler)
 
         val settings = WorldSettings(
             seed,
@@ -56,6 +59,10 @@ class ReplaySession(
             difficulty = EnumDifficulty.NORMAL,
             profiler = minecraft.mcProfiler,
         )
+
+
+        (handler as AccessorNetHandlerPlayClient)
+            .`flashback$setClientWorldController`(world)
 
         minecraft.loadWorld(
             world,
