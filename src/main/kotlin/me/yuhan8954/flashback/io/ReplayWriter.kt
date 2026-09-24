@@ -1,6 +1,8 @@
 package me.yuhan8954.flashback.io
 
 import me.yuhan8954.flashback.replay.RecordedPacket
+import me.yuhan8954.flashback.snapshot.ReplaySnapshot
+import me.yuhan8954.flashback.snapshot.SnapshotWriter
 import java.io.BufferedOutputStream
 import java.io.Closeable
 import java.io.DataOutputStream
@@ -9,6 +11,7 @@ import java.io.FileOutputStream
 
 class ReplayWriter(
     file: File,
+    snapshot: ReplaySnapshot,
 ) : Closeable {
 
     private val output =
@@ -23,6 +26,11 @@ class ReplayWriter(
 
         output.writeInt(MAGIC)
         output.writeInt(FORMAT_VERSION)
+
+        SnapshotWriter.write(
+            output,
+            snapshot,
+        )
     }
 
     @Synchronized
@@ -81,6 +89,6 @@ class ReplayWriter(
 
         const val MAGIC = 0x46425231
 
-        const val FORMAT_VERSION = 2
+        const val FORMAT_VERSION = 3
     }
 }

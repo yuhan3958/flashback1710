@@ -1,6 +1,7 @@
 package me.yuhan8954.flashback.replay
 
 import cpw.mods.fml.common.network.internal.FMLProxyPacket
+import cpw.mods.fml.relauncher.Side
 import io.netty.buffer.Unpooled
 import me.yuhan8954.flashback.io.ReplayReader
 import net.minecraft.client.Minecraft
@@ -34,16 +35,21 @@ object ReplayPlayer {
     fun play(file: File) {
         stop()
 
-        packets =
+        val reader =
             ReplayReader(
                 file,
-            ).packets
+            )
+
+        packets =
+            reader.packets
 
         session =
             ReplaySession(
                 Minecraft.getMinecraft(),
             ).also {
-                it.open()
+                it.open(
+                    reader.snapshot,
+                )
             }
 
         index = 0
@@ -205,6 +211,10 @@ object ReplayPlayer {
         return FMLProxyPacket(
             payload,
             channel,
-        )
+        ).apply {
+            setTarget(
+                Side.CLIENT,
+            )
+        }
     }
 }

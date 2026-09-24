@@ -1,8 +1,11 @@
 package me.yuhan8954.flashback.replay
 
 import me.yuhan8954.flashback.mixin.AccessorNetHandlerPlayClient
+import me.yuhan8954.flashback.snapshot.ReplaySnapshot
+import me.yuhan8954.flashback.snapshot.SnapshotRestorer
 import net.minecraft.client.Minecraft
 import net.minecraft.client.entity.EntityClientPlayerMP
+import net.minecraft.client.gui.GuiMainMenu
 import net.minecraft.stats.StatFileWriter
 import net.minecraft.world.EnumDifficulty
 import net.minecraft.world.WorldSettings
@@ -36,8 +39,7 @@ class ReplaySession(
         private set
 
     fun open(
-        dimension: Int = 0,
-        seed: Long = 0L,
+        snapshot: ReplaySnapshot,
     ) {
         close()
 
@@ -56,7 +58,7 @@ class ReplaySession(
 
         val settings =
             WorldSettings(
-                seed,
+                snapshot.seed,
                 WorldSettings.GameType.CREATIVE,
                 false,
                 false,
@@ -70,7 +72,7 @@ class ReplaySession(
                 settings =
                 settings,
                 dimension =
-                dimension,
+                snapshot.dimensionId,
                 difficulty =
                 EnumDifficulty.NORMAL,
                 profiler =
@@ -104,9 +106,10 @@ class ReplaySession(
         minecraft.renderViewEntity =
             player
 
-        world.addEntityToWorld(
-            player.entityId,
+        SnapshotRestorer.restore(
+            world,
             player,
+            snapshot,
         )
 
         active =
@@ -123,6 +126,10 @@ class ReplaySession(
 
         minecraft.loadWorld(
             null,
+        )
+
+        minecraft.displayGuiScreen(
+            GuiMainMenu(),
         )
     }
 }

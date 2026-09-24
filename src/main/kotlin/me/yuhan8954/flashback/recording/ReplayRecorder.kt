@@ -4,6 +4,8 @@ import cpw.mods.fml.common.network.internal.FMLProxyPacket
 import io.netty.buffer.Unpooled
 import me.yuhan8954.flashback.io.ReplayWriter
 import me.yuhan8954.flashback.replay.RecordedPacket
+import me.yuhan8954.flashback.snapshot.SnapshotCapture
+import net.minecraft.client.Minecraft
 import net.minecraft.network.Packet
 import net.minecraft.network.PacketBuffer
 import java.io.File
@@ -22,11 +24,19 @@ object ReplayRecorder {
     fun start(file: File) {
         stop()
 
-        startTime =
-            System.nanoTime()
+        val snapshot =
+            SnapshotCapture.capture(
+                Minecraft.getMinecraft(),
+            )
 
         writer =
-            ReplayWriter(file)
+            ReplayWriter(
+                file,
+                snapshot,
+            )
+
+        startTime =
+            System.nanoTime()
     }
 
     @JvmStatic
@@ -52,19 +62,35 @@ object ReplayRecorder {
             )
 
         try {
-            packet.writePacketData(
-                buffer,
-            )
-
             val payload =
-                ByteArray(
-                    buffer.readableBytes(),
-                )
+                if (
+                    packet is FMLProxyPacket
+                ) {
+                    val packetPayload =
+                        packet.payload()
 
-            buffer.getBytes(
-                buffer.readerIndex(),
-                payload,
-            )
+                    ByteArray(
+                        packetPayload.readableBytes(),
+                    ).also {
+                        packetPayload.getBytes(
+                            packetPayload.readerIndex(),
+                            it,
+                        )
+                    }
+                } else {
+                    packet.writePacketData(
+                        buffer,
+                    )
+
+                    ByteArray(
+                        buffer.readableBytes(),
+                    ).also {
+                        buffer.getBytes(
+                            buffer.readerIndex(),
+                            it,
+                        )
+                    }
+                }
 
             val channel =
                 if (

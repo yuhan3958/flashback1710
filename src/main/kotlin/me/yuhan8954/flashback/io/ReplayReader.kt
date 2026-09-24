@@ -1,6 +1,8 @@
 package me.yuhan8954.flashback.io
 
 import me.yuhan8954.flashback.replay.RecordedPacket
+import me.yuhan8954.flashback.snapshot.ReplaySnapshot
+import me.yuhan8954.flashback.snapshot.SnapshotReader
 import java.io.BufferedInputStream
 import java.io.DataInputStream
 import java.io.EOFException
@@ -11,11 +13,16 @@ class ReplayReader(
     file: File,
 ) {
 
+    val snapshot: ReplaySnapshot
+
     val packets: List<RecordedPacket>
 
     init {
         val result =
             mutableListOf<RecordedPacket>()
+
+        lateinit var loadedSnapshot:
+            ReplaySnapshot
 
         DataInputStream(
             BufferedInputStream(
@@ -40,6 +47,11 @@ class ReplayReader(
             ) {
                 "Unsupported replay version: $version"
             }
+
+            loadedSnapshot =
+                SnapshotReader.read(
+                    input,
+                )
 
             while (true) {
                 try {
@@ -122,6 +134,9 @@ class ReplayReader(
                 }
             }
         }
+
+        snapshot =
+            loadedSnapshot
 
         packets = result
     }
