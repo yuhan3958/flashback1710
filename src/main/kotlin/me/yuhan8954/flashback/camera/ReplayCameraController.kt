@@ -294,8 +294,8 @@ class ReplayCameraController(
 
         val strafe =
             keyDirection(
-                settings.keyBindRight,
                 settings.keyBindLeft,
+                settings.keyBindRight,
             )
 
         val vertical =
