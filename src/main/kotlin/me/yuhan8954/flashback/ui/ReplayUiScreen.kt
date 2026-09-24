@@ -10,6 +10,8 @@ class ReplayUiScreen(
     screen,
 ) {
 
+    override fun doesGuiPauseGame(): Boolean = false
+
     override fun handleMouseInput() {
         super.handleMouseInput()
 

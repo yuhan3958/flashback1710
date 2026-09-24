@@ -2,11 +2,14 @@ package me.yuhan8954.flashback.replay
 
 import me.yuhan8954.flashback.camera.ReplayCameraController
 import me.yuhan8954.flashback.mixin.AccessorNetHandlerPlayClient
+import me.yuhan8954.flashback.mixin.AccessorWorldClient
 import me.yuhan8954.flashback.snapshot.ReplaySnapshot
 import me.yuhan8954.flashback.snapshot.SnapshotRestorer
 import net.minecraft.client.Minecraft
 import net.minecraft.client.entity.EntityClientPlayerMP
 import net.minecraft.client.gui.GuiMainMenu
+import net.minecraft.client.multiplayer.WorldClient
+import net.minecraft.entity.EntityLivingBase
 import net.minecraft.stats.StatFileWriter
 import net.minecraft.world.EnumDifficulty
 import net.minecraft.world.WorldSettings
@@ -39,6 +42,18 @@ class ReplaySession(
     private val statFileWriter =
         StatFileWriter()
 
+    private var liveWorld:
+        WorldClient? =
+        null
+
+    private var livePlayer:
+        EntityClientPlayerMP? =
+        null
+
+    private var liveViewEntity:
+        EntityLivingBase? =
+        null
+
     var active =
         false
         private set
@@ -47,6 +62,15 @@ class ReplaySession(
         snapshot: ReplaySnapshot,
     ) {
         close()
+
+        liveWorld =
+            minecraft.theWorld
+
+        livePlayer =
+            minecraft.thePlayer
+
+        liveViewEntity =
+            minecraft.renderViewEntity
 
         networkManager =
             ReplayNetworkManager()
@@ -91,11 +115,6 @@ class ReplaySession(
             world,
         )
 
-        minecraft.loadWorld(
-            world,
-            "Loading replay...",
-        )
-
         player =
             EntityClientPlayerMP(
                 minecraft,
@@ -105,25 +124,36 @@ class ReplaySession(
                 statFileWriter,
             )
 
-        minecraft.thePlayer =
-            player
+        detachLivePlayer()
 
-        minecraft.renderViewEntity =
-            player
+        try {
+            minecraft.thePlayer =
+                player
 
-        SnapshotRestorer.restore(
-            world,
-            player,
-            snapshot,
-        )
-
-        cameraController =
-            ReplayCameraController(
-                this,
+            minecraft.loadWorld(
+                world,
+                "Loading replay...",
             )
 
-        active =
-            true
+            SnapshotRestorer.restore(
+                world,
+                player,
+                snapshot,
+            )
+
+            cameraController =
+                ReplayCameraController(
+                    this,
+                )
+
+            active =
+                true
+        } catch (
+            throwable: Throwable,
+        ) {
+            restoreLiveWorld()
+            throw throwable
+        }
     }
 
     fun close() {
@@ -135,12 +165,92 @@ class ReplaySession(
 
         active = false
 
-        minecraft.loadWorld(
-            null,
+        restoreLiveWorld()
+    }
+
+    private fun detachLivePlayer() {
+        val currentWorld =
+            liveWorld ?: return
+
+        val currentPlayer =
+            livePlayer ?: return
+
+        currentWorld.playerEntities.remove(
+            currentPlayer,
         )
 
-        minecraft.displayGuiScreen(
-            GuiMainMenu(),
+        currentWorld.loadedEntityList.remove(
+            currentPlayer,
         )
+
+        (
+            currentWorld as
+                AccessorWorldClient
+            ).replayEntityList.remove(
+            currentPlayer,
+        )
+
+        if (
+            currentPlayer.addedToChunk &&
+            currentWorld.chunkProvider
+                .chunkExists(
+                    currentPlayer.chunkCoordX,
+                    currentPlayer.chunkCoordZ,
+                )
+        ) {
+            currentWorld.getChunkFromChunkCoords(
+                currentPlayer.chunkCoordX,
+                currentPlayer.chunkCoordZ,
+            ).removeEntity(
+                currentPlayer,
+            )
+        }
+
+        currentPlayer.addedToChunk = false
+
+        currentWorld.onEntityRemoved(
+            currentPlayer,
+        )
+    }
+
+    private fun restoreLiveWorld() {
+        val restoredWorld =
+            liveWorld
+
+        val restoredPlayer =
+            livePlayer
+
+        if (
+            restoredWorld != null &&
+            restoredPlayer != null
+        ) {
+            minecraft.thePlayer =
+                restoredPlayer
+
+            minecraft.loadWorld(
+                restoredWorld,
+                "Returning to world...",
+            )
+
+            minecraft.renderViewEntity =
+                liveViewEntity
+                    ?: restoredPlayer
+
+            minecraft.displayGuiScreen(
+                null,
+            )
+        } else {
+            minecraft.loadWorld(
+                null,
+            )
+
+            minecraft.displayGuiScreen(
+                GuiMainMenu(),
+            )
+        }
+
+        liveWorld = null
+        livePlayer = null
+        liveViewEntity = null
     }
 }
