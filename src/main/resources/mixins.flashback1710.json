@@ -1,0 +1,11 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "me.yuhan8954.flashback.mixin",
+  "refmap": "mixins.flashback1710.refmap.json",
+  "compatibilityLevel": "JAVA_8",
+  "mixins": [],
+  "client": [
+    "MixinNetworkManager"
+  ]
+}
