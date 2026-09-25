@@ -149,7 +149,7 @@ object ReplayPlayer {
             speed >= 0.0 &&
             (
                 lastReverseCaptureNanos ==
-                Long.MIN_VALUE ||
+                    Long.MIN_VALUE ||
                     clock.currentTimeNanos -
                     lastReverseCaptureNanos >=
                     ReplayClock.MINECRAFT_TICK_NANOS
@@ -615,7 +615,7 @@ object ReplayPlayer {
 
                 nextCaptureTimeNanos =
                     recorded.timestampNanos +
-                        ReplayClock.MINECRAFT_TICK_NANOS
+                    ReplayClock.MINECRAFT_TICK_NANOS
             }
         }
 

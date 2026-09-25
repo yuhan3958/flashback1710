@@ -124,8 +124,7 @@ data class ReplayReverseFrame(
     val timestampNanos: Long,
     val packetIndex: Int,
     private val playerState: ReplayReversePlayerState,
-    private val entityStates:
-        Map<Int, ReplayReverseEntityState>,
+    private val entityStates: Map<Int, ReplayReverseEntityState>,
     private val worldTime: Long,
     private val totalWorldTime: Long,
     private val raining: Boolean,
@@ -156,10 +155,11 @@ data class ReplayReverseFrame(
                 }
 
         currentEntities.forEach {
-            (
-                entityId,
-                entity,
-            ) ->
+                (
+                    entityId,
+                    entity,
+                ),
+            ->
             val targetState =
                 entityStates[
                     entityId,
@@ -184,10 +184,11 @@ data class ReplayReverseFrame(
         }
 
         entityStates.forEach {
-            (
-                entityId,
-                state,
-            ) ->
+                (
+                    entityId,
+                    state,
+                ),
+            ->
             val current =
                 world.getEntityByID(
                     entityId,
@@ -398,62 +399,61 @@ data class ReplayReversePlayerState(
 
         fun capture(
             player: EntityReplayPlayer,
-        ): ReplayReversePlayerState =
-            ReplayReversePlayerState(
-                x =
-                player.posX,
-                y =
-                player.posY,
-                z =
-                player.posZ,
-                prevX =
-                player.prevPosX,
-                prevY =
-                player.prevPosY,
-                prevZ =
-                player.prevPosZ,
-                lastTickX =
-                player.lastTickPosX,
-                lastTickY =
-                player.lastTickPosY,
-                lastTickZ =
-                player.lastTickPosZ,
-                yaw =
-                player.rotationYaw,
-                pitch =
-                player.rotationPitch,
-                prevYaw =
-                player.prevRotationYaw,
-                prevPitch =
-                player.prevRotationPitch,
-                motionX =
-                player.motionX,
-                motionY =
-                player.motionY,
-                motionZ =
-                player.motionZ,
-                onGround =
-                player.onGround,
-                currentItem =
-                player.inventory
-                    .currentItem,
-                sneaking =
-                player.isSneaking,
-                sprinting =
-                player.isSprinting,
-                mainInventory =
-                player.inventory
-                    .mainInventory
-                    .map {
-                        it?.copy()
-                    },
-                armorInventory =
-                player.inventory
-                    .armorInventory
-                    .map {
-                        it?.copy()
-                    },
-            )
+        ): ReplayReversePlayerState = ReplayReversePlayerState(
+            x =
+            player.posX,
+            y =
+            player.posY,
+            z =
+            player.posZ,
+            prevX =
+            player.prevPosX,
+            prevY =
+            player.prevPosY,
+            prevZ =
+            player.prevPosZ,
+            lastTickX =
+            player.lastTickPosX,
+            lastTickY =
+            player.lastTickPosY,
+            lastTickZ =
+            player.lastTickPosZ,
+            yaw =
+            player.rotationYaw,
+            pitch =
+            player.rotationPitch,
+            prevYaw =
+            player.prevRotationYaw,
+            prevPitch =
+            player.prevRotationPitch,
+            motionX =
+            player.motionX,
+            motionY =
+            player.motionY,
+            motionZ =
+            player.motionZ,
+            onGround =
+            player.onGround,
+            currentItem =
+            player.inventory
+                .currentItem,
+            sneaking =
+            player.isSneaking,
+            sprinting =
+            player.isSprinting,
+            mainInventory =
+            player.inventory
+                .mainInventory
+                .map {
+                    it?.copy()
+                },
+            armorInventory =
+            player.inventory
+                .armorInventory
+                .map {
+                    it?.copy()
+                },
+        )
     }
 }
 
@@ -582,64 +582,63 @@ data class ReplayReverseEntityState(
 
         fun capture(
             entity: Entity,
-        ): ReplayReverseEntityState =
-            ReplayReverseEntityState(
-                entity =
-                entity,
-                x =
-                entity.posX,
-                y =
-                entity.posY,
-                z =
-                entity.posZ,
-                prevX =
-                entity.prevPosX,
-                prevY =
-                entity.prevPosY,
-                prevZ =
-                entity.prevPosZ,
-                lastTickX =
-                entity.lastTickPosX,
-                lastTickY =
-                entity.lastTickPosY,
-                lastTickZ =
-                entity.lastTickPosZ,
-                yaw =
-                entity.rotationYaw,
-                pitch =
-                entity.rotationPitch,
-                prevYaw =
-                entity.prevRotationYaw,
-                prevPitch =
-                entity.prevRotationPitch,
-                motionX =
-                entity.motionX,
-                motionY =
-                entity.motionY,
-                motionZ =
-                entity.motionZ,
-                serverPosX =
-                entity.serverPosX,
-                serverPosY =
-                entity.serverPosY,
-                serverPosZ =
-                entity.serverPosZ,
-                onGround =
-                entity.onGround,
-                sneaking =
-                entity.isSneaking,
-                sprinting =
-                entity.isSprinting,
-                rotationYawHead =
-                (
-                    entity as?
-                        EntityLivingBase
-                    )?.rotationYawHead,
-                prevRotationYawHead =
-                (
-                    entity as?
-                        EntityLivingBase
-                    )?.prevRotationYawHead,
-            )
+        ): ReplayReverseEntityState = ReplayReverseEntityState(
+            entity =
+            entity,
+            x =
+            entity.posX,
+            y =
+            entity.posY,
+            z =
+            entity.posZ,
+            prevX =
+            entity.prevPosX,
+            prevY =
+            entity.prevPosY,
+            prevZ =
+            entity.prevPosZ,
+            lastTickX =
+            entity.lastTickPosX,
+            lastTickY =
+            entity.lastTickPosY,
+            lastTickZ =
+            entity.lastTickPosZ,
+            yaw =
+            entity.rotationYaw,
+            pitch =
+            entity.rotationPitch,
+            prevYaw =
+            entity.prevRotationYaw,
+            prevPitch =
+            entity.prevRotationPitch,
+            motionX =
+            entity.motionX,
+            motionY =
+            entity.motionY,
+            motionZ =
+            entity.motionZ,
+            serverPosX =
+            entity.serverPosX,
+            serverPosY =
+            entity.serverPosY,
+            serverPosZ =
+            entity.serverPosZ,
+            onGround =
+            entity.onGround,
+            sneaking =
+            entity.isSneaking,
+            sprinting =
+            entity.isSprinting,
+            rotationYawHead =
+            (
+                entity as?
+                    EntityLivingBase
+                )?.rotationYawHead,
+            prevRotationYawHead =
+            (
+                entity as?
+                    EntityLivingBase
+                )?.prevRotationYawHead,
+        )
     }
 }

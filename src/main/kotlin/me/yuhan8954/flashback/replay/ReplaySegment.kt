@@ -64,8 +64,8 @@ class ReplaySegmentIndex(
 
         segments =
             resolved.mapIndexed {
-                index,
-                checkpoint,
+                    index,
+                    checkpoint,
                 ->
                 ReplaySegment(
                     startTimeNanos =
