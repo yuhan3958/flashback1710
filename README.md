@@ -1,32 +1,533 @@
 # Flashback 1710
 
-Flashback1710 records clientbound packets and local-player movement, then
-replays them in an isolated `ReplayWorld` on Minecraft 1.7.10.
+Flashback 1710 is an experimental client-side replay system for Minecraft 1.7.10.
+
+It records clientbound network traffic, selected local-player actions, and periodic world checkpoints, then reconstructs the session inside an isolated replay world. The project is currently aimed at proving that a modern replay workflow can be made practical on the GTNH 1.7.10 stack.
+
+The long-term goal is not only to provide a standalone replay mod, but to reach a quality level where a proposal such as "should GTNH ship or officially support this?" can be discussed on technical merits.
+
+## Current Status
+
+Implemented:
+
+- Clientbound packet recording.
+- Selected serverbound player-action recording.
+- Initial world snapshot.
+- Configurable delta checkpoints.
+- Configurable full checkpoint anchors.
+- Timeline seeking.
+- Reverse playback through checkpoint-based state reconstruction.
+- Playback speeds from -4x to 4x.
+- Tick stepping while paused.
+- Free camera.
+- Player camera.
+- ModularUI2 playback controls.
+- Explicit Stop control.
+- Replay boundary pause: reaching the beginning or end pauses playback instead of returning to the live world.
+- Replay format v7.
+- Backward loading support for replay format v6.
+
+The project is still experimental. Compatibility with arbitrary modded packets, tile entities, world state, and long-running GTNH sessions has not yet been proven.
+
+## Why This Exists
+
+Replay systems are unusually difficult on Minecraft 1.7.10 because the client is not a deterministic simulation that can simply be rewound.
+
+A packet can mutate:
+
+- chunks,
+- entities,
+- tile entities,
+- inventories,
+- weather,
+- world time,
+- mod-specific client state,
+- GUI state,
+- custom FML channels.
+
+Many of those operations have no inverse.
+
+For that reason Flashback 1710 does not attempt to reverse packets. Instead, it reconstructs an earlier state from checkpoints and then replays packets forward to the requested timestamp.
+
+That architecture is the central idea of the project.
+
+## High-Level Workflow
+
+### Recording
+
+```text
+Live server connection
+        |
+        | clientbound packets
+        v
+MixinNetworkManager
+        |
+        v
+ReplayRecorder
+        |
+        +--------------------------+
+        |                          |
+        | packet stream            | ClientTick END
+        v                          v
+ReplayWriter              SnapshotCapture
+                                   |
+                                   v
+                         checkpoint comparison
+                                   |
+                         +---------+---------+
+                         |                   |
+                         v                   v
+                    delta checkpoint    full anchor
+```
+
+Recording begins by capturing a full initial snapshot.
+
+Packets are then written with:
+
+- replay timestamp,
+- packet direction,
+- packet class,
+- optional FML channel,
+- serialized payload.
+
+Checkpoint capture is performed at client tick END rather than inside the inbound packet hook. This matters because the inbound packet hook executes before the packet has necessarily finished mutating the client world. Capturing at tick END gives the checkpoint a substantially clearer meaning: "client state after this tick's packet processing."
+
+### Replay File Layout
+
+Replay format v7 is a mixed record stream.
+
+```text
+magic
+format version
+initial full snapshot
+
+packet
+packet
+packet
+delta checkpoint
+packet
+packet
+full checkpoint
+packet
+...
+```
+
+Record types are currently:
+
+```text
+0 = packet
+1 = full checkpoint
+2 = delta checkpoint
+```
+
+The default checkpoint configuration is:
+
+```text
+delta checkpoint: 30 seconds
+full anchor:       300 seconds
+```
+
+Both intervals are configurable.
+
+### Playback
+
+```text
+ReplayReader
+    |
+    +--> initial snapshot
+    +--> packet list
+    +--> checkpoint list
+              |
+              v
+        ReplayPlayer
+              |
+              v
+        ReplaySession
+              |
+       +------+------+
+       |             |
+       v             v
+ ReplayWorld   recorded player
+       |
+       v
+ReplayNetHandler
+```
+
+Playback does not run inside the original live world.
+
+`ReplaySession` creates:
+
+- an isolated `ReplayWorld`,
+- a replay network handler,
+- the recorded player entity,
+- a spectator entity for the local client,
+- a replay camera controller.
+
+The live world and live player are retained so that Stop can restore the original session.
+
+## Seeking
+
+Seeking is checkpoint based.
+
+For a target such as 08:47:
+
+```text
+target = 08:47
+      |
+      v
+find nearest valid full anchor
+      |
+      v
+apply following delta checkpoints
+      |
+      v
+resolved checkpoint state
+      |
+      v
+restore ReplayWorld
+      |
+      v
+replay packet tail up to 08:47
+```
+
+With the default settings, a file may look like:
+
+```text
+05:00 FULL
+05:30 delta
+06:00 delta
+06:30 delta
+...
+08:30 delta
+```
+
+Seeking to 08:47 resolves the checkpoint chain through 08:30 and then replays only the remaining packet tail.
+
+The checkpoint stores the packet index associated with its state, so playback can resume from the correct position in the packet stream.
+
+## Reverse Playback
+
+Reverse playback is intentionally asymmetric.
+
+Forward playback:
+
+```text
+time moves forward
+    ->
+apply packets normally
+```
+
+Reverse playback:
+
+```text
+time moves backward
+    ->
+seek to earlier timestamp
+    ->
+restore checkpoint state
+    ->
+replay forward from that checkpoint
+```
+
+Flashback 1710 does not attempt to execute network packets backwards.
+
+This avoids requiring impossible or unreliable inverse operations for events such as:
+
+- entity destruction,
+- block replacement,
+- inventory mutation,
+- chunk unloading,
+- mod-specific custom packets.
+
+Supported playback speeds are:
+
+```text
+-4x
+-2x
+-1x
+-0.5x
+-0.25x
+0.25x
+0.5x
+1x
+2x
+4x
+```
+
+At timestamp 0, reverse playback pauses.
+
+At the replay duration, forward playback pauses.
+
+The replay session remains open at both boundaries until the user explicitly presses Stop or runs the stop command.
+
+## Snapshot Model
+
+A full snapshot currently includes:
+
+- dimension ID,
+- world seed,
+- world time,
+- total world time,
+- rain and thunder state,
+- replay-player transform,
+- replay-player motion,
+- replay-player inventory,
+- loaded view chunks,
+- block IDs,
+- block metadata,
+- biome arrays,
+- tile entity NBT,
+- loaded entity state.
+
+Delta checkpoints compare two snapshot states and retain changed state plus removals.
+
+The current delta model is designed for implementation simplicity and correctness before aggressive storage optimization. Further optimization can move toward finer-grained dirty-state tracking after behavior is validated.
+
+## Configuration
+
+Flashback 1710 uses the Forge configuration file.
+
+Current recording options:
+
+```text
+checkpointIntervalSeconds = 30
+checkpointAnchorIntervalSeconds = 300
+```
+
+`checkpointIntervalSeconds` controls delta checkpoints.
+
+`checkpointAnchorIntervalSeconds` controls full checkpoint anchors.
+
+A value of `0` disables that checkpoint type.
 
 ## Commands
 
-- `/flashback record` captures the current client world and starts recording
-  packet changes.
-- `/flashback stop` finishes the current recording.
-- `/flashback play` restores the initial snapshot and starts `latest.fbr` paused.
-- `/flashback pause`, `resume`, and `toggle` control the replay clock.
-- `/flashback speed <value>` selects 0.25x, 0.5x, 1x, 2x, or 4x playback.
-- `/flashback step` advances a paused replay by one 50 ms Minecraft tick.
-- `/flashback camera free` detaches the view into a no-clip camera.
-- `/flashback camera player` returns the view to the replay player.
-- `/flashback camera speed <value>` sets free-camera movement speed.
-- `/flashback ui` reopens the ModularUI2 replay controls after they are closed.
+```text
+/flashback record
+/flashback stop
+/flashback play
+/flashback pause
+/flashback resume
+/flashback toggle
+/flashback speed <value>
+/flashback step
+/flashback camera free
+/flashback camera player
+/flashback camera speed <value>
+/flashback ui
+```
+
+Current development recording is written to:
+
+```text
+.minecraft/replays/latest.fbr
+```
+
+### Playback Speed
+
+Example:
+
+```text
+/flashback speed -1
+/flashback speed 0.5
+/flashback speed 4
+```
+
+Negative values play backward through repeated checkpoint-based reconstruction.
+
+### Camera
+
+```text
+/flashback camera free
+```
+
+enables the no-clip replay camera.
+
+```text
+/flashback camera player
+```
+
+returns the view to the recorded player.
+
+Free-camera movement remains usable while the replay UI is open. Hold the right mouse button and drag to look around.
 
 ## Replay UI
 
-Playback opens a ModularUI2 control screen with replay time, duration, speed,
-a visual timeline, playback controls, and player/free-camera controls. The
-timeline is display-only until replay seeking is implemented. Free camera
-movement remains available while the UI is open; hold the right mouse button
-and drag to look around.
+Playback opens a ModularUI2 interface containing:
 
-Replay format version 5 stores a world snapshot before the directional,
-timestamped packet stream. The snapshot contains world and weather time,
-player transform, loaded view chunks, block metadata, biomes, tile entity NBT,
-and loaded entity state.
-Older replay versions are rejected with an unsupported-version error.
+- timeline,
+- current time,
+- duration,
+- playback speed,
+- seek interaction,
+- step,
+- play/pause,
+- speed controls,
+- Stop,
+- camera controls.
+
+Stop is intentionally distinct from Pause.
+
+Pause freezes replay time while keeping the replay world active.
+
+Stop destroys the replay session and restores the original live world and player.
+
+## Main Components
+
+### Recording
+
+`ReplayRecorder`
+
+Coordinates packet recording and checkpoint scheduling.
+
+`SnapshotCapture`
+
+Captures the current client-visible world state.
+
+`SnapshotDelta`
+
+Builds and applies checkpoint deltas.
+
+`ReplayWriter`
+
+Serializes the replay stream.
+
+### Loading
+
+`ReplayReader`
+
+Loads the initial snapshot, packets, and checkpoints.
+
+`ReplayCheckpointResolver`
+
+Resolves the best checkpoint state for a requested timestamp.
+
+### Playback
+
+`ReplayPlayer`
+
+Owns replay time, packet position, seeking, playback direction, and playback state.
+
+`ReplayClock`
+
+Tracks replay time and signed playback speed.
+
+`ReplaySession`
+
+Owns replay-world lifetime and restores the live Minecraft session on Stop.
+
+`ReplayWorld`
+
+Runs replay-time-aware world simulation.
+
+`ReplayNetHandler`
+
+Applies recorded clientbound packets to the replay world.
+
+### Camera and UI
+
+`ReplayCameraController`
+
+Controls free camera and player camera modes.
+
+`ReplayControlBar`
+
+Provides primary playback controls.
+
+`ReplayTimelineWidget`
+
+Displays replay progress and performs timeline seeking.
+
+## Design Principles
+
+### Do not mutate the live world during playback
+
+Replay state belongs in an isolated world.
+
+### Do not invent reverse packets
+
+Reverse playback should reconstruct known state rather than guess an inverse network operation.
+
+### Prefer explicit replay time
+
+Replay state should depend on the replay clock rather than wall-clock time wherever possible.
+
+### Preserve modded packet data
+
+Unknown packet behavior should be retained rather than translated into a lossy custom event format unless there is a clear reason to do so.
+
+### Keep the recorded player separate from the spectator
+
+The replay subject and the local camera/controller are different entities.
+
+### Optimize after correctness
+
+Checkpoint compression and dirty-state tracking matter, but a smaller incorrect replay is not useful.
+
+## Known Limitations
+
+The largest unresolved questions are compatibility and determinism.
+
+Current limitations include:
+
+- Replay files are still managed as a single development file, `latest.fbr`.
+- There is no replay browser or metadata index.
+- Checkpoint capture currently snapshots client-visible state and can become expensive on large view distances.
+- Delta creation currently compares snapshots rather than consuming a complete dirty-state event stream.
+- Reverse playback repeatedly performs state reconstruction and is more expensive than forward playback.
+- Arbitrary modded custom packets have not been tested across the GTNH mod set.
+- Client-side state that is not represented by packets or snapshots may diverge.
+- Dimension transitions need dedicated stress testing.
+- Long-session memory, file-size, and seek-latency characteristics have not yet been benchmarked.
+- Crash recovery and partially written replay handling are not yet production-grade.
+- Replay format compatibility policy is not yet formally specified.
+- Automated replay correctness tests are not yet sufficient for a GTNH-scale integration proposal.
+
+## Development Direction
+
+The project should not be proposed for GTNH integration merely because basic playback works.
+
+Before such a proposal, it should demonstrate:
+
+1. replay correctness across representative GTNH gameplay,
+2. acceptable recording overhead,
+3. bounded replay file growth,
+4. predictable seek latency,
+5. stable handling of modded packets,
+6. recovery from malformed or interrupted replay files,
+7. a maintainable compatibility strategy,
+8. automated regression coverage,
+9. usable replay file management,
+10. clear ownership and maintenance expectations.
+
+The detailed plan is in:
+
+[GTNH Integration Plan](docs/GTNH_INTEGRATION_PLAN.md)
+
+## Proposed End State
+
+A proposal-ready version should be able to make a concrete claim:
+
+> A normal GTNH client can record gameplay for an extended session with acceptable overhead, reopen it later, seek and reverse through it reliably, and reproduce the client-visible state closely enough for debugging, review, cinematics, and support workflows.
+
+Only after that claim is backed by tests and measurements does it make sense to ask whether the feature belongs in GTNH itself, an officially recommended companion mod, or a separate maintained project.
+
+## Build
+
+The project uses the GTNH convention Gradle plugin and targets Minecraft 1.7.10 / Forge 10.13.4.1614.
+
+ModularUI2 is currently a required dependency.
+
+```text
+com.github.GTNewHorizons:ModularUI2:2.3.89-1.7.10:dev
+```
+
+Kotlin targets JVM 8 bytecode.
+
+## Project Stage
+
+Flashback 1710 should currently be treated as a prototype moving toward an engineering validation phase.
+
+The next milestone is not "more features."
+
+The next milestone is proving that the existing architecture remains correct, fast, and maintainable under real GTNH workloads.
