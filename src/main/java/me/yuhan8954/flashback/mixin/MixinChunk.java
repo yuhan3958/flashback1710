@@ -39,21 +39,13 @@ public abstract class MixinChunk {
     }
 
     @Inject(method = "fillChunk", at = @At("HEAD"))
-    private void flashback1710$beforeFillChunk(
-        byte[] data,
-        int primaryBitMask,
-        int addBitMask,
-        boolean includeBiome,
+    private void flashback1710$beforeFillChunk(byte[] data, int primaryBitMask, int addBitMask, boolean includeBiome,
         CallbackInfo ci) {
         ReplayChunkMutationHooks.beforeFillChunk((Chunk) (Object) this);
     }
 
     @Inject(method = "fillChunk", at = @At("RETURN"))
-    private void flashback1710$afterFillChunk(
-        byte[] data,
-        int primaryBitMask,
-        int addBitMask,
-        boolean includeBiome,
+    private void flashback1710$afterFillChunk(byte[] data, int primaryBitMask, int addBitMask, boolean includeBiome,
         CallbackInfo ci) {
         ReplayChunkMutationHooks.afterFillChunk();
     }
