@@ -12,6 +12,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.util.concurrent.GenericFutureListener;
 import me.yuhan8954.flashback.recording.ReplayRecorder;
 
 @Mixin(NetworkManager.class)
@@ -30,5 +31,14 @@ public abstract class MixinNetworkManager {
         }
 
         ReplayRecorder.record(packet);
+    }
+
+    @Inject(
+        method = "scheduleOutboundPacket(Lnet/minecraft/network/Packet;"
+            + "[Lio/netty/util/concurrent/GenericFutureListener;)V",
+        at = @At("HEAD"))
+    private void flashback$recordOutboundPacket(Packet packet, GenericFutureListener<?>[] listeners, CallbackInfo ci) {
+
+        ReplayRecorder.recordOutbound(packet);
     }
 }

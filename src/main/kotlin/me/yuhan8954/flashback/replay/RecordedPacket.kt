@@ -5,4 +5,10 @@ data class RecordedPacket(
     val packetClass: String,
     val payload: ByteArray,
     val channel: String? = null,
+    val flow: PacketFlow = PacketFlow.CLIENTBOUND,
 )
+
+enum class PacketFlow {
+    CLIENTBOUND,
+    SERVERBOUND,
+}

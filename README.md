@@ -1,7 +1,7 @@
 # Flashback 1710
 
-Flashback1710 records inbound client packets and replays them in an isolated
-`ReplayWorld` on Minecraft 1.7.10.
+Flashback1710 records clientbound packets and local-player movement, then
+replays them in an isolated `ReplayWorld` on Minecraft 1.7.10.
 
 ## Commands
 
@@ -25,7 +25,8 @@ timeline is display-only until replay seeking is implemented. Free camera
 movement remains available while the UI is open; hold the right mouse button
 and drag to look around.
 
-Replay format version 3 stores a world snapshot before the timestamped packet
-stream. The snapshot contains world and weather time, player transform, loaded
-view chunks, block metadata, biomes, tile entity NBT, and loaded entity state.
+Replay format version 4 stores a world snapshot before the directional,
+timestamped packet stream. The snapshot contains world and weather time,
+player transform, loaded view chunks, block metadata, biomes, tile entity NBT,
+and loaded entity state.
 Older replay versions are rejected with an unsupported-version error.

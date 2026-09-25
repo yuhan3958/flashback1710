@@ -6,6 +6,9 @@ import net.minecraft.client.Minecraft
 
 object ReplayUiController {
 
+    private var hiddenByHud =
+        false
+
     private val minecraft:
         Minecraft
         get() = Minecraft.getMinecraft()
@@ -13,6 +16,7 @@ object ReplayUiController {
     fun open(): Boolean {
         if (
             !ReplayPlayer.playing ||
+            minecraft.gameSettings.hideGUI ||
             minecraft.currentScreen is
                 ReplayUiScreen
         ) {
@@ -29,6 +33,8 @@ object ReplayUiController {
     }
 
     fun close() {
+        hiddenByHud = false
+
         if (
             minecraft.currentScreen is
                 ReplayUiScreen
@@ -36,6 +42,42 @@ object ReplayUiController {
             minecraft.displayGuiScreen(
                 null,
             )
+        }
+    }
+
+    fun toggleHudVisibility() {
+        minecraft.gameSettings.hideGUI =
+            !minecraft.gameSettings.hideGUI
+
+        syncHudVisibility()
+    }
+
+    fun syncHudVisibility() {
+        if (!ReplayPlayer.playing) {
+            hiddenByHud = false
+            return
+        }
+
+        if (minecraft.gameSettings.hideGUI) {
+            if (
+                minecraft.currentScreen is
+                    ReplayUiScreen
+            ) {
+                hiddenByHud = true
+                minecraft.displayGuiScreen(
+                    null,
+                )
+            }
+
+            return
+        }
+
+        if (
+            hiddenByHud &&
+            minecraft.currentScreen == null
+        ) {
+            hiddenByHud = false
+            open()
         }
     }
 

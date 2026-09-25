@@ -8,6 +8,7 @@ import me.yuhan8954.flashback.ui.ReplayUiController
 import net.minecraft.client.Minecraft
 import net.minecraft.network.Packet
 import net.minecraft.network.PacketBuffer
+import net.minecraft.network.play.client.C03PacketPlayer
 import java.io.File
 
 object ReplayPlayer {
@@ -83,6 +84,8 @@ object ReplayPlayer {
             packets.lastOrNull()
                 ?.timestampNanos ?: 0L
 
+        clock.reset()
+
         session =
             ReplaySession(
                 Minecraft.getMinecraft(),
@@ -93,8 +96,6 @@ object ReplayPlayer {
             }
 
         index = 0
-
-        clock.reset()
 
         stopRequested =
             false
@@ -124,44 +125,7 @@ object ReplayPlayer {
             return
         }
 
-        val currentSession =
-            session ?: return
-
-        currentSession.cameraController.tick()
-
-        clock.update()
-
-        while (
-            index < packets.size &&
-            packets[index]
-                .timestampNanos <=
-            clock.currentTimeNanos
-        ) {
-            val recorded =
-                packets[index]
-
-            try {
-                val packet =
-                    decode(
-                        recorded,
-                    )
-
-                packet.processPacket(
-                    currentSession.handler,
-                )
-            } catch (
-                throwable: Throwable,
-            ) {
-                System.err.println(
-                    "[Flashback] Failed replay packet: " +
-                        recorded.packetClass,
-                )
-
-                throwable.printStackTrace()
-            }
-
-            index++
-        }
+        session?.cameraController?.tick()
 
         if (
             index >= packets.size
@@ -176,8 +140,11 @@ object ReplayPlayer {
             return
         }
 
+        clock.update()
+        processAvailablePackets()
+
         session?.world?.beginReplayTick(
-            clock.paused,
+            clock.currentTimeNanos,
         )
 
         session?.cameraController?.beginTick()
@@ -262,8 +229,6 @@ object ReplayPlayer {
         }
 
         clock.step()
-
-        session?.world?.requestStep()
 
         return true
     }
@@ -362,6 +327,86 @@ object ReplayPlayer {
         return packet
     }
 
+    private fun processAvailablePackets() {
+        val currentSession =
+            session ?: return
+
+        while (
+            index < packets.size &&
+            packets[index]
+                .timestampNanos <=
+            clock.currentTimeNanos
+        ) {
+            val recorded =
+                packets[index]
+
+            try {
+                val packet =
+                    decode(
+                        recorded,
+                    )
+
+                if (
+                    recorded.flow ==
+                    PacketFlow.SERVERBOUND
+                ) {
+                    applyServerboundPacket(
+                        currentSession,
+                        packet,
+                    )
+                } else {
+                    packet.processPacket(
+                        currentSession.handler,
+                    )
+                }
+            } catch (
+                throwable: Throwable,
+            ) {
+                System.err.println(
+                    "[Flashback] failed replay packet: " +
+                        recorded.packetClass,
+                )
+
+                throwable.printStackTrace()
+            }
+
+            index++
+        }
+    }
+
+    private fun applyServerboundPacket(
+        currentSession: ReplaySession,
+        packet: Packet,
+    ) {
+        if (packet !is C03PacketPlayer) {
+            return
+        }
+
+        val player =
+            currentSession.player
+
+        player.prevPosX = player.posX
+        player.prevPosY = player.posY
+        player.prevPosZ = player.posZ
+        player.prevRotationYaw = player.rotationYaw
+        player.prevRotationPitch = player.rotationPitch
+
+        if (packet.func_149466_j()) {
+            player.setPosition(
+                packet.func_149464_c(),
+                packet.func_149471_f(),
+                packet.func_149472_e(),
+            )
+        }
+
+        if (packet.func_149463_k()) {
+            player.rotationYaw = packet.func_149462_g()
+            player.rotationPitch = packet.func_149470_h()
+        }
+
+        player.onGround = packet.func_149465_i()
+    }
+
     private fun decodeFmlProxyPacket(
         recorded: RecordedPacket,
     ): Packet {
@@ -381,9 +426,7 @@ object ReplayPlayer {
             payload,
             channel,
         ).apply {
-            setTarget(
-                Side.CLIENT,
-            )
+            target = Side.CLIENT
         }
     }
 }

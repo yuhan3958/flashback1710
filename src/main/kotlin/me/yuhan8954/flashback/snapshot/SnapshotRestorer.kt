@@ -56,11 +56,8 @@ object SnapshotRestorer {
         world: ReplayWorld,
         snapshot: ReplaySnapshot,
     ) {
-        world.setWorldTime(
+        world.initializeReplayTime(
             snapshot.worldTime,
-        )
-
-        world.func_82738_a(
             snapshot.totalWorldTime,
         )
 
@@ -317,10 +314,13 @@ object SnapshotRestorer {
         player.motionY = snapshot.motionY
         player.motionZ = snapshot.motionZ
 
-        world.addEntityToWorld(
-            snapshot.entityId,
-            player,
-        )
+        check(
+            world.spawnEntityInWorld(
+                player,
+            ),
+        ) {
+            "Replay player could not be added to its snapshot chunk"
+        }
     }
 
     private fun blockIndex(

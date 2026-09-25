@@ -2,6 +2,7 @@ package me.yuhan8954.flashback.ui
 
 import com.cleanroommc.modularui.screen.GuiScreenWrapper
 import me.yuhan8954.flashback.replay.ReplayPlayer
+import org.lwjgl.input.Keyboard
 import org.lwjgl.input.Mouse
 
 class ReplayUiScreen(
@@ -11,6 +12,21 @@ class ReplayUiScreen(
 ) {
 
     override fun doesGuiPauseGame(): Boolean = false
+
+    override fun keyTyped(
+        character: Char,
+        keyCode: Int,
+    ) {
+        if (keyCode == Keyboard.KEY_F1) {
+            ReplayUiController.toggleHudVisibility()
+            return
+        }
+
+        super.keyTyped(
+            character,
+            keyCode,
+        )
+    }
 
     override fun handleMouseInput() {
         super.handleMouseInput()

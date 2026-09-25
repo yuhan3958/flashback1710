@@ -5,6 +5,7 @@ import cpw.mods.fml.common.eventhandler.SubscribeEvent
 import cpw.mods.fml.common.gameevent.TickEvent
 import me.yuhan8954.flashback.command.CommandFlashback
 import me.yuhan8954.flashback.replay.ReplayPlayer
+import me.yuhan8954.flashback.ui.ReplayUiController
 import net.minecraftforge.client.ClientCommandHandler
 import net.minecraftforge.client.event.MouseEvent
 import net.minecraftforge.common.MinecraftForge
@@ -13,7 +14,7 @@ object FlashbackRuntime {
 
     @JvmStatic
     fun initialize() {
-        println("[Flashback1710] Kotlin runtime initialized")
+        println("[Flashback1710] Flashback1710 Kotlin runtime initialized")
 
         MinecraftForge.EVENT_BUS.register(this)
         FMLCommonHandler.instance().bus().register(this)
@@ -35,7 +36,10 @@ object FlashbackRuntime {
                 ReplayPlayer.beginTick()
 
             TickEvent.Phase.END ->
-                ReplayPlayer.tick()
+                {
+                    ReplayPlayer.tick()
+                    ReplayUiController.syncHudVisibility()
+                }
         }
     }
 

@@ -1,5 +1,6 @@
 package me.yuhan8954.flashback.io
 
+import me.yuhan8954.flashback.replay.PacketFlow
 import me.yuhan8954.flashback.replay.RecordedPacket
 import me.yuhan8954.flashback.snapshot.ReplaySnapshot
 import me.yuhan8954.flashback.snapshot.SnapshotReader
@@ -57,6 +58,11 @@ class ReplayReader(
                 try {
                     val timestamp =
                         input.readLong()
+
+                    val flow =
+                        PacketFlow.entries[
+                            input.readUnsignedByte(),
+                        ]
 
                     val classLength =
                         input.readInt()
@@ -128,6 +134,8 @@ class ReplayReader(
                             payload,
                             channel =
                             channel,
+                            flow =
+                            flow,
                         )
                 } catch (_: EOFException) {
                     break

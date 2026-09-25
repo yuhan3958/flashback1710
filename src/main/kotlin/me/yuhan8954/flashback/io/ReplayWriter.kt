@@ -44,6 +44,10 @@ class ReplayWriter(
             packet.timestampNanos,
         )
 
+        output.writeByte(
+            packet.flow.ordinal,
+        )
+
         output.writeInt(
             classBytes.size,
         )
@@ -89,6 +93,6 @@ class ReplayWriter(
 
         const val MAGIC = 0x46425231
 
-        const val FORMAT_VERSION = 3
+        const val FORMAT_VERSION = 4
     }
 }

@@ -3,11 +3,13 @@ package me.yuhan8954.flashback.recording
 import cpw.mods.fml.common.network.internal.FMLProxyPacket
 import io.netty.buffer.Unpooled
 import me.yuhan8954.flashback.io.ReplayWriter
+import me.yuhan8954.flashback.replay.PacketFlow
 import me.yuhan8954.flashback.replay.RecordedPacket
 import me.yuhan8954.flashback.snapshot.SnapshotCapture
 import net.minecraft.client.Minecraft
 import net.minecraft.network.Packet
 import net.minecraft.network.PacketBuffer
+import net.minecraft.network.play.client.C03PacketPlayer
 import java.io.File
 
 object ReplayRecorder {
@@ -50,6 +52,29 @@ object ReplayRecorder {
     @JvmStatic
     @Synchronized
     fun record(packet: Packet) {
+        record(
+            packet,
+            PacketFlow.CLIENTBOUND,
+        )
+    }
+
+    @JvmStatic
+    @Synchronized
+    fun recordOutbound(packet: Packet) {
+        if (packet !is C03PacketPlayer) {
+            return
+        }
+
+        record(
+            packet,
+            PacketFlow.SERVERBOUND,
+        )
+    }
+
+    private fun record(
+        packet: Packet,
+        flow: PacketFlow,
+    ) {
         val currentWriter =
             writer ?: return
 
@@ -112,6 +137,8 @@ object ReplayRecorder {
                     payload,
                     channel =
                     channel,
+                    flow =
+                    flow,
                 ),
             )
         } catch (
