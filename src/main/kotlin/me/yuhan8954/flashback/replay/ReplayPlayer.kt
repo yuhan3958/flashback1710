@@ -43,6 +43,11 @@ object ReplayPlayer {
     private var durationNanos =
         0L
 
+    @JvmStatic
+    var reconstructing =
+        false
+        private set
+
     var playing =
         false
         private set
@@ -97,6 +102,7 @@ object ReplayPlayer {
             ReplaySegmentIndex(
                 reader.snapshot,
                 reader.checkpoints,
+                packets,
                 durationNanos,
             )
 
@@ -232,6 +238,9 @@ object ReplayPlayer {
         segmentIndex =
             null
 
+        reconstructing =
+            false
+
         reverseHistory.clear()
 
         lastReverseCaptureNanos =
@@ -304,35 +313,23 @@ object ReplayPlayer {
                 targetTimeNanos,
             )
 
-        if (
-            targetTimeNanos < clock.currentTimeNanos ||
-            segment.startTimeNanos >
-            clock.currentTimeNanos
-        ) {
-            currentSession.reset(
-                segment.snapshot,
-            )
+        withReconstruction {
+            if (
+                targetTimeNanos < clock.currentTimeNanos ||
+                segment.startTimeNanos >
+                clock.currentTimeNanos
+            ) {
+                restoreSegment(
+                    currentSession,
+                    segment,
+                )
+            }
 
-            index =
-                segment.packetIndex
-                    .coerceIn(
-                        0,
-                        packets.size,
-                    )
-
-            clock.seek(
-                segment.startTimeNanos,
-            )
-
-            currentSession.world.seekReplayTime(
-                segment.startTimeNanos,
+            fastForwardTo(
+                currentSession,
+                targetTimeNanos,
             )
         }
-
-        fastForwardTo(
-            currentSession,
-            targetTimeNanos,
-        )
 
         reverseHistory.clear()
 
@@ -541,34 +538,22 @@ object ReplayPlayer {
                 startTimeNanos,
             )
 
-        currentSession.reset(
-            segment.snapshot,
-        )
+        withReconstruction {
+            restoreSegment(
+                currentSession,
+                segment,
+            )
 
-        index =
-            segment.packetIndex
-                .coerceIn(
-                    0,
-                    packets.size,
-                )
+            reverseHistory.clear()
 
-        clock.seek(
-            segment.startTimeNanos,
-        )
+            lastReverseCaptureNanos =
+                Long.MIN_VALUE
 
-        currentSession.world.seekReplayTime(
-            segment.startTimeNanos,
-        )
-
-        reverseHistory.clear()
-
-        lastReverseCaptureNanos =
-            Long.MIN_VALUE
-
-        fastForwardTo(
-            currentSession,
-            startTimeNanos,
-        )
+            fastForwardTo(
+                currentSession,
+                startTimeNanos,
+            )
+        }
 
         captureReverseFrame(
             currentSession,
@@ -631,6 +616,88 @@ object ReplayPlayer {
             currentSession,
             endTimeNanos,
         )
+    }
+
+    private fun restoreSegment(
+        currentSession: ReplaySession,
+        segment: ReplaySegment,
+    ) {
+        currentSession.reset(
+            segment.snapshot,
+        )
+
+        val bootstrap =
+            segment.bootstrap
+
+        var bootstrapIndex =
+            bootstrap.startPacketIndex
+                .coerceIn(
+                    0,
+                    packets.size,
+                )
+
+        val bootstrapEnd =
+            bootstrap.endPacketIndex
+                .coerceIn(
+                    bootstrapIndex,
+                    packets.size,
+                )
+
+        while (
+            bootstrapIndex <
+            bootstrapEnd
+        ) {
+            val recorded =
+                packets[
+                    bootstrapIndex,
+                ]
+
+            if (
+                ReplayBootstrapPolicy
+                    .shouldReplay(
+                        recorded,
+                    )
+            ) {
+                processRecordedPacket(
+                    currentSession,
+                    recorded,
+                )
+            }
+
+            bootstrapIndex++
+        }
+
+        index =
+            segment.packetIndex
+                .coerceIn(
+                    0,
+                    packets.size,
+                )
+
+        clock.seek(
+            segment.startTimeNanos,
+        )
+
+        currentSession.world.seekReplayTime(
+            segment.startTimeNanos,
+        )
+    }
+
+    private inline fun withReconstruction(
+        action: () -> Unit,
+    ) {
+        val wasReconstructing =
+            reconstructing
+
+        reconstructing =
+            true
+
+        try {
+            action()
+        } finally {
+            reconstructing =
+                wasReconstructing
+        }
     }
 
     private fun captureReverseFrame(
