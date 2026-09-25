@@ -1,18 +1,26 @@
 package me.yuhan8954.flashback.replay
 
+import cpw.mods.fml.common.network.internal.FMLProxyPacket
 import me.yuhan8954.flashback.snapshot.ReplaySnapshot
 import me.yuhan8954.flashback.snapshot.SnapshotDelta
+
+data class ReplayBootstrapBundle(
+    val startPacketIndex: Int,
+    val endPacketIndex: Int,
+)
 
 data class ReplaySegment(
     val startTimeNanos: Long,
     val endTimeNanos: Long,
     val packetIndex: Int,
     val snapshot: ReplaySnapshot,
+    val bootstrap: ReplayBootstrapBundle,
 )
 
 class ReplaySegmentIndex(
     initialSnapshot: ReplaySnapshot,
     checkpoints: List<ReplayCheckpoint>,
+    packets: List<RecordedPacket>,
     durationNanos: Long,
 ) {
 
@@ -22,15 +30,19 @@ class ReplaySegmentIndex(
     init {
         val resolved =
             mutableListOf(
-                ResolvedReplayCheckpoint(
+                ResolvedSegmentState(
                     timestampNanos = 0L,
                     packetIndex = 0,
                     snapshot = initialSnapshot,
+                    bootstrapStartPacketIndex = 0,
                 ),
             )
 
         var currentSnapshot =
             initialSnapshot
+
+        var bootstrapStartPacketIndex =
+            0
 
         checkpoints
             .sortedBy {
@@ -40,6 +52,9 @@ class ReplaySegmentIndex(
                     is ReplayCheckpoint.Full -> {
                         currentSnapshot =
                             checkpoint.snapshot
+
+                        bootstrapStartPacketIndex =
+                            checkpoint.packetIndex
                     }
 
                     is ReplayCheckpoint.Delta -> {
@@ -52,13 +67,15 @@ class ReplaySegmentIndex(
                 }
 
                 resolved +=
-                    ResolvedReplayCheckpoint(
+                    ResolvedSegmentState(
                         timestampNanos =
                         checkpoint.timestampNanos,
                         packetIndex =
                         checkpoint.packetIndex,
                         snapshot =
                         currentSnapshot,
+                        bootstrapStartPacketIndex =
+                        bootstrapStartPacketIndex,
                     )
             }
 
@@ -79,6 +96,21 @@ class ReplaySegmentIndex(
                     checkpoint.packetIndex,
                     snapshot =
                     checkpoint.snapshot,
+                    bootstrap =
+                    ReplayBootstrapBundle(
+                        startPacketIndex =
+                        checkpoint.bootstrapStartPacketIndex
+                            .coerceIn(
+                                0,
+                                packets.size,
+                            ),
+                        endPacketIndex =
+                        checkpoint.packetIndex
+                            .coerceIn(
+                                0,
+                                packets.size,
+                            ),
+                    ),
                 )
             }
     }
@@ -130,4 +162,22 @@ class ReplaySegmentIndex(
     val size: Int
         get() =
             segments.size
+
+    private data class ResolvedSegmentState(
+        val timestampNanos: Long,
+        val packetIndex: Int,
+        val snapshot: ReplaySnapshot,
+        val bootstrapStartPacketIndex: Int,
+    )
+}
+
+object ReplayBootstrapPolicy {
+
+    fun shouldReplay(
+        packet: RecordedPacket,
+    ): Boolean =
+        packet.flow ==
+            PacketFlow.CLIENTBOUND &&
+            packet.packetClass ==
+            FMLProxyPacket::class.java.name
 }
