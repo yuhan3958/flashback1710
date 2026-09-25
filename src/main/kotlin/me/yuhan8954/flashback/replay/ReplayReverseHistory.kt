@@ -919,7 +919,7 @@ data class ReplayReverseEntityState(
                 playerProfileId =
                 if (
                     entity is
-                    EntityOtherPlayerMP
+                        EntityOtherPlayerMP
                 ) {
                     entity.gameProfile.id
                         ?.toString()
@@ -929,7 +929,7 @@ data class ReplayReverseEntityState(
                 playerProfileName =
                 if (
                     entity is
-                    EntityOtherPlayerMP
+                        EntityOtherPlayerMP
                 ) {
                     entity.gameProfile.name
                 } else {

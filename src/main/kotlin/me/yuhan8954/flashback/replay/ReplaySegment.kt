@@ -175,9 +175,8 @@ object ReplayBootstrapPolicy {
 
     fun shouldReplay(
         packet: RecordedPacket,
-    ): Boolean =
-        packet.flow ==
-            PacketFlow.CLIENTBOUND &&
-            packet.packetClass ==
-            FMLProxyPacket::class.java.name
+    ): Boolean = packet.flow ==
+        PacketFlow.CLIENTBOUND &&
+        packet.packetClass ==
+        FMLProxyPacket::class.java.name
 }
