@@ -37,9 +37,6 @@ object ReplayPlayer {
         ReplaySession? =
         null
 
-    private var stopRequested =
-        false
-
     private var durationNanos =
         0L
 
@@ -111,9 +108,6 @@ object ReplayPlayer {
 
         index = 0
 
-        stopRequested =
-            false
-
         playing =
             true
 
@@ -126,27 +120,11 @@ object ReplayPlayer {
     }
 
     fun tick() {
-        if (stopRequested) {
-            stopRequested =
-                false
-
-            stop()
-
-            return
-        }
-
         if (!playing) {
             return
         }
 
         session?.cameraController?.tick()
-
-        if (
-            index >= packets.size
-        ) {
-            stopRequested =
-                true
-        }
     }
 
     fun beginTick() {
@@ -154,21 +132,59 @@ object ReplayPlayer {
             return
         }
 
+        val previousTimeNanos =
+            clock.currentTimeNanos
+
         clock.update()
-        processAvailablePackets()
+
+        if (
+            clock.currentTimeNanos >
+            durationNanos
+        ) {
+            clock.seek(
+                durationNanos,
+            )
+        }
+
+        if (
+            clock.currentTimeNanos <
+            previousTimeNanos
+        ) {
+            val targetTimeNanos =
+                clock.currentTimeNanos
+
+            clock.seek(
+                previousTimeNanos,
+            )
+
+            seek(
+                targetTimeNanos,
+            )
+        } else {
+            processAvailablePackets()
+        }
 
         session?.world?.beginReplayTick(
             clock.currentTimeNanos,
         )
 
         session?.cameraController?.beginTick()
+
+        if (
+            !clock.paused &&
+            (
+                speed > 0.0 &&
+                    clock.currentTimeNanos >= durationNanos ||
+                    speed < 0.0 &&
+                    clock.currentTimeNanos <= 0L
+                )
+        ) {
+            clock.pause()
+        }
     }
 
     fun stop() {
         playing =
-            false
-
-        stopRequested =
             false
 
         ReplayUiController.close()
@@ -284,8 +300,6 @@ object ReplayPlayer {
             currentSession,
             targetTimeNanos,
         )
-
-        stopRequested = false
 
         return true
     }
@@ -424,7 +438,8 @@ object ReplayPlayer {
             index < packets.size &&
             packets[index].timestampNanos <= targetTimeNanos
         ) {
-            val recorded = packets[index]
+            val recorded =
+                packets[index]
 
             clock.seek(
                 recorded.timestampNanos,
