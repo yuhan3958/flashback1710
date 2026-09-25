@@ -358,8 +358,8 @@ object ReplayPlayer {
                         packet,
                     )
                 } else {
-                    packet.processPacket(
-                        currentSession.handler,
+                    currentSession.processClientboundPacket(
+                        packet,
                     )
                 }
             } catch (
@@ -384,7 +384,7 @@ object ReplayPlayer {
         when (packet) {
             is C03PacketPlayer -> {
                 val player =
-                    currentSession.player
+                    currentSession.recordedPlayer
 
                 player.prevPosX =
                     player.posX
@@ -426,7 +426,7 @@ object ReplayPlayer {
                     packet.func_149614_c()
 
                 if (slot in 0..8) {
-                    currentSession.player
+                    currentSession.recordedPlayer
                         .inventory
                         .currentItem =
                         slot
@@ -434,13 +434,13 @@ object ReplayPlayer {
             }
 
             is C0APacketAnimation -> {
-                currentSession.player
+                currentSession.recordedPlayer
                     .swingItem()
             }
 
             is C0BPacketEntityAction -> {
                 val player =
-                    currentSession.player
+                    currentSession.recordedPlayer
 
                 when (
                     packet.func_149513_d()

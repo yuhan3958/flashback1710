@@ -3,7 +3,6 @@ package me.yuhan8954.flashback.replay
 import com.mojang.authlib.GameProfile
 import me.yuhan8954.flashback.camera.ReplayCameraController
 import me.yuhan8954.flashback.mixin.AccessorNetHandlerPlayClient
-import me.yuhan8954.flashback.mixin.AccessorWorldClient
 import me.yuhan8954.flashback.snapshot.ReplaySnapshot
 import me.yuhan8954.flashback.snapshot.SnapshotRestorer
 import net.minecraft.client.Minecraft
@@ -11,7 +10,9 @@ import net.minecraft.client.entity.EntityClientPlayerMP
 import net.minecraft.client.gui.GuiMainMenu
 import net.minecraft.client.multiplayer.WorldClient
 import net.minecraft.entity.EntityLivingBase
+import net.minecraft.network.Packet
 import net.minecraft.stats.StatFileWriter
+import net.minecraft.util.MovementInput
 import net.minecraft.world.EnumDifficulty
 import net.minecraft.world.WorldSettings
 import net.minecraft.world.WorldType
@@ -35,6 +36,9 @@ class ReplaySession(
 
     lateinit var player:
         EntityClientPlayerMP
+        private set
+
+    lateinit var recordedPlayer: EntityReplayPlayer
         private set
 
     lateinit var cameraController:
@@ -126,7 +130,7 @@ class ReplaySession(
                 snapshot.player.profileName,
             )
 
-        player =
+        recordedPlayer =
             EntityReplayPlayer(
                 minecraft,
                 world,
@@ -136,7 +140,24 @@ class ReplaySession(
                 recordedProfile,
             )
 
-        detachLivePlayer()
+        recordedPlayer.movementInput = MovementInput()
+
+        player =
+            EntityReplaySpectator(
+                minecraft,
+                world,
+                minecraft.session,
+                handler,
+                statFileWriter,
+            )
+
+        player.setPositionAndRotation(
+            snapshot.player.x,
+            snapshot.player.y,
+            snapshot.player.z,
+            snapshot.player.yaw,
+            snapshot.player.pitch,
+        )
 
         try {
             minecraft.thePlayer =
@@ -149,7 +170,7 @@ class ReplaySession(
 
             SnapshotRestorer.restore(
                 world,
-                player,
+                recordedPlayer,
                 snapshot,
             )
 
@@ -186,49 +207,13 @@ class ReplaySession(
         restoreLiveWorld()
     }
 
-    private fun detachLivePlayer() {
-        val currentWorld =
-            liveWorld ?: return
-
-        val currentPlayer =
-            livePlayer ?: return
-
-        currentWorld.playerEntities.remove(
-            currentPlayer,
-        )
-
-        currentWorld.loadedEntityList.remove(
-            currentPlayer,
-        )
-
-        (
-            currentWorld as
-                AccessorWorldClient
-            ).replayEntityList.remove(
-            currentPlayer,
-        )
-
-        if (
-            currentPlayer.addedToChunk &&
-            currentWorld.chunkProvider
-                .chunkExists(
-                    currentPlayer.chunkCoordX,
-                    currentPlayer.chunkCoordZ,
-                )
-        ) {
-            currentWorld.getChunkFromChunkCoords(
-                currentPlayer.chunkCoordX,
-                currentPlayer.chunkCoordZ,
-            ).removeEntity(
-                currentPlayer,
-            )
+    fun processClientboundPacket(packet: Packet) {
+        try {
+            minecraft.thePlayer = recordedPlayer
+            packet.processPacket(handler)
+        } finally {
+            minecraft.thePlayer = player
         }
-
-        currentPlayer.addedToChunk = false
-
-        currentWorld.onEntityRemoved(
-            currentPlayer,
-        )
     }
 
     private fun restoreLiveWorld() {

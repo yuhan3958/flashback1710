@@ -103,7 +103,7 @@ class ReplayCameraController(
         restorePlayerRotation()
 
         minecraft.renderViewEntity =
-            session.player
+            session.recordedPlayer
 
         playerMovementInput?.let {
             session.player.movementInput =
