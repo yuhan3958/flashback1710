@@ -5,6 +5,7 @@
   "mixins": [],
   "client": [
     "MixinNetworkManager",
+    "MixinEntityRenderer",
     "AccessorNetHandlerPlayClient",
     "AccessorWorldClient"
   ]
