@@ -4,7 +4,6 @@ import cpw.mods.fml.common.network.internal.FMLProxyPacket
 import cpw.mods.fml.relauncher.Side
 import io.netty.buffer.Unpooled
 import me.yuhan8954.flashback.io.ReplayReader
-import me.yuhan8954.flashback.snapshot.ReplaySnapshot
 import me.yuhan8954.flashback.ui.ReplayUiController
 import net.minecraft.client.Minecraft
 import net.minecraft.network.Packet
@@ -24,8 +23,6 @@ object ReplayPlayer {
     private var segmentIndex:
         ReplaySegmentIndex? =
         null
-
-    private var snapshot: ReplaySnapshot? = null
 
     private var index =
         0
@@ -89,8 +86,6 @@ object ReplayPlayer {
             ReplayReader(
                 file,
             )
-
-        snapshot = reader.snapshot
 
         packets =
             reader.packets
@@ -230,8 +225,6 @@ object ReplayPlayer {
 
         session =
             null
-
-        snapshot = null
 
         packets =
             emptyList()
