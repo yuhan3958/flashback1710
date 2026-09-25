@@ -9,6 +9,9 @@ object ReplayUiController {
     private var hiddenByHud =
         false
 
+    private var openRequested =
+        false
+
     private val minecraft:
         Minecraft
         get() = Minecraft.getMinecraft()
@@ -16,12 +19,25 @@ object ReplayUiController {
     fun open(): Boolean {
         if (
             !ReplayPlayer.playing ||
-            minecraft.gameSettings.hideGUI ||
-            minecraft.currentScreen is
-                ReplayUiScreen
+            minecraft.gameSettings.hideGUI
         ) {
             return false
         }
+
+        if (
+            minecraft.currentScreen is
+                ReplayUiScreen
+        ) {
+            openRequested = false
+            return true
+        }
+
+        if (minecraft.currentScreen != null) {
+            openRequested = true
+            return true
+        }
+
+        openRequested = false
 
         minecraft.displayGuiScreen(
             ReplayUiScreen(
@@ -34,6 +50,7 @@ object ReplayUiController {
 
     fun close() {
         hiddenByHud = false
+        openRequested = false
 
         if (
             minecraft.currentScreen is
@@ -55,6 +72,7 @@ object ReplayUiController {
     fun syncHudVisibility() {
         if (!ReplayPlayer.playing) {
             hiddenByHud = false
+            openRequested = false
             return
         }
 
@@ -73,7 +91,7 @@ object ReplayUiController {
         }
 
         if (
-            hiddenByHud &&
+            (hiddenByHud || openRequested) &&
             minecraft.currentScreen == null
         ) {
             hiddenByHud = false
