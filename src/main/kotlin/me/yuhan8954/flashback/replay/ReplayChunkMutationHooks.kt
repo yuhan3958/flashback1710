@@ -182,7 +182,6 @@ object ReplayChunkMutationHooks {
     private data class ReplayChunkCapture(
         val world: ReplayWorld,
         val chunk: ReplayChunkSnapshot,
-        val tileEntities:
-            List<ReplayTileEntitySnapshot>,
+        val tileEntities: List<ReplayTileEntitySnapshot>,
     )
 }
