@@ -503,11 +503,11 @@ object ReplayPlayer {
                 )
 
         clock.seek(
-            frame.timestampNanos,
+            targetTimeNanos,
         )
 
         currentSession.world.seekReplayTime(
-            frame.timestampNanos,
+            targetTimeNanos,
         )
     }
 
@@ -565,44 +565,27 @@ object ReplayPlayer {
                 ReplayClock.MINECRAFT_TICK_NANOS
 
         while (
-            index < packets.size &&
-            packets[index]
-                .timestampNanos <=
+            nextCaptureTimeNanos <=
             endTimeNanos
         ) {
-            val recorded =
-                packets[index]
-
-            clock.seek(
-                recorded.timestampNanos,
-            )
-
-            processRecordedPacket(
+            fastForwardTo(
                 currentSession,
-                recorded,
+                nextCaptureTimeNanos,
             )
 
-            index++
+            captureReverseFrame(
+                currentSession,
+                nextCaptureTimeNanos,
+            )
 
-            if (
-                recorded.timestampNanos >=
-                nextCaptureTimeNanos
-            ) {
-                currentSession.world
-                    .seekReplayTime(
-                        recorded.timestampNanos,
-                    )
-
-                captureReverseFrame(
-                    currentSession,
-                    recorded.timestampNanos,
-                )
-
-                nextCaptureTimeNanos =
-                    recorded.timestampNanos +
-                    ReplayClock.MINECRAFT_TICK_NANOS
-            }
+            nextCaptureTimeNanos +=
+                ReplayClock.MINECRAFT_TICK_NANOS
         }
+
+        fastForwardTo(
+            currentSession,
+            endTimeNanos,
+        )
 
         clock.seek(
             endTimeNanos,
