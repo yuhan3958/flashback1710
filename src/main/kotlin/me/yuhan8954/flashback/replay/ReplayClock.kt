@@ -89,6 +89,11 @@ class ReplayClock(
         speedMultiplier = speed
     }
 
+    fun seek(timeNanos: Long) {
+        currentTimeNanos = timeNanos.coerceAtLeast(0L)
+        lastUpdateNanos = timeSource()
+    }
+
     fun step() {
         check(paused) {
             "Replay must be paused before stepping"

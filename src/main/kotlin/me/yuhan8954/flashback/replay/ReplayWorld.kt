@@ -85,6 +85,13 @@ class ReplayWorld(
             targetSimulationTicks
     }
 
+    fun seekReplayTime(currentReplayTimeNanos: Long) {
+        replayTimeNanos = currentReplayTimeNanos
+        completedSimulationTicks = currentReplayTimeNanos / ReplayClock.MINECRAFT_TICK_NANOS
+        simulationTicks = 0
+        applyReplayTime()
+    }
+
     override fun tick() {
         repeat(simulationTicks) {
             super.tick()

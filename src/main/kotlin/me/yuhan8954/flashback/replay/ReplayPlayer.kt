@@ -4,6 +4,7 @@ import cpw.mods.fml.common.network.internal.FMLProxyPacket
 import cpw.mods.fml.relauncher.Side
 import io.netty.buffer.Unpooled
 import me.yuhan8954.flashback.io.ReplayReader
+import me.yuhan8954.flashback.snapshot.ReplaySnapshot
 import me.yuhan8954.flashback.ui.ReplayUiController
 import net.minecraft.client.Minecraft
 import net.minecraft.network.Packet
@@ -19,6 +20,8 @@ object ReplayPlayer {
     private var packets:
         List<RecordedPacket> =
         emptyList()
+
+    private var snapshot: ReplaySnapshot? = null
 
     private var index =
         0
@@ -79,6 +82,8 @@ object ReplayPlayer {
             ReplayReader(
                 file,
             )
+
+        snapshot = reader.snapshot
 
         packets =
             reader.packets
@@ -167,6 +172,8 @@ object ReplayPlayer {
         session =
             null
 
+        snapshot = null
+
         packets =
             emptyList()
 
@@ -219,6 +226,33 @@ object ReplayPlayer {
         clock.setSpeed(
             speed,
         )
+
+        return true
+    }
+
+    fun seek(timeNanos: Long): Boolean {
+        if (!playing) {
+            return false
+        }
+
+        val currentSession = session ?: return false
+        val initialSnapshot = snapshot ?: return false
+        val targetTimeNanos = timeNanos.coerceIn(0L, durationNanos)
+
+        if (targetTimeNanos < clock.currentTimeNanos) {
+            currentSession.reset(
+                initialSnapshot,
+            )
+
+            index = 0
+        }
+
+        fastForwardTo(
+            currentSession,
+            targetTimeNanos,
+        )
+
+        stopRequested = false
 
         return true
     }
@@ -340,40 +374,78 @@ object ReplayPlayer {
                 .timestampNanos <=
             clock.currentTimeNanos
         ) {
-            val recorded =
-                packets[index]
-
-            try {
-                val packet =
-                    decode(
-                        recorded,
-                    )
-
-                if (
-                    recorded.flow ==
-                    PacketFlow.SERVERBOUND
-                ) {
-                    applyServerboundPacket(
-                        currentSession,
-                        packet,
-                    )
-                } else {
-                    currentSession.processClientboundPacket(
-                        packet,
-                    )
-                }
-            } catch (
-                throwable: Throwable,
-            ) {
-                System.err.println(
-                    "[Flashback] failed replay packet: " +
-                        recorded.packetClass,
-                )
-
-                throwable.printStackTrace()
-            }
+            processRecordedPacket(
+                currentSession,
+                packets[index],
+            )
 
             index++
+        }
+    }
+
+    private fun fastForwardTo(
+        currentSession: ReplaySession,
+        targetTimeNanos: Long,
+    ) {
+        while (
+            index < packets.size &&
+            packets[index].timestampNanos <= targetTimeNanos
+        ) {
+            val recorded = packets[index]
+
+            clock.seek(
+                recorded.timestampNanos,
+            )
+
+            processRecordedPacket(
+                currentSession,
+                recorded,
+            )
+
+            index++
+        }
+
+        clock.seek(
+            targetTimeNanos,
+        )
+
+        currentSession.world.seekReplayTime(
+            targetTimeNanos,
+        )
+    }
+
+    private fun processRecordedPacket(
+        currentSession: ReplaySession,
+        recorded: RecordedPacket,
+    ) {
+        try {
+            val packet =
+                decode(
+                    recorded,
+                )
+
+            if (
+                recorded.flow ==
+                PacketFlow.SERVERBOUND
+            ) {
+                applyServerboundPacket(
+                    currentSession,
+                    packet,
+                )
+            } else {
+                currentSession.processClientboundPacket(
+                    packet,
+                )
+            }
+        } catch (
+            throwable: Throwable,
+        ) {
+            System.err.println(
+                "[Flashback] failed replay packet: " +
+                    recorded.packetClass,
+            )
+
+            throwable.printStackTrace()
         }
     }
 

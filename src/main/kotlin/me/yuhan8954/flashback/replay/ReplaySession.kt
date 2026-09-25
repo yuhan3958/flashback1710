@@ -195,6 +195,148 @@ class ReplaySession(
         }
     }
 
+    fun reset(snapshot: ReplaySnapshot) {
+        check(active) {
+            "Replay session is not active"
+        }
+
+        val currentScreen = minecraft.currentScreen
+        val freeCameraActive = cameraController.state.active
+        val currentView = minecraft.renderViewEntity
+        val cameraX = currentView?.posX ?: snapshot.player.x
+        val cameraY = currentView?.posY ?: snapshot.player.y
+        val cameraZ = currentView?.posZ ?: snapshot.player.z
+        val cameraYaw = currentView?.rotationYaw ?: snapshot.player.yaw
+        val cameraPitch = currentView?.rotationPitch ?: snapshot.player.pitch
+
+        cameraController.close()
+
+        networkManager = ReplayNetworkManager()
+
+        handler =
+            ReplayNetHandler(
+                minecraft,
+                networkManager,
+            )
+
+        networkManager.setNetHandler(
+            handler,
+        )
+
+        val settings =
+            WorldSettings(
+                snapshot.seed,
+                WorldSettings.GameType.CREATIVE,
+                false,
+                false,
+                WorldType.DEFAULT,
+            )
+
+        world =
+            ReplayWorld(
+                handler =
+                handler,
+                settings =
+                settings,
+                dimension =
+                snapshot.dimensionId,
+                difficulty =
+                EnumDifficulty.NORMAL,
+                profiler =
+                minecraft.mcProfiler,
+            )
+
+        (
+            handler as
+                AccessorNetHandlerPlayClient
+            ).setReplayWorld(
+            world,
+        )
+
+        val recordedProfile =
+            GameProfile(
+                snapshot.player.profileId
+                    ?.let(
+                        UUID::fromString,
+                    ),
+                snapshot.player.profileName,
+            )
+
+        recordedPlayer =
+            EntityReplayPlayer(
+                minecraft,
+                world,
+                minecraft.session,
+                handler,
+                statFileWriter,
+                recordedProfile,
+            )
+
+        recordedPlayer.movementInput = MovementInput()
+
+        player =
+            EntityReplaySpectator(
+                minecraft,
+                world,
+                minecraft.session,
+                handler,
+                statFileWriter,
+            )
+
+        if (freeCameraActive) {
+            player.setPositionAndRotation(
+                cameraX,
+                cameraY - player.eyeHeight,
+                cameraZ,
+                cameraYaw,
+                cameraPitch,
+            )
+        } else {
+            player.setPositionAndRotation(
+                snapshot.player.x,
+                snapshot.player.y,
+                snapshot.player.z,
+                snapshot.player.yaw,
+                snapshot.player.pitch,
+            )
+        }
+
+        minecraft.thePlayer =
+            player
+
+        minecraft.loadWorld(
+            world,
+            "Seeking replay...",
+        )
+
+        SnapshotRestorer.restore(
+            world,
+            recordedPlayer,
+            snapshot,
+        )
+
+        cameraController =
+            ReplayCameraController(
+                this,
+            )
+
+        if (freeCameraActive) {
+            minecraft.renderViewEntity = player
+            cameraController.enable()
+        } else {
+            minecraft.renderViewEntity = recordedPlayer
+        }
+
+        if (
+            currentScreen != null &&
+            minecraft.currentScreen !== currentScreen
+        ) {
+            minecraft.displayGuiScreen(
+                currentScreen,
+            )
+        }
+    }
+
     fun close() {
         if (!active) {
             return

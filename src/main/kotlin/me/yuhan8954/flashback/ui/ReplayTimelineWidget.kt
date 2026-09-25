@@ -1,5 +1,6 @@
 package me.yuhan8954.flashback.ui
 
+import com.cleanroommc.modularui.api.widget.Interactable
 import com.cleanroommc.modularui.drawable.Rectangle
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext
 import com.cleanroommc.modularui.theme.WidgetThemeEntry
@@ -7,7 +8,9 @@ import com.cleanroommc.modularui.widget.Widget
 import me.yuhan8954.flashback.replay.ReplayPlayer
 import kotlin.math.roundToInt
 
-class ReplayTimelineWidget : Widget<ReplayTimelineWidget>() {
+class ReplayTimelineWidget :
+    Widget<ReplayTimelineWidget>(),
+    Interactable {
 
     private val track =
         Rectangle()
@@ -86,6 +89,41 @@ class ReplayTimelineWidget : Widget<ReplayTimelineWidget>() {
             PLAYHEAD_WIDTH,
             height,
             widgetTheme.theme,
+        )
+    }
+
+    override fun onMousePressed(mouseButton: Int): Interactable.Result {
+        if (mouseButton != 0) {
+            return Interactable.Result.IGNORE
+        }
+
+        seekToMouse()
+
+        return Interactable.Result.SUCCESS
+    }
+
+    override fun onMouseDrag(
+        mouseButton: Int,
+        timeSinceClick: Long,
+    ) {
+        if (mouseButton == 0) {
+            seekToMouse()
+        }
+    }
+
+    override fun onMouseRelease(mouseButton: Int): Boolean = mouseButton == 0
+
+    private fun seekToMouse() {
+        if (area.width <= 0) {
+            return
+        }
+
+        val relativeX = (context.absMouseX - area.x).coerceIn(0, area.width)
+        val fraction = relativeX.toDouble() / area.width
+        val targetTimeNanos = (ReplayPlayer.totalDurationNanos * fraction).toLong()
+
+        ReplayPlayer.seek(
+            targetTimeNanos,
         )
     }
 
