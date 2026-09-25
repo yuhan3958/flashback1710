@@ -507,18 +507,17 @@ class ReplayWorld(
     private fun captureChunkTileEntities(
         chunkX: Int,
         chunkZ: Int,
-    ): List<ReplayTileEntitySnapshot> =
-        loadedTileEntityList
-            .filterIsInstance<TileEntity>()
-            .asSequence()
-            .filter {
-                it.xCoord shr 4 ==
-                    chunkX &&
-                    it.zCoord shr 4 ==
-                    chunkZ
-            }.mapNotNull(
-                SnapshotCapture::captureTileEntity,
-            ).toList()
+    ): List<ReplayTileEntitySnapshot> = loadedTileEntityList
+        .filterIsInstance<TileEntity>()
+        .asSequence()
+        .filter {
+            it.xCoord shr 4 ==
+                chunkX &&
+                it.zCoord shr 4 ==
+                chunkZ
+        }.mapNotNull(
+            SnapshotCapture::captureTileEntity,
+        ).toList()
 
     private fun applyReplayTime() {
         val elapsedTicks =
