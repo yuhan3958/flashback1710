@@ -4,7 +4,6 @@ import cpw.mods.fml.common.network.internal.FMLProxyPacket
 import cpw.mods.fml.relauncher.Side
 import io.netty.buffer.Unpooled
 import me.yuhan8954.flashback.io.ReplayReader
-import me.yuhan8954.flashback.snapshot.ReplaySnapshot
 import me.yuhan8954.flashback.ui.ReplayUiController
 import net.minecraft.client.Minecraft
 import net.minecraft.network.Packet
@@ -21,11 +20,9 @@ object ReplayPlayer {
         List<RecordedPacket> =
         emptyList()
 
-    private var checkpoints:
-        List<ReplayCheckpoint> =
-        emptyList()
-
-    private var snapshot: ReplaySnapshot? = null
+    private var segmentIndex:
+        ReplaySegmentIndex? =
+        null
 
     private var index =
         0
@@ -90,16 +87,18 @@ object ReplayPlayer {
                 file,
             )
 
-        snapshot = reader.snapshot
-
         packets =
             reader.packets
 
-        checkpoints =
-            reader.checkpoints
-
         durationNanos =
             reader.durationNanos
+
+        segmentIndex =
+            ReplaySegmentIndex(
+                reader.snapshot,
+                reader.checkpoints,
+                durationNanos,
+            )
 
         clock.reset()
 
@@ -227,13 +226,11 @@ object ReplayPlayer {
         session =
             null
 
-        snapshot = null
-
         packets =
             emptyList()
 
-        checkpoints =
-            emptyList()
+        segmentIndex =
+            null
 
         reverseHistory.clear()
 
@@ -299,38 +296,36 @@ object ReplayPlayer {
         }
 
         val currentSession = session ?: return false
-        val initialSnapshot = snapshot ?: return false
+        val currentSegmentIndex = segmentIndex ?: return false
         val targetTimeNanos = timeNanos.coerceIn(0L, durationNanos)
 
-        val checkpoint =
-            ReplayCheckpointResolver.resolve(
-                initialSnapshot,
-                checkpoints,
+        val segment =
+            currentSegmentIndex.find(
                 targetTimeNanos,
             )
 
         if (
             targetTimeNanos < clock.currentTimeNanos ||
-            checkpoint.timestampNanos >
+            segment.startTimeNanos >
             clock.currentTimeNanos
         ) {
             currentSession.reset(
-                checkpoint.snapshot,
+                segment.snapshot,
             )
 
             index =
-                checkpoint.packetIndex
+                segment.packetIndex
                     .coerceIn(
                         0,
                         packets.size,
                     )
 
             clock.seek(
-                checkpoint.timestampNanos,
+                segment.startTimeNanos,
             )
 
             currentSession.world.seekReplayTime(
-                checkpoint.timestampNanos,
+                segment.startTimeNanos,
             )
         }
 
@@ -523,8 +518,8 @@ object ReplayPlayer {
         currentSession: ReplaySession,
         targetTimeNanos: Long,
     ) {
-        val initialSnapshot =
-            snapshot ?: return
+        val currentSegmentIndex =
+            segmentIndex ?: return
 
         val endTimeNanos =
             targetTimeNanos.coerceIn(
@@ -541,30 +536,28 @@ object ReplayPlayer {
                 0L,
             )
 
-        val checkpoint =
-            ReplayCheckpointResolver.resolve(
-                initialSnapshot,
-                checkpoints,
+        val segment =
+            currentSegmentIndex.find(
                 startTimeNanos,
             )
 
         currentSession.reset(
-            checkpoint.snapshot,
+            segment.snapshot,
         )
 
         index =
-            checkpoint.packetIndex
+            segment.packetIndex
                 .coerceIn(
                     0,
                     packets.size,
                 )
 
         clock.seek(
-            checkpoint.timestampNanos,
+            segment.startTimeNanos,
         )
 
         currentSession.world.seekReplayTime(
-            checkpoint.timestampNanos,
+            segment.startTimeNanos,
         )
 
         reverseHistory.clear()
