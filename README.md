@@ -25,7 +25,7 @@ timeline is display-only until replay seeking is implemented. Free camera
 movement remains available while the UI is open; hold the right mouse button
 and drag to look around.
 
-Replay format version 4 stores a world snapshot before the directional,
+Replay format version 5 stores a world snapshot before the directional,
 timestamped packet stream. The snapshot contains world and weather time,
 player transform, loaded view chunks, block metadata, biomes, tile entity NBT,
 and loaded entity state.

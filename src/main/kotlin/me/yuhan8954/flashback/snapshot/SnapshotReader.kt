@@ -259,6 +259,15 @@ object SnapshotReader {
             entityId = entityId,
             entityType = entityType,
             entityClass = input.readUTF(),
+            playerProfileId = readNullableString(
+                input,
+            ),
+            playerProfileName = readNullableString(
+                input,
+            ),
+            serverPosX = input.readInt(),
+            serverPosY = input.readInt(),
+            serverPosZ = input.readInt(),
             x = input.readDouble(),
             y = input.readDouble(),
             z = input.readDouble(),
@@ -271,6 +280,14 @@ object SnapshotReader {
                 input,
             ),
         )
+    }
+
+    private fun readNullableString(input: DataInput): String? = if (
+        input.readBoolean()
+    ) {
+        input.readUTF()
+    } else {
+        null
     }
 
     private fun readNbt(

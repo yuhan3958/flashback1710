@@ -1,13 +1,16 @@
 package me.yuhan8954.flashback.snapshot
 
+import com.mojang.authlib.GameProfile
 import me.yuhan8954.flashback.replay.ReplayWorld
 import net.minecraft.block.Block
 import net.minecraft.client.entity.EntityClientPlayerMP
+import net.minecraft.client.entity.EntityOtherPlayerMP
 import net.minecraft.entity.Entity
 import net.minecraft.entity.EntityList
 import net.minecraft.nbt.NBTTagCompound
 import net.minecraft.tileentity.TileEntity
 import net.minecraft.world.World
+import java.util.UUID
 
 object SnapshotRestorer {
 
@@ -211,6 +214,10 @@ object SnapshotRestorer {
                 snapshot.entityId,
             )
 
+            entity.serverPosX = snapshot.serverPosX
+            entity.serverPosY = snapshot.serverPosY
+            entity.serverPosZ = snapshot.serverPosZ
+
             entity.setPositionAndRotation(
                 snapshot.x,
                 snapshot.y,
@@ -252,6 +259,14 @@ object SnapshotRestorer {
         snapshot: ReplayEntitySnapshot,
         nbt: NBTTagCompound,
     ): Entity? {
+        createOtherPlayer(
+            world,
+            snapshot,
+            nbt,
+        )?.let {
+            return it
+        }
+
         if (snapshot.entityType != null) {
             EntityList.createEntityFromNBT(
                 nbt,
@@ -278,6 +293,33 @@ object SnapshotRestorer {
 
         return constructor.newInstance(
             world,
+        ).also {
+            it.readFromNBT(
+                nbt,
+            )
+        }
+    }
+
+    private fun createOtherPlayer(
+        world: ReplayWorld,
+        snapshot: ReplayEntitySnapshot,
+        nbt: NBTTagCompound,
+    ): EntityOtherPlayerMP? {
+        val profileName =
+            snapshot.playerProfileName ?: return null
+
+        val profileId =
+            snapshot.playerProfileId
+                ?.let(
+                    UUID::fromString,
+                )
+
+        return EntityOtherPlayerMP(
+            world,
+            GameProfile(
+                profileId,
+                profileName,
+            ),
         ).also {
             it.readFromNBT(
                 nbt,

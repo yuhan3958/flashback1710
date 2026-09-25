@@ -259,6 +259,28 @@ object SnapshotWriter {
             entity.entityClass,
         )
 
+        writeNullableString(
+            output,
+            entity.playerProfileId,
+        )
+
+        writeNullableString(
+            output,
+            entity.playerProfileName,
+        )
+
+        output.writeInt(
+            entity.serverPosX,
+        )
+
+        output.writeInt(
+            entity.serverPosY,
+        )
+
+        output.writeInt(
+            entity.serverPosZ,
+        )
+
         output.writeDouble(
             entity.x,
         )
@@ -295,6 +317,21 @@ object SnapshotWriter {
             output,
             entity.nbt,
         )
+    }
+
+    private fun writeNullableString(
+        output: DataOutput,
+        value: String?,
+    ) {
+        output.writeBoolean(
+            value != null,
+        )
+
+        value?.let {
+            output.writeUTF(
+                it,
+            )
+        }
     }
 
     private fun writeNbt(

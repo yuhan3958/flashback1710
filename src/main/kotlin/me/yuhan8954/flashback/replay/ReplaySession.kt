@@ -146,6 +146,12 @@ class ReplaySession(
                     this,
                 )
 
+            check(
+                cameraController.enable(),
+            ) {
+                "Replay free camera could not be enabled"
+            }
+
             active =
                 true
         } catch (

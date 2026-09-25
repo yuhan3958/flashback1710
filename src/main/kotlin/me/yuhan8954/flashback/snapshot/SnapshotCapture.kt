@@ -2,6 +2,7 @@ package me.yuhan8954.flashback.snapshot
 
 import net.minecraft.block.Block
 import net.minecraft.client.Minecraft
+import net.minecraft.client.entity.EntityOtherPlayerMP
 import net.minecraft.client.multiplayer.ChunkProviderClient
 import net.minecraft.entity.EntityList
 import net.minecraft.nbt.NBTTagCompound
@@ -113,6 +114,22 @@ object SnapshotCapture {
                             entityId = entity.entityId,
                             entityType = entityType,
                             entityClass = entity.javaClass.name,
+                            playerProfileId =
+                            if (entity is EntityOtherPlayerMP) {
+                                entity.gameProfile.id
+                                    ?.toString()
+                            } else {
+                                null
+                            },
+                            playerProfileName =
+                            if (entity is EntityOtherPlayerMP) {
+                                entity.gameProfile.name
+                            } else {
+                                null
+                            },
+                            serverPosX = entity.serverPosX,
+                            serverPosY = entity.serverPosY,
+                            serverPosZ = entity.serverPosZ,
                             x = entity.posX,
                             y = entity.posY,
                             z = entity.posZ,
