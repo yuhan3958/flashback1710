@@ -1,5 +1,6 @@
 package me.yuhan8954.flashback.ui
 
+import com.cleanroommc.modularui.screen.UISettings
 import me.yuhan8954.flashback.replay.ReplayClock
 import me.yuhan8954.flashback.replay.ReplayPlayer
 import net.minecraft.client.Minecraft
@@ -39,9 +40,16 @@ object ReplayUiController {
 
         openRequested = false
 
+        val replayPanel =
+            ReplayMainPanel()
+
+        replayPanel.context.setSettings(
+            UISettings(),
+        )
+
         minecraft.displayGuiScreen(
             ReplayUiScreen(
-                ReplayMainPanel(),
+                replayPanel,
             ),
         )
 
