@@ -1,5 +1,7 @@
 package me.yuhan8954.flashback.replay
 
+import me.yuhan8954.flashback.snapshot.ReplayTileEntitySnapshot
+import me.yuhan8954.flashback.snapshot.SnapshotCapture
 import net.minecraft.block.Block
 import net.minecraft.client.multiplayer.WorldClient
 import net.minecraft.entity.Entity
@@ -123,6 +125,105 @@ class ReplayWorld(
             this,
             targetTimeNanos,
         )
+    }
+
+    override fun doPreChunk(
+        chunkX: Int,
+        chunkZ: Int,
+        loadChunk: Boolean,
+    ) {
+        val wasLoaded =
+            chunkProvider.chunkExists(
+                chunkX,
+                chunkZ,
+            )
+
+        val unloadedChunk =
+            if (
+                mutationJournal.recording &&
+                wasLoaded &&
+                !loadChunk
+            ) {
+                SnapshotCapture.captureChunk(
+                    getChunkFromChunkCoords(
+                        chunkX,
+                        chunkZ,
+                    ),
+                )
+            } else {
+                null
+            }
+
+        val unloadedTileEntities =
+            if (unloadedChunk != null) {
+                captureChunkTileEntities(
+                    chunkX,
+                    chunkZ,
+                )
+            } else {
+                emptyList()
+            }
+
+        if (
+            mutationJournal.recording &&
+            (
+                unloadedChunk != null ||
+                    loadChunk &&
+                    !wasLoaded
+                )
+        ) {
+            mutationJournal.withoutRecording {
+                super.doPreChunk(
+                    chunkX,
+                    chunkZ,
+                    loadChunk,
+                )
+            }
+        } else {
+            super.doPreChunk(
+                chunkX,
+                chunkZ,
+                loadChunk,
+            )
+        }
+
+        if (
+            !mutationJournal.recording
+        ) {
+            return
+        }
+
+        if (
+            loadChunk &&
+            !wasLoaded &&
+            chunkProvider.chunkExists(
+                chunkX,
+                chunkZ,
+            )
+        ) {
+            mutationJournal.record(
+                ReplayChunkLoadedMutation(
+                    chunkX,
+                    chunkZ,
+                ),
+            )
+
+            return
+        }
+
+        if (
+            !loadChunk &&
+            unloadedChunk != null
+        ) {
+            mutationJournal.record(
+                ReplayChunkUnloadedMutation(
+                    chunk =
+                    unloadedChunk,
+                    tileEntities =
+                    unloadedTileEntities,
+                ),
+            )
+        }
     }
 
     override fun setBlock(
@@ -402,6 +503,21 @@ class ReplayWorld(
             replayPartialTick,
         )
     }
+
+    private fun captureChunkTileEntities(
+        chunkX: Int,
+        chunkZ: Int,
+    ): List<ReplayTileEntitySnapshot> = loadedTileEntityList
+        .filterIsInstance<TileEntity>()
+        .asSequence()
+        .filter {
+            it.xCoord shr 4 ==
+                chunkX &&
+                it.zCoord shr 4 ==
+                chunkZ
+        }.mapNotNull(
+            SnapshotCapture::captureTileEntity,
+        ).toList()
 
     private fun applyReplayTime() {
         val elapsedTicks =
