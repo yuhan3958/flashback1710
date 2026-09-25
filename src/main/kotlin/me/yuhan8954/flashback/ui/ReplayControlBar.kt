@@ -49,6 +49,15 @@ class ReplayControlBar : ParentWidget<ReplayControlBar>() {
 
         child(
             controlButton(
+                "Stop",
+                4,
+            ) {
+                ReplayPlayer.stop()
+            },
+        )
+
+        child(
+            controlButton(
                 "- Speed",
                 58,
             ) {
