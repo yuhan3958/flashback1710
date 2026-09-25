@@ -249,14 +249,29 @@ class ReplayWorld(
             }
 
         val changed =
-            super.setBlock(
-                x,
-                y,
-                z,
-                block,
-                metadata,
-                flags,
-            )
+            if (
+                before != null
+            ) {
+                mutationJournal.withoutRecording {
+                    super.setBlock(
+                        x,
+                        y,
+                        z,
+                        block,
+                        metadata,
+                        flags,
+                    )
+                }
+            } else {
+                super.setBlock(
+                    x,
+                    y,
+                    z,
+                    block,
+                    metadata,
+                    flags,
+                )
+            }
 
         if (
             changed &&
@@ -297,13 +312,27 @@ class ReplayWorld(
             }
 
         val changed =
-            super.setBlockMetadataWithNotify(
-                x,
-                y,
-                z,
-                metadata,
-                flags,
-            )
+            if (
+                before != null
+            ) {
+                mutationJournal.withoutRecording {
+                    super.setBlockMetadataWithNotify(
+                        x,
+                        y,
+                        z,
+                        metadata,
+                        flags,
+                    )
+                }
+            } else {
+                super.setBlockMetadataWithNotify(
+                    x,
+                    y,
+                    z,
+                    metadata,
+                    flags,
+                )
+            }
 
         if (
             changed &&

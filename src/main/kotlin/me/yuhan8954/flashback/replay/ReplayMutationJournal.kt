@@ -269,6 +269,28 @@ sealed interface ReplayMutation {
     )
 }
 
+data class ReplayChunkStateMutation(
+    val chunk: ReplayChunkSnapshot,
+    val tileEntities: List<ReplayTileEntitySnapshot>,
+) : ReplayMutation {
+
+    override fun undo(
+        world: ReplayWorld,
+    ) {
+        SnapshotRestorer.restoreChunk(
+            world,
+            chunk,
+        )
+
+        tileEntities.forEach {
+            SnapshotRestorer.restoreTileEntity(
+                world,
+                it,
+            )
+        }
+    }
+}
+
 data class ReplayChunkLoadedMutation(
     val chunkX: Int,
     val chunkZ: Int,

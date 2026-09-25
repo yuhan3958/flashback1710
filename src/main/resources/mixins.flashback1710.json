@@ -6,6 +6,7 @@
   "client": [
     "MixinNetworkManager",
     "MixinEntityRenderer",
+    "MixinChunk",
     "AccessorNetHandlerPlayClient",
     "AccessorWorldClient"
   ]

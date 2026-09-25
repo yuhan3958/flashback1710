@@ -86,6 +86,19 @@ object SnapshotRestorer {
         world: ReplayWorld,
         snapshot: ReplayChunkSnapshot,
     ) {
+        if (
+            world.chunkProvider.chunkExists(
+                snapshot.chunkX,
+                snapshot.chunkZ,
+            )
+        ) {
+            world.doPreChunk(
+                snapshot.chunkX,
+                snapshot.chunkZ,
+                false,
+            )
+        }
+
         world.doPreChunk(
             snapshot.chunkX,
             snapshot.chunkZ,
