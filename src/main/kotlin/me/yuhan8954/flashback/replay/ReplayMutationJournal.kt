@@ -287,8 +287,7 @@ data class ReplayChunkLoadedMutation(
 
 data class ReplayChunkUnloadedMutation(
     val chunk: ReplayChunkSnapshot,
-    val tileEntities:
-        List<ReplayTileEntitySnapshot>,
+    val tileEntities: List<ReplayTileEntitySnapshot>,
 ) : ReplayMutation {
 
     override fun undo(
