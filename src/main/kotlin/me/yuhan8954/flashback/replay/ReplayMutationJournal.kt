@@ -1,5 +1,8 @@
 package me.yuhan8954.flashback.replay
 
+import me.yuhan8954.flashback.snapshot.ReplayChunkSnapshot
+import me.yuhan8954.flashback.snapshot.ReplayTileEntitySnapshot
+import me.yuhan8954.flashback.snapshot.SnapshotRestorer
 import net.minecraft.block.Block
 import net.minecraft.entity.Entity
 import net.minecraft.nbt.NBTTagCompound
@@ -264,6 +267,45 @@ sealed interface ReplayMutation {
     fun undo(
         world: ReplayWorld,
     )
+}
+
+data class ReplayChunkLoadedMutation(
+    val chunkX: Int,
+    val chunkZ: Int,
+) : ReplayMutation {
+
+    override fun undo(
+        world: ReplayWorld,
+    ) {
+        world.doPreChunk(
+            chunkX,
+            chunkZ,
+            false,
+        )
+    }
+}
+
+data class ReplayChunkUnloadedMutation(
+    val chunk: ReplayChunkSnapshot,
+    val tileEntities:
+        List<ReplayTileEntitySnapshot>,
+) : ReplayMutation {
+
+    override fun undo(
+        world: ReplayWorld,
+    ) {
+        SnapshotRestorer.restoreChunk(
+            world,
+            chunk,
+        )
+
+        tileEntities.forEach {
+            SnapshotRestorer.restoreTileEntity(
+                world,
+                it,
+            )
+        }
+    }
 }
 
 data class ReplayBlockMutation(
