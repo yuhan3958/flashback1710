@@ -66,12 +66,12 @@ class ReplayMutationJournal {
             return
         }
 
+        this.timestampNanos =
+            timestampNanos
+
         captureTileEntityMutations(
             world,
         )
-
-        this.timestampNanos =
-            timestampNanos
 
         trim()
     }
