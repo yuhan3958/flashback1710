@@ -33,6 +33,12 @@ object ReplayPlayer {
     private val clock =
         ReplayClock()
 
+    private val reverseHistory =
+        ReplayReverseHistory()
+
+    private var lastReverseCaptureNanos =
+        Long.MIN_VALUE
+
     private var session:
         ReplaySession? =
         null
@@ -108,6 +114,17 @@ object ReplayPlayer {
 
         index = 0
 
+        reverseHistory.clear()
+        lastReverseCaptureNanos =
+            Long.MIN_VALUE
+
+        session?.let {
+            captureReverseFrame(
+                it,
+                0L,
+            )
+        }
+
         playing =
             true
 
@@ -124,13 +141,35 @@ object ReplayPlayer {
             return
         }
 
-        session?.cameraController?.tick()
+        val currentSession =
+            session ?: return
+
+        currentSession.cameraController.tick()
+
+        if (
+            speed >= 0.0 &&
+            (
+                lastReverseCaptureNanos ==
+                Long.MIN_VALUE ||
+                    clock.currentTimeNanos -
+                    lastReverseCaptureNanos >=
+                    ReplayClock.MINECRAFT_TICK_NANOS
+                )
+        ) {
+            captureReverseFrame(
+                currentSession,
+                clock.currentTimeNanos,
+            )
+        }
     }
 
     fun beginTick() {
         if (!playing) {
             return
         }
+
+        val currentSession =
+            session ?: return
 
         val previousTimeNanos =
             clock.currentTimeNanos
@@ -150,25 +189,19 @@ object ReplayPlayer {
             clock.currentTimeNanos <
             previousTimeNanos
         ) {
-            val targetTimeNanos =
-                clock.currentTimeNanos
-
-            clock.seek(
-                previousTimeNanos,
-            )
-
-            seek(
-                targetTimeNanos,
+            reverseTo(
+                currentSession,
+                clock.currentTimeNanos,
             )
         } else {
             processAvailablePackets()
         }
 
-        session?.world?.beginReplayTick(
+        currentSession.world.beginReplayTick(
             clock.currentTimeNanos,
         )
 
-        session?.cameraController?.beginTick()
+        currentSession.cameraController.beginTick()
 
         if (
             !clock.paused &&
@@ -201,6 +234,11 @@ object ReplayPlayer {
 
         checkpoints =
             emptyList()
+
+        reverseHistory.clear()
+
+        lastReverseCaptureNanos =
+            Long.MIN_VALUE
 
         index =
             0
@@ -297,6 +335,13 @@ object ReplayPlayer {
         }
 
         fastForwardTo(
+            currentSession,
+            targetTimeNanos,
+        )
+
+        reverseHistory.clear()
+
+        captureReverseFrame(
             currentSession,
             targetTimeNanos,
         )
@@ -428,6 +473,185 @@ object ReplayPlayer {
 
             index++
         }
+    }
+
+    private fun reverseTo(
+        currentSession: ReplaySession,
+        targetTimeNanos: Long,
+    ) {
+        var frame =
+            reverseHistory.restoreAtOrBefore(
+                currentSession,
+                targetTimeNanos,
+            )
+
+        if (frame == null) {
+            rebuildReverseHistory(
+                currentSession,
+                targetTimeNanos,
+            )
+
+            frame =
+                reverseHistory.restoreAtOrBefore(
+                    currentSession,
+                    targetTimeNanos,
+                )
+        }
+
+        if (frame == null) {
+            clock.pause()
+            return
+        }
+
+        index =
+            frame.packetIndex
+                .coerceIn(
+                    0,
+                    packets.size,
+                )
+
+        clock.seek(
+            frame.timestampNanos,
+        )
+
+        currentSession.world.seekReplayTime(
+            frame.timestampNanos,
+        )
+    }
+
+    private fun rebuildReverseHistory(
+        currentSession: ReplaySession,
+        targetTimeNanos: Long,
+    ) {
+        val initialSnapshot =
+            snapshot ?: return
+
+        val endTimeNanos =
+            targetTimeNanos.coerceIn(
+                0L,
+                durationNanos,
+            )
+
+        val startTimeNanos =
+            (
+                endTimeNanos -
+                    ReplayReverseHistory
+                        .HISTORY_DURATION_NANOS
+                ).coerceAtLeast(
+                0L,
+            )
+
+        val checkpoint =
+            ReplayCheckpointResolver.resolve(
+                initialSnapshot,
+                checkpoints,
+                startTimeNanos,
+            )
+
+        currentSession.reset(
+            checkpoint.snapshot,
+        )
+
+        index =
+            checkpoint.packetIndex
+                .coerceIn(
+                    0,
+                    packets.size,
+                )
+
+        clock.seek(
+            checkpoint.timestampNanos,
+        )
+
+        currentSession.world.seekReplayTime(
+            checkpoint.timestampNanos,
+        )
+
+        reverseHistory.clear()
+
+        lastReverseCaptureNanos =
+            Long.MIN_VALUE
+
+        fastForwardTo(
+            currentSession,
+            startTimeNanos,
+        )
+
+        captureReverseFrame(
+            currentSession,
+            startTimeNanos,
+        )
+
+        var nextCaptureTimeNanos =
+            startTimeNanos +
+                ReplayClock.MINECRAFT_TICK_NANOS
+
+        while (
+            index < packets.size &&
+            packets[index]
+                .timestampNanos <=
+            endTimeNanos
+        ) {
+            val recorded =
+                packets[index]
+
+            clock.seek(
+                recorded.timestampNanos,
+            )
+
+            processRecordedPacket(
+                currentSession,
+                recorded,
+            )
+
+            index++
+
+            if (
+                recorded.timestampNanos >=
+                nextCaptureTimeNanos
+            ) {
+                currentSession.world
+                    .seekReplayTime(
+                        recorded.timestampNanos,
+                    )
+
+                captureReverseFrame(
+                    currentSession,
+                    recorded.timestampNanos,
+                )
+
+                nextCaptureTimeNanos =
+                    recorded.timestampNanos +
+                        ReplayClock.MINECRAFT_TICK_NANOS
+            }
+        }
+
+        clock.seek(
+            endTimeNanos,
+        )
+
+        currentSession.world.seekReplayTime(
+            endTimeNanos,
+        )
+
+        captureReverseFrame(
+            currentSession,
+            endTimeNanos,
+        )
+    }
+
+    private fun captureReverseFrame(
+        currentSession: ReplaySession,
+        timestampNanos: Long,
+    ) {
+        reverseHistory.capture(
+            currentSession,
+            timestampNanos,
+            index,
+        )
+
+        lastReverseCaptureNanos =
+            timestampNanos
     }
 
     private fun fastForwardTo(
