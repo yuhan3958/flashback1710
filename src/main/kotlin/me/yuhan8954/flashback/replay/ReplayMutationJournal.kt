@@ -14,16 +14,66 @@ class ReplayMutationJournal {
     private var suspendedDepth =
         0
 
+    private var enabled =
+        false
+
+    private val tileEntityState =
+        mutableMapOf<Long, NBTTagCompound>()
+
     var timestampNanos =
         0L
 
     val recording: Boolean
         get() =
-            suspendedDepth ==
+            enabled &&
+                suspendedDepth ==
                 0
 
     fun clear() {
         mutations.clear()
+        tileEntityState.clear()
+    }
+
+    fun start(
+        world: ReplayWorld,
+        timestampNanos: Long,
+    ) {
+        clear()
+
+        this.timestampNanos =
+            timestampNanos
+
+        enabled =
+            true
+
+        snapshotTileEntities(
+            world,
+        )
+    }
+
+    fun suspend() {
+        enabled =
+            false
+    }
+
+    fun advanceTo(
+        world: ReplayWorld,
+        timestampNanos: Long,
+    ) {
+        if (!enabled) {
+            this.timestampNanos =
+                timestampNanos
+            return
+        }
+
+        captureTileEntityMutations(
+            world,
+        )
+
+        this.timestampNanos =
+            timestampNanos
+
+        trim()
     }
 
     fun record(
@@ -66,6 +116,10 @@ class ReplayMutationJournal {
 
         timestampNanos =
             targetTimeNanos
+
+        snapshotTileEntities(
+            world,
+        )
     }
 
     fun <T> withoutRecording(
@@ -79,6 +133,103 @@ class ReplayMutationJournal {
             suspendedDepth--
         }
     }
+
+
+    private fun captureTileEntityMutations(
+        world: ReplayWorld,
+    ) {
+        val current =
+            mutableMapOf<Long, NBTTagCompound>()
+
+        world.loadedTileEntityList
+            .filterIsInstance<TileEntity>()
+            .forEach { tileEntity ->
+                val nbt =
+                    captureTileEntity(
+                        tileEntity,
+                    ) ?: return@forEach
+
+                val key =
+                    tileEntityKey(
+                        tileEntity.xCoord,
+                        tileEntity.yCoord,
+                        tileEntity.zCoord,
+                    )
+
+                current[key] =
+                    nbt
+
+                val previous =
+                    tileEntityState[
+                        key,
+                    ]
+
+                if (
+                    previous != null &&
+                    previous != nbt
+                ) {
+                    record(
+                        ReplayTileEntityMutation(
+                            x =
+                            tileEntity.xCoord,
+                            y =
+                            tileEntity.yCoord,
+                            z =
+                            tileEntity.zCoord,
+                            beforeNbt =
+                            previous,
+                        ),
+                    )
+                }
+            }
+
+        tileEntityState.clear()
+        tileEntityState.putAll(
+            current,
+        )
+    }
+
+    private fun snapshotTileEntities(
+        world: ReplayWorld,
+    ) {
+        tileEntityState.clear()
+
+        world.loadedTileEntityList
+            .filterIsInstance<TileEntity>()
+            .forEach { tileEntity ->
+                captureTileEntity(
+                    tileEntity,
+                )?.let {
+                    tileEntityState[
+                        tileEntityKey(
+                            tileEntity.xCoord,
+                            tileEntity.yCoord,
+                            tileEntity.zCoord,
+                        ),
+                    ] =
+                        it
+                }
+            }
+    }
+
+    private fun tileEntityKey(
+        x: Int,
+        y: Int,
+        z: Int,
+    ): Long =
+        (
+            x.toLong() and
+                0x3ffffffL
+            ) shl 38 xor
+            (
+                z.toLong() and
+                    0x3ffffffL
+                ) shl 12 xor
+            (
+                y.toLong() and
+                    0xfffL
+                )
+
 
     private fun trim() {
         val minimumTimeNanos =
