@@ -124,6 +124,10 @@ object ReplayPlayer {
             Long.MIN_VALUE
 
         session?.let {
+            it.world.startMutationJournal(
+                0L,
+            )
+
             captureReverseFrame(
                 it,
                 0L,
@@ -471,6 +475,10 @@ object ReplayPlayer {
         currentSession: ReplaySession,
         targetTimeNanos: Long,
     ) {
+        currentSession.world.undoMutationsTo(
+            targetTimeNanos,
+        )
+
         var frame =
             reverseHistory.restoreAtOrBefore(
                 currentSession,
@@ -605,9 +613,13 @@ object ReplayPlayer {
         currentSession: ReplaySession,
         segment: ReplaySegment,
     ) {
+        currentSession.world.suspendMutationJournal()
+
         currentSession.reset(
             segment.snapshot,
         )
+
+        currentSession.world.suspendMutationJournal()
 
         val bootstrap =
             segment.bootstrap
@@ -662,6 +674,10 @@ object ReplayPlayer {
         )
 
         currentSession.world.seekReplayTime(
+            segment.startTimeNanos,
+        )
+
+        currentSession.world.startMutationJournal(
             segment.startTimeNanos,
         )
     }
@@ -733,6 +749,11 @@ object ReplayPlayer {
         currentSession: ReplaySession,
         recorded: RecordedPacket,
     ) {
+        currentSession.world
+            .mutationJournal
+            .timestampNanos =
+            recorded.timestampNanos
+
         try {
             val packet =
                 decode(
