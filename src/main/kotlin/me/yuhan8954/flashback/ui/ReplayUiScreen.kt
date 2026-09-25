@@ -13,6 +13,13 @@ class ReplayUiScreen(
 
     override fun doesGuiPauseGame(): Boolean = false
 
+    fun initializeLayout() {
+        screen.onResize(
+            width,
+            height,
+        )
+    }
+
     override fun keyTyped(
         character: Char,
         keyCode: Int,

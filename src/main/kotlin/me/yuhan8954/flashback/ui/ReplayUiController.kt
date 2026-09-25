@@ -39,11 +39,16 @@ object ReplayUiController {
 
         openRequested = false
 
-        minecraft.displayGuiScreen(
+        val replayScreen =
             ReplayUiScreen(
                 ReplayMainPanel(),
-            ),
+            )
+
+        minecraft.displayGuiScreen(
+            replayScreen,
         )
+
+        replayScreen.initializeLayout()
 
         return true
     }
