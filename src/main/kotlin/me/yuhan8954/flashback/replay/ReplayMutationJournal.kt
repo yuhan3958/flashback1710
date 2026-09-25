@@ -377,29 +377,28 @@ data class ReplayBlockState(
             x: Int,
             y: Int,
             z: Int,
-        ): ReplayBlockState =
-            ReplayBlockState(
-                block =
-                world.getBlock(
+        ): ReplayBlockState = ReplayBlockState(
+            block =
+            world.getBlock(
+                x,
+                y,
+                z,
+            ),
+            metadata =
+            world.getBlockMetadata(
+                x,
+                y,
+                z,
+            ),
+            tileEntityNbt =
+            captureTileEntity(
+                world.getTileEntity(
                     x,
                     y,
                     z,
                 ),
-                metadata =
-                world.getBlockMetadata(
-                    x,
-                    y,
-                    z,
-                ),
-                tileEntityNbt =
-                captureTileEntity(
-                    world.getTileEntity(
-                        x,
-                        y,
-                        z,
-                    ),
-                ),
-            )
+            ),
+        )
     }
 }
 
