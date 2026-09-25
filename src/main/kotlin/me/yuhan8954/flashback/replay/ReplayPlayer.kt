@@ -21,6 +21,10 @@ object ReplayPlayer {
         List<RecordedPacket> =
         emptyList()
 
+    private var checkpoints:
+        List<ReplayCheckpoint> =
+        emptyList()
+
     private var snapshot: ReplaySnapshot? = null
 
     private var index =
@@ -88,9 +92,11 @@ object ReplayPlayer {
         packets =
             reader.packets
 
+        checkpoints =
+            reader.checkpoints
+
         durationNanos =
-            packets.lastOrNull()
-                ?.timestampNanos ?: 0L
+            reader.durationNanos
 
         clock.reset()
 
@@ -177,6 +183,9 @@ object ReplayPlayer {
         packets =
             emptyList()
 
+        checkpoints =
+            emptyList()
+
         index =
             0
 
@@ -239,12 +248,36 @@ object ReplayPlayer {
         val initialSnapshot = snapshot ?: return false
         val targetTimeNanos = timeNanos.coerceIn(0L, durationNanos)
 
-        if (targetTimeNanos < clock.currentTimeNanos) {
-            currentSession.reset(
+        val checkpoint =
+            ReplayCheckpointResolver.resolve(
                 initialSnapshot,
+                checkpoints,
+                targetTimeNanos,
             )
 
-            index = 0
+        if (
+            targetTimeNanos < clock.currentTimeNanos ||
+            checkpoint.timestampNanos >
+            clock.currentTimeNanos
+        ) {
+            currentSession.reset(
+                checkpoint.snapshot,
+            )
+
+            index =
+                checkpoint.packetIndex
+                    .coerceIn(
+                        0,
+                        packets.size,
+                    )
+
+            clock.seek(
+                checkpoint.timestampNanos,
+            )
+
+            currentSession.world.seekReplayTime(
+                checkpoint.timestampNanos,
+            )
         }
 
         fastForwardTo(

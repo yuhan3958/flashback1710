@@ -2,10 +2,13 @@ package me.yuhan8954.flashback.recording
 
 import cpw.mods.fml.common.network.internal.FMLProxyPacket
 import io.netty.buffer.Unpooled
+import me.yuhan8954.flashback.config.ReplayConfig
 import me.yuhan8954.flashback.io.ReplayWriter
 import me.yuhan8954.flashback.replay.PacketFlow
 import me.yuhan8954.flashback.replay.RecordedPacket
+import me.yuhan8954.flashback.snapshot.ReplaySnapshot
 import me.yuhan8954.flashback.snapshot.SnapshotCapture
+import me.yuhan8954.flashback.snapshot.SnapshotDelta
 import net.minecraft.client.Minecraft
 import net.minecraft.network.Packet
 import net.minecraft.network.PacketBuffer
@@ -24,6 +27,19 @@ object ReplayRecorder {
     private var startTime =
         0L
 
+    private var packetCount =
+        0
+
+    private var checkpointSnapshot:
+        ReplaySnapshot? =
+        null
+
+    private var nextDeltaCheckpointNanos =
+        Long.MAX_VALUE
+
+    private var nextFullCheckpointNanos =
+        Long.MAX_VALUE
+
     @JvmStatic
     @Synchronized
     fun start(file: File) {
@@ -40,8 +56,23 @@ object ReplayRecorder {
                 snapshot,
             )
 
+        checkpointSnapshot =
+            snapshot
+
+        packetCount = 0
+
         startTime =
             System.nanoTime()
+
+        nextDeltaCheckpointNanos =
+            intervalNanos(
+                ReplayConfig.checkpointIntervalSeconds,
+            )
+
+        nextFullCheckpointNanos =
+            intervalNanos(
+                ReplayConfig.checkpointAnchorIntervalSeconds,
+            )
     }
 
     @JvmStatic
@@ -49,6 +80,91 @@ object ReplayRecorder {
     fun stop() {
         writer?.close()
         writer = null
+        checkpointSnapshot = null
+        packetCount = 0
+        nextDeltaCheckpointNanos = Long.MAX_VALUE
+        nextFullCheckpointNanos = Long.MAX_VALUE
+    }
+
+    @JvmStatic
+    @Synchronized
+    fun tick() {
+        val currentWriter =
+            writer ?: return
+
+        val elapsedNanos =
+            System.nanoTime() -
+                startTime
+
+        val writeFullCheckpoint =
+            elapsedNanos >=
+                nextFullCheckpointNanos
+
+        val writeDeltaCheckpoint =
+            elapsedNanos >=
+                nextDeltaCheckpointNanos
+
+        if (
+            !writeFullCheckpoint &&
+            !writeDeltaCheckpoint
+        ) {
+            return
+        }
+
+        val snapshot =
+            SnapshotCapture.capture(
+                Minecraft.getMinecraft(),
+            )
+
+        if (writeFullCheckpoint) {
+            currentWriter.writeFullCheckpoint(
+                elapsedNanos,
+                packetCount,
+                snapshot,
+            )
+
+            checkpointSnapshot =
+                snapshot
+
+            nextFullCheckpointNanos =
+                nextCheckpointTime(
+                    elapsedNanos,
+                    ReplayConfig
+                        .checkpointAnchorIntervalSeconds,
+                )
+
+            nextDeltaCheckpointNanos =
+                nextCheckpointTime(
+                    elapsedNanos,
+                    ReplayConfig
+                        .checkpointIntervalSeconds,
+                )
+
+            return
+        }
+
+        val previousSnapshot =
+            checkpointSnapshot
+                ?: snapshot
+
+        currentWriter.writeDeltaCheckpoint(
+            elapsedNanos,
+            packetCount,
+            SnapshotDelta.create(
+                previousSnapshot,
+                snapshot,
+            ),
+        )
+
+        checkpointSnapshot =
+            snapshot
+
+        nextDeltaCheckpointNanos =
+            nextCheckpointTime(
+                elapsedNanos,
+                ReplayConfig
+                    .checkpointIntervalSeconds,
+            )
     }
 
     @JvmStatic
@@ -148,6 +264,8 @@ object ReplayRecorder {
                     flow,
                 ),
             )
+
+            packetCount++
         } catch (
             throwable: Throwable,
         ) {
@@ -160,5 +278,32 @@ object ReplayRecorder {
         } finally {
             byteBuf.release()
         }
+    }
+
+    private fun intervalNanos(seconds: Int): Long = if (seconds <= 0) {
+        Long.MAX_VALUE
+    } else {
+        seconds * 1_000_000_000L
+    }
+
+    private fun nextCheckpointTime(
+        currentTimeNanos: Long,
+        intervalSeconds: Int,
+    ): Long {
+        val intervalNanos =
+            intervalNanos(
+                intervalSeconds,
+            )
+
+        if (intervalNanos == Long.MAX_VALUE) {
+            return Long.MAX_VALUE
+        }
+
+        return (
+            currentTimeNanos /
+                intervalNanos +
+                1L
+            ) *
+            intervalNanos
     }
 }

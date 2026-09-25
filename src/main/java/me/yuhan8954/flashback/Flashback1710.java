@@ -8,6 +8,7 @@ import cpw.mods.fml.common.event.FMLInitializationEvent;
 import cpw.mods.fml.common.event.FMLPostInitializationEvent;
 import cpw.mods.fml.common.event.FMLPreInitializationEvent;
 import cpw.mods.fml.common.event.FMLServerStartingEvent;
+import me.yuhan8954.flashback.config.ReplayConfig;
 
 @Mod(
     modid = Flashback1710.MODID,
@@ -24,6 +25,7 @@ public class Flashback1710 {
 
     @Mod.EventHandler
     public void preInit(FMLPreInitializationEvent event) {
+        ReplayConfig.load(event.getSuggestedConfigurationFile());
         FlashbackRuntime.initialize();
     }
 

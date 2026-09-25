@@ -2,6 +2,8 @@ package me.yuhan8954.flashback.io
 
 import me.yuhan8954.flashback.replay.RecordedPacket
 import me.yuhan8954.flashback.snapshot.ReplaySnapshot
+import me.yuhan8954.flashback.snapshot.ReplaySnapshotDelta
+import me.yuhan8954.flashback.snapshot.SnapshotDeltaWriter
 import me.yuhan8954.flashback.snapshot.SnapshotWriter
 import java.io.BufferedOutputStream
 import java.io.Closeable
@@ -35,6 +37,64 @@ class ReplayWriter(
 
     @Synchronized
     fun write(packet: RecordedPacket) {
+        output.writeByte(
+            RECORD_PACKET,
+        )
+
+        writePacket(
+            packet,
+        )
+    }
+
+    @Synchronized
+    fun writeFullCheckpoint(
+        timestampNanos: Long,
+        packetIndex: Int,
+        snapshot: ReplaySnapshot,
+    ) {
+        output.writeByte(
+            RECORD_FULL_CHECKPOINT,
+        )
+
+        output.writeLong(
+            timestampNanos,
+        )
+
+        output.writeInt(
+            packetIndex,
+        )
+
+        SnapshotWriter.write(
+            output,
+            snapshot,
+        )
+    }
+
+    @Synchronized
+    fun writeDeltaCheckpoint(
+        timestampNanos: Long,
+        packetIndex: Int,
+        delta: ReplaySnapshotDelta,
+    ) {
+        output.writeByte(
+            RECORD_DELTA_CHECKPOINT,
+        )
+
+        output.writeLong(
+            timestampNanos,
+        )
+
+        output.writeInt(
+            packetIndex,
+        )
+
+        SnapshotDeltaWriter.write(
+            output,
+            delta,
+        )
+    }
+
+    private fun writePacket(packet: RecordedPacket) {
         val classBytes =
             packet.packetClass.toByteArray(
                 Charsets.UTF_8,
@@ -93,6 +153,10 @@ class ReplayWriter(
 
         const val MAGIC = 0x46425231
 
-        const val FORMAT_VERSION = 6
+        const val FORMAT_VERSION = 7
+
+        const val RECORD_PACKET = 0
+        const val RECORD_FULL_CHECKPOINT = 1
+        const val RECORD_DELTA_CHECKPOINT = 2
     }
 }

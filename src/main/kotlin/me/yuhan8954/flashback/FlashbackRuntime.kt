@@ -4,6 +4,7 @@ import cpw.mods.fml.common.FMLCommonHandler
 import cpw.mods.fml.common.eventhandler.SubscribeEvent
 import cpw.mods.fml.common.gameevent.TickEvent
 import me.yuhan8954.flashback.command.CommandFlashback
+import me.yuhan8954.flashback.recording.ReplayRecorder
 import me.yuhan8954.flashback.replay.ReplayPlayer
 import me.yuhan8954.flashback.ui.ReplayUiController
 import net.minecraftforge.client.ClientCommandHandler
@@ -38,6 +39,7 @@ object FlashbackRuntime {
             TickEvent.Phase.END ->
                 {
                     ReplayPlayer.tick()
+                    ReplayRecorder.tick()
                     ReplayUiController.syncHudVisibility()
                 }
         }
