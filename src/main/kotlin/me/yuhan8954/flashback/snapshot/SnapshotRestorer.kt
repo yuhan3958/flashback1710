@@ -82,7 +82,7 @@ object SnapshotRestorer {
         )
     }
 
-    private fun restoreChunk(
+    internal fun restoreChunk(
         world: ReplayWorld,
         snapshot: ReplayChunkSnapshot,
     ) {
@@ -155,7 +155,7 @@ object SnapshotRestorer {
         )
     }
 
-    private fun restoreTileEntity(
+    internal fun restoreTileEntity(
         world: ReplayWorld,
         snapshot: ReplayTileEntitySnapshot,
     ) {
