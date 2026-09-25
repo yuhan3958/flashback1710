@@ -79,9 +79,14 @@ resolution      replay
          ReplayWorld
 ```
 
-Reverse playback is implemented as repeated backward seeking. Packets themselves are never inverted.
+Reverse playback uses two layers:
 
-This should remain the architectural baseline unless profiling or correctness testing demonstrates a better model.
+- an in-memory tick-state history for interactive reverse playback,
+- replay-segment reconstruction when the requested time falls outside the cached history window.
+
+Packets themselves are never inverted. Entity state is reconstructed from immutable reverse frames and interpolated between replay ticks. Segment reconstruction remains the fallback for older history.
+
+The long-term correctness target is not merely smooth reverse movement. Forward playback, reverse playback, and direct seek must converge on the same replay-visible state at the same timestamp.
 
 # Proposal Readiness Gates
 
@@ -93,7 +98,7 @@ Required:
 
 - forward playback does not unexpectedly diverge during normal vanilla interactions,
 - seeking to the same timestamp repeatedly produces equivalent visible state,
-- reverse playback and forward playback can cross the same region repeatedly,
+- reverse playback and forward playback can cross the same region repeatedly without entity loss, frozen transforms, or state drift,
 - reaching either replay boundary does not corrupt the session,
 - Stop reliably restores the original live world,
 - free camera does not mutate recorded-player state,
@@ -102,6 +107,16 @@ Required:
 Acceptance target:
 
 Create a deterministic test scenario with known block, entity, inventory, movement, weather, and time changes. Record it, then verify selected timestamps against expected state.
+
+For every sampled timestamp, compare three paths:
+
+```text
+forward from start -> t
+reverse from later time -> t
+direct seek -> t
+```
+
+All three paths should produce equivalent replay-visible state.
 
 ## Gate 2: GTNH Packet Compatibility
 
@@ -678,3 +693,71 @@ At that point the project can be presented as an engineering result rather than 
 The most important change in mindset is:
 
 > From this point forward, development should prioritize evidence, compatibility, and reliability over adding more controls.
+
+
+# Perfect Reverse Playback Program
+
+Perfect reverse playback requires a reversible representation of all replay-relevant mutations.
+
+The current entity reverse path is a first step: reverse frames store immutable NBT and transform state rather than live object references, recreate missing entities when necessary, remove entities that did not exist at the target frame, and interpolate transforms between replay ticks.
+
+That is not sufficient for full world correctness.
+
+## Required reversible state domains
+
+The reverse engine must eventually cover:
+
+- entity creation and removal,
+- entity NBT and transforms,
+- player state and inventory,
+- block ID and metadata mutations,
+- tile entity creation, removal, and NBT mutation,
+- chunk load and unload state,
+- world time and weather,
+- scoreboard/team state where visible,
+- mod-owned client state,
+- transient render state where practical.
+
+## Mutation journal
+
+The preferred architecture is a tick-ordered mutation journal.
+
+```text
+before tick N
+    |
+    +-- block before/after
+    +-- tile entity before/after
+    +-- entity before/after
+    +-- chunk lifecycle
+    +-- world metadata before/after
+    +-- mod adapter state
+    |
+after tick N
+```
+
+Each mutation entry should contain enough information to apply both directions without rebuilding the entire replay world.
+
+Checkpoint/segment reconstruction remains necessary for:
+
+- random access,
+- recovery,
+- crossing beyond retained reverse history,
+- validation against corruption.
+
+The mutation journal is for continuous exact reverse playback.
+
+## Acceptance criteria
+
+A proposal-ready reverse engine should demonstrate:
+
+1. no frozen entities during negative playback,
+2. entity spawn/despawn reverses exactly,
+3. repeated forward/reverse traversal does not accumulate drift,
+4. block changes reverse exactly,
+5. tile entity state reverses exactly,
+6. inventories and held items reverse exactly,
+7. direct seek and reverse traversal agree on target state,
+8. reverse playback remains interactive in a representative GTNH base,
+9. unsupported mod state is explicitly detected rather than silently diverging.
+
+Until these are met, reverse playback should be described as experimental rather than complete.

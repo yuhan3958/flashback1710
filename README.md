@@ -16,7 +16,7 @@ Implemented:
 - Configurable delta checkpoints.
 - Configurable full checkpoint anchors.
 - Timeline seeking.
-- Reverse playback through checkpoint-based state reconstruction.
+- Reverse playback through in-memory tick history, segment reconstruction, and interpolated entity restoration.
 - Playback speeds from -4x to 4x.
 - Tick stepping while paused.
 - Free camera.
@@ -167,7 +167,7 @@ The live world and live player are retained so that Stop can restore the origina
 
 ## Seeking
 
-Seeking is checkpoint based.
+Seeking is segment based. Checkpoints are resolved into replay segments when the replay is loaded.
 
 For a target such as 08:47:
 
@@ -175,16 +175,13 @@ For a target such as 08:47:
 target = 08:47
       |
       v
-find nearest valid full anchor
+find segment containing 08:47
       |
       v
-apply following delta checkpoints
+restore resolved segment snapshot
       |
       v
-resolved checkpoint state
-      |
-      v
-restore ReplayWorld
+replay segment bootstrap packet bundle
       |
       v
 replay packet tail up to 08:47
@@ -201,43 +198,45 @@ With the default settings, a file may look like:
 08:30 delta
 ```
 
-Seeking to 08:47 resolves the checkpoint chain through 08:30 and then replays only the remaining packet tail.
+Checkpoint chains are resolved once at load time into a binary-searchable `ReplaySegmentIndex`. Seeking to 08:47 finds the 08:30 segment in O(log n), restores its resolved snapshot, replays its bootstrap packet bundle for supported mod/FML side effects, and then replays only the remaining packet tail.
 
-The checkpoint stores the packet index associated with its state, so playback can resume from the correct position in the packet stream.
+A segment stores the packet index associated with its start state, so playback can resume from the correct position in the packet stream.
 
 ## Reverse Playback
 
-Reverse playback is intentionally asymmetric.
+Reverse playback is state reconstruction, not packet inversion.
 
 Forward playback:
 
 ```text
-time moves forward
+clock advances
     ->
-apply packets normally
+packets are processed
+    ->
+ReplayWorld simulates forward
+    ->
+a reverse frame is captured at replay-tick boundaries
 ```
 
 Reverse playback:
 
 ```text
-time moves backward
+clock moves backward
     ->
-seek to earlier timestamp
+find the surrounding reverse frames
     ->
-restore checkpoint state
+restore immutable player/entity/world state
     ->
-replay forward from that checkpoint
+interpolate transforms between the two replay ticks
 ```
 
-Flashback 1710 does not attempt to execute network packets backwards.
+The in-memory reverse history currently covers the most recent 30 seconds. When playback crosses the beginning of that history window, Flashback reconstructs the previous window from the nearest replay segment and then continues from newly generated reverse frames.
 
-This avoids requiring impossible or unreliable inverse operations for events such as:
+Reverse frames do not retain live entity object references. Entity state is captured as immutable NBT plus replay-relevant transforms and identity data, so entities can be recreated after a replay-world reset.
 
-- entity destruction,
-- block replacement,
-- inventory mutation,
-- chunk unloading,
-- mod-specific custom packets.
+Entity position, rotation, motion, server position, head rotation, and recorded-player transforms are interpolated between replay ticks. The replay clock remains at the requested target timestamp instead of snapping to the previous stored frame.
+
+Flashback still does not attempt to execute network packets backwards. Packet inversion is not generally well-defined for entity destruction, block replacement, inventory mutation, chunk loading, tile entities, or arbitrary mod packets.
 
 Supported playback speeds are:
 
@@ -474,9 +473,11 @@ Current limitations include:
 - There is no replay browser or metadata index.
 - Checkpoint capture currently snapshots client-visible state and can become expensive on large view distances.
 - Delta creation currently compares snapshots rather than consuming a complete dirty-state event stream.
-- Reverse playback repeatedly performs state reconstruction and is more expensive than forward playback.
+- Reverse playback is substantially cheaper inside the 30-second in-memory reverse-history window, but rebuilding an older history window still requires segment reconstruction.
 - Arbitrary modded custom packets have not been tested across the GTNH mod set.
-- Client-side state that is not represented by packets or snapshots may diverge.
+- Client-side state that is not represented by packets, snapshots, or reverse-frame state may diverge.
+- Tick-level reverse restoration for blocks, tile entities, chunk membership, particles, sounds, and arbitrary mod-owned client state is not yet exact.
+- Perfect reverse playback requires a world-mutation journal or equivalent reversible state stream for every replay-relevant mutation, not only entity transforms.
 - Dimension transitions need dedicated stress testing.
 - Long-session memory, file-size, and seek-latency characteristics have not yet been benchmarked.
 - Crash recovery and partially written replay handling are not yet production-grade.
@@ -531,3 +532,38 @@ Flashback 1710 should currently be treated as a prototype moving toward an engin
 The next milestone is not "more features."
 
 The next milestone is proving that the existing architecture remains correct, fast, and maintainable under real GTNH workloads.
+
+
+## Perfect Replay Target
+
+The architectural target is stronger than "visually plausible reverse playback."
+
+Flashback 1710 should eventually satisfy the following invariant:
+
+```text
+state_at(t)
+==
+state produced by forward playback to t
+==
+state produced by reverse playback back to t
+==
+state produced by seek directly to t
+```
+
+for every replay-relevant client-visible state component.
+
+That includes:
+
+- player state,
+- all entities,
+- entity lifecycle,
+- blocks,
+- chunk load state,
+- tile entities,
+- inventories,
+- world metadata,
+- weather and time,
+- mod-owned state,
+- transient visual state where practical.
+
+The current reverse entity path now reconstructs immutable entity state and interpolates transforms correctly. Full perfect reverse playback still requires reversible world mutation tracking for blocks, tile entities, chunks, and mod-specific state.
