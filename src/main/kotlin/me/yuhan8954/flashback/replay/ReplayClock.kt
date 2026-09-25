@@ -39,9 +39,14 @@ class ReplayClock(
                 .coerceAtLeast(0L)
 
         if (!paused) {
-            currentTimeNanos +=
-                (wallTimeDelta * speedMultiplier)
-                    .toLong()
+            currentTimeNanos =
+                (
+                    currentTimeNanos +
+                        (wallTimeDelta * speedMultiplier)
+                            .toLong()
+                    ).coerceAtLeast(
+                    0L,
+                )
         }
 
         lastUpdateNanos = now
@@ -123,6 +128,11 @@ class ReplayClock(
 
         val SUPPORTED_SPEEDS =
             listOf(
+                -4.0,
+                -2.0,
+                -1.0,
+                -0.5,
+                -0.25,
                 0.25,
                 0.5,
                 1.0,
