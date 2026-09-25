@@ -57,33 +57,9 @@ object SnapshotCapture {
                         it.xCoord shr 4,
                         it.zCoord shr 4,
                     ) in chunkPositions
-                }.mapNotNull { tileEntity ->
-                    try {
-                        val nbt =
-                            NBTTagCompound()
-
-                        tileEntity.writeToNBT(
-                            nbt,
-                        )
-
-                        ReplayTileEntitySnapshot(
-                            x = tileEntity.xCoord,
-                            y = tileEntity.yCoord,
-                            z = tileEntity.zCoord,
-                            nbt = nbt,
-                        )
-                    } catch (
-                        throwable: Throwable,
-                    ) {
-                        System.err.println(
-                            "[Flashback] Failed to snapshot tile entity: " +
-                                tileEntity.javaClass.name,
-                        )
-
-                        throwable.printStackTrace()
-                        null
-                    }
-                }.toList()
+                }.mapNotNull(
+                    ::captureTileEntity,
+                ).toList()
 
         val entities =
             world.loadedEntityList
@@ -251,7 +227,7 @@ object SnapshotCapture {
         return result
     }
 
-    private fun captureChunk(
+    internal fun captureChunk(
         chunk: Chunk,
     ): ReplayChunkSnapshot {
         val blockIds =
@@ -308,6 +284,34 @@ object SnapshotCapture {
             metadata = metadata,
             biomes = chunk.biomeArray.copyOf(),
         )
+    }
+
+    internal fun captureTileEntity(
+        tileEntity: net.minecraft.tileentity.TileEntity,
+    ): ReplayTileEntitySnapshot? = try {
+        val nbt =
+            NBTTagCompound()
+
+        tileEntity.writeToNBT(
+            nbt,
+        )
+
+        ReplayTileEntitySnapshot(
+            x = tileEntity.xCoord,
+            y = tileEntity.yCoord,
+            z = tileEntity.zCoord,
+            nbt = nbt,
+        )
+    } catch (
+        throwable: Throwable,
+    ) {
+        System.err.println(
+            "[Flashback] Failed to snapshot tile entity: " +
+                tileEntity.javaClass.name,
+        )
+
+        throwable.printStackTrace()
+        null
     }
 
     private fun captureInventory(
