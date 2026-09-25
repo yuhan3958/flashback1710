@@ -1,6 +1,9 @@
 package me.yuhan8954.flashback.replay
 
+import net.minecraft.block.Block
 import net.minecraft.client.multiplayer.WorldClient
+import net.minecraft.entity.Entity
+import net.minecraft.tileentity.TileEntity
 import net.minecraft.profiler.Profiler
 import net.minecraft.world.EnumDifficulty
 import net.minecraft.world.WorldSettings
@@ -18,6 +21,9 @@ class ReplayWorld(
     difficulty,
     profiler,
 ) {
+
+    val mutationJournal =
+        ReplayMutationJournal()
 
     private var replayTimeNanos =
         0L
@@ -67,6 +73,11 @@ class ReplayWorld(
     fun beginReplayTick(
         currentReplayTimeNanos: Long,
     ) {
+        mutationJournal.advanceTo(
+            this,
+            currentReplayTimeNanos,
+        )
+
         replayTimeNanos = currentReplayTimeNanos
         applyReplayTime()
 
@@ -90,6 +101,262 @@ class ReplayWorld(
         completedSimulationTicks = currentReplayTimeNanos / ReplayClock.MINECRAFT_TICK_NANOS
         simulationTicks = 0
         applyReplayTime()
+    }
+
+    fun startMutationJournal(
+        currentReplayTimeNanos: Long,
+    ) {
+        mutationJournal.start(
+            this,
+            currentReplayTimeNanos,
+        )
+    }
+
+    fun suspendMutationJournal() {
+        mutationJournal.suspend()
+    }
+
+    fun undoMutationsTo(
+        targetTimeNanos: Long,
+    ) {
+        mutationJournal.undoTo(
+            this,
+            targetTimeNanos,
+        )
+    }
+
+    override fun setBlock(
+        x: Int,
+        y: Int,
+        z: Int,
+        block: Block,
+        metadata: Int,
+        flags: Int,
+    ): Boolean {
+        val before =
+            if (
+                mutationJournal.recording
+            ) {
+                ReplayBlockState.capture(
+                    this,
+                    x,
+                    y,
+                    z,
+                )
+            } else {
+                null
+            }
+
+        val changed =
+            super.setBlock(
+                x,
+                y,
+                z,
+                block,
+                metadata,
+                flags,
+            )
+
+        if (
+            changed &&
+            before != null
+        ) {
+            mutationJournal.record(
+                ReplayBlockMutation(
+                    x,
+                    y,
+                    z,
+                    before,
+                ),
+            )
+        }
+
+        return changed
+    }
+
+    override fun setBlockMetadataWithNotify(
+        x: Int,
+        y: Int,
+        z: Int,
+        metadata: Int,
+        flags: Int,
+    ): Boolean {
+        val before =
+            if (
+                mutationJournal.recording
+            ) {
+                ReplayBlockState.capture(
+                    this,
+                    x,
+                    y,
+                    z,
+                )
+            } else {
+                null
+            }
+
+        val changed =
+            super.setBlockMetadataWithNotify(
+                x,
+                y,
+                z,
+                metadata,
+                flags,
+            )
+
+        if (
+            changed &&
+            before != null
+        ) {
+            mutationJournal.record(
+                ReplayBlockMutation(
+                    x,
+                    y,
+                    z,
+                    before,
+                ),
+            )
+        }
+
+        return changed
+    }
+
+    override fun setTileEntity(
+        x: Int,
+        y: Int,
+        z: Int,
+        tileEntity: TileEntity,
+    ) {
+        val before =
+            if (
+                mutationJournal.recording
+            ) {
+                captureTileEntity(
+                    getTileEntity(
+                        x,
+                        y,
+                        z,
+                    ),
+                )
+            } else {
+                null
+            }
+
+        super.setTileEntity(
+            x,
+            y,
+            z,
+            tileEntity,
+        )
+
+        if (
+            mutationJournal.recording
+        ) {
+            mutationJournal.record(
+                ReplayTileEntityMutation(
+                    x,
+                    y,
+                    z,
+                    before,
+                ),
+            )
+        }
+    }
+
+    override fun removeTileEntity(
+        x: Int,
+        y: Int,
+        z: Int,
+    ) {
+        val before =
+            if (
+                mutationJournal.recording
+            ) {
+                captureTileEntity(
+                    getTileEntity(
+                        x,
+                        y,
+                        z,
+                    ),
+                )
+            } else {
+                null
+            }
+
+        super.removeTileEntity(
+            x,
+            y,
+            z,
+        )
+
+        if (
+            before != null
+        ) {
+            mutationJournal.record(
+                ReplayTileEntityMutation(
+                    x,
+                    y,
+                    z,
+                    before,
+                ),
+            )
+        }
+    }
+
+    override fun addEntityToWorld(
+        entityId: Int,
+        entity: Entity,
+    ) {
+        super.addEntityToWorld(
+            entityId,
+            entity,
+        )
+
+        if (
+            mutationJournal.recording
+        ) {
+            mutationJournal.record(
+                ReplayEntityAddedMutation(
+                    entityId,
+                ),
+            )
+        }
+    }
+
+    override fun removeEntityFromWorld(
+        entityId: Int,
+    ): Entity? {
+        val state =
+            if (
+                mutationJournal.recording
+            ) {
+                getEntityByID(
+                    entityId,
+                )?.let {
+                    ReplayReverseEntityState.capture(
+                        it,
+                    )
+                }
+            } else {
+                null
+            }
+
+        val removed =
+            super.removeEntityFromWorld(
+                entityId,
+            )
+
+        if (
+            state != null
+        ) {
+            mutationJournal.record(
+                ReplayEntityRemovedMutation(
+                    state,
+                ),
+            )
+        }
+
+        return removed
     }
 
     override fun tick() {
