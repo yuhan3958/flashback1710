@@ -116,7 +116,7 @@ class ReplaySession(
         )
 
         player =
-            EntityClientPlayerMP(
+            EntityReplayPlayer(
                 minecraft,
                 world,
                 minecraft.session,
