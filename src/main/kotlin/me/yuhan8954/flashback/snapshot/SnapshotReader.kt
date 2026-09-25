@@ -128,17 +128,132 @@ object SnapshotReader {
 
     private fun readPlayer(
         input: DataInput,
-    ): ReplayPlayerSnapshot = ReplayPlayerSnapshot(
-        entityId = input.readInt(),
-        x = input.readDouble(),
-        y = input.readDouble(),
-        z = input.readDouble(),
-        yaw = input.readFloat(),
-        pitch = input.readFloat(),
-        motionX = input.readDouble(),
-        motionY = input.readDouble(),
-        motionZ = input.readDouble(),
-    )
+    ): ReplayPlayerSnapshot {
+        val entityId =
+            input.readInt()
+
+        val profileId =
+            readNullableString(
+                input,
+            )
+
+        val profileName =
+            input.readUTF()
+
+        val x =
+            input.readDouble()
+
+        val y =
+            input.readDouble()
+
+        val z =
+            input.readDouble()
+
+        val yaw =
+            input.readFloat()
+
+        val pitch =
+            input.readFloat()
+
+        val motionX =
+            input.readDouble()
+
+        val motionY =
+            input.readDouble()
+
+        val motionZ =
+            input.readDouble()
+
+        return ReplayPlayerSnapshot(
+            entityId = entityId,
+            profileId = profileId,
+            profileName = profileName,
+            x = x,
+            y = y,
+            z = z,
+            yaw = yaw,
+            pitch = pitch,
+            motionX = motionX,
+            motionY = motionY,
+            motionZ = motionZ,
+            inventory =
+            readInventory(
+                input,
+            ),
+        )
+    }
+
+    private fun readInventory(
+        input: DataInput,
+    ): ReplayInventorySnapshot {
+        val selectedSlot =
+            input.readInt()
+
+        require(
+            selectedSlot in 0..8,
+        ) {
+            "Invalid selected hotbar slot: $selectedSlot"
+        }
+
+        val mainSize =
+            input.readInt()
+
+        require(
+            mainSize in 0..64,
+        ) {
+            "Invalid main inventory size: $mainSize"
+        }
+
+        val mainInventory =
+            List(
+                mainSize,
+            ) {
+                readNullableNbt(
+                    input,
+                )
+            }
+
+        val armorSize =
+            input.readInt()
+
+        require(
+            armorSize in 0..16,
+        ) {
+            "Invalid armor inventory size: $armorSize"
+        }
+
+        val armorInventory =
+            List(
+                armorSize,
+            ) {
+                readNullableNbt(
+                    input,
+                )
+            }
+
+        return ReplayInventorySnapshot(
+            selectedSlot =
+            selectedSlot,
+
+            mainInventory =
+            mainInventory,
+
+            armorInventory =
+            armorInventory,
+        )
+    }
+
+    private fun readNullableNbt(
+        input: DataInput,
+    ): NBTTagCompound? = if (
+        input.readBoolean()
+    ) {
+        readNbt(
+            input,
+        )
+    } else {
+        null
+    }
 
     private fun readChunk(
         input: DataInput,

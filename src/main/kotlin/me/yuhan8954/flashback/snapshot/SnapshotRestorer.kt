@@ -7,6 +7,7 @@ import net.minecraft.client.entity.EntityClientPlayerMP
 import net.minecraft.client.entity.EntityOtherPlayerMP
 import net.minecraft.entity.Entity
 import net.minecraft.entity.EntityList
+import net.minecraft.item.ItemStack
 import net.minecraft.nbt.NBTTagCompound
 import net.minecraft.tileentity.TileEntity
 import net.minecraft.world.World
@@ -344,6 +345,11 @@ object SnapshotRestorer {
             snapshot.pitch,
         )
 
+        restoreInventory(
+            player,
+            snapshot.inventory,
+        )
+
         player.prevPosX = snapshot.x
         player.prevPosY = snapshot.y
         player.prevPosZ = snapshot.z
@@ -363,6 +369,50 @@ object SnapshotRestorer {
         ) {
             "Replay player could not be added to its snapshot chunk"
         }
+    }
+
+    private fun restoreInventory(
+        player: EntityClientPlayerMP,
+        snapshot: ReplayInventorySnapshot,
+    ) {
+        player.inventory.mainInventory
+            .indices
+            .forEach { index ->
+                player.inventory
+                    .mainInventory[index] =
+                    snapshot.mainInventory
+                        .getOrNull(
+                            index,
+                        )
+                        ?.let {
+                            ItemStack.loadItemStackFromNBT(
+                                it.copy() as
+                                    NBTTagCompound,
+                            )
+                        }
+            }
+
+        player.inventory.armorInventory
+            .indices
+            .forEach { index ->
+                player.inventory
+                    .armorInventory[index] =
+                    snapshot.armorInventory
+                        .getOrNull(
+                            index,
+                        )
+                        ?.let {
+                            ItemStack.loadItemStackFromNBT(
+                                it.copy() as
+                                    NBTTagCompound,
+                            )
+                        }
+            }
+
+        player.inventory.currentItem =
+            snapshot.selectedSlot
+
+        player.inventory.markDirty()
     }
 
     private fun blockIndex(

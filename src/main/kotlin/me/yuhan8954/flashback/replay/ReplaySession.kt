@@ -1,5 +1,6 @@
 package me.yuhan8954.flashback.replay
 
+import com.mojang.authlib.GameProfile
 import me.yuhan8954.flashback.camera.ReplayCameraController
 import me.yuhan8954.flashback.mixin.AccessorNetHandlerPlayClient
 import me.yuhan8954.flashback.mixin.AccessorWorldClient
@@ -14,6 +15,7 @@ import net.minecraft.stats.StatFileWriter
 import net.minecraft.world.EnumDifficulty
 import net.minecraft.world.WorldSettings
 import net.minecraft.world.WorldType
+import java.util.UUID
 
 class ReplaySession(
     val minecraft: Minecraft,
@@ -115,6 +117,15 @@ class ReplaySession(
             world,
         )
 
+        val recordedProfile =
+            GameProfile(
+                snapshot.player.profileId
+                    ?.let(
+                        UUID::fromString,
+                    ),
+                snapshot.player.profileName,
+            )
+
         player =
             EntityReplayPlayer(
                 minecraft,
@@ -122,6 +133,7 @@ class ReplaySession(
                 minecraft.session,
                 handler,
                 statFileWriter,
+                recordedProfile,
             )
 
         detachLivePlayer()

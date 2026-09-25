@@ -5,6 +5,7 @@ import net.minecraft.client.Minecraft
 import net.minecraft.client.entity.EntityOtherPlayerMP
 import net.minecraft.client.multiplayer.ChunkProviderClient
 import net.minecraft.entity.EntityList
+import net.minecraft.item.ItemStack
 import net.minecraft.nbt.NBTTagCompound
 import net.minecraft.util.MathHelper
 import net.minecraft.world.chunk.Chunk
@@ -164,6 +165,8 @@ object SnapshotCapture {
             thunderStrength = world.thunderingStrength,
             player = ReplayPlayerSnapshot(
                 entityId = player.entityId,
+                profileId = player.gameProfile.id?.toString(),
+                profileName = player.gameProfile.name,
                 x = player.posX,
                 y = player.posY,
                 z = player.posZ,
@@ -172,6 +175,11 @@ object SnapshotCapture {
                 motionX = player.motionX,
                 motionY = player.motionY,
                 motionZ = player.motionZ,
+                inventory = captureInventory(
+                    selectedSlot = player.inventory.currentItem,
+                    mainInventory = player.inventory.mainInventory,
+                    armorInventory = player.inventory.armorInventory,
+                ),
             ),
             chunks = chunks,
             tileEntities = tileEntities,
@@ -300,6 +308,32 @@ object SnapshotCapture {
             metadata = metadata,
             biomes = chunk.biomeArray.copyOf(),
         )
+    }
+
+    private fun captureInventory(
+        selectedSlot: Int,
+        mainInventory: Array<ItemStack?>,
+        armorInventory: Array<ItemStack?>,
+    ): ReplayInventorySnapshot = ReplayInventorySnapshot(
+        selectedSlot = selectedSlot,
+        mainInventory = mainInventory.map(::captureItemStack),
+        armorInventory = armorInventory.map(::captureItemStack),
+    )
+
+    private fun captureItemStack(
+        stack: ItemStack?,
+    ): NBTTagCompound? {
+        if (stack == null) {
+            return null
+        }
+
+        val nbt = NBTTagCompound()
+
+        stack.writeToNBT(
+            nbt,
+        )
+
+        return nbt
     }
 
     private fun blockIndex(

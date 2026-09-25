@@ -1,5 +1,6 @@
 package me.yuhan8954.flashback.replay
 
+import com.mojang.authlib.GameProfile
 import net.minecraft.client.Minecraft
 import net.minecraft.client.entity.EntityClientPlayerMP
 import net.minecraft.client.network.NetHandlerPlayClient
@@ -13,6 +14,7 @@ class EntityReplayPlayer(
     session: Session,
     netHandler: NetHandlerPlayClient,
     statFileWriter: StatFileWriter,
+    private val replayProfile: GameProfile,
 ) : EntityClientPlayerMP(
     minecraft,
     world,
@@ -25,28 +27,21 @@ class EntityReplayPlayer(
         noClip = true
     }
 
-    /**
-     * Prevent accidental local movement from changing the replay player.
-     */
+    override fun getGameProfile(): GameProfile = replayProfile
+
     override fun moveEntity(
         x: Double,
         y: Double,
         z: Double,
     ) {
-        // Packet-driven replay entity: ignore local physics movement.
+        // Recorded C03 state is authoritative.
     }
 
-    /**
-     * Prevent local knockback / physics from accumulating velocity.
-     *
-     * Recorded motion can still be assigned directly by the replay system
-     * when needed.
-     */
     override fun addVelocity(
         x: Double,
         y: Double,
         z: Double,
     ) {
-        // Ignore local simulation velocity.
+        // Ignore local physics.
     }
 }

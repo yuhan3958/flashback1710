@@ -102,6 +102,15 @@ object SnapshotWriter {
             player.entityId,
         )
 
+        writeNullableString(
+            output,
+            player.profileId,
+        )
+
+        output.writeUTF(
+            player.profileName,
+        )
+
         output.writeDouble(
             player.x,
         )
@@ -133,6 +142,60 @@ object SnapshotWriter {
         output.writeDouble(
             player.motionZ,
         )
+
+        writeInventory(
+            output,
+            player.inventory,
+        )
+    }
+
+    private fun writeInventory(
+        output: DataOutput,
+        inventory: ReplayInventorySnapshot,
+    ) {
+        output.writeInt(
+            inventory.selectedSlot,
+        )
+
+        output.writeInt(
+            inventory.mainInventory.size,
+        )
+
+        inventory.mainInventory
+            .forEach {
+                writeNullableNbt(
+                    output,
+                    it,
+                )
+            }
+
+        output.writeInt(
+            inventory.armorInventory.size,
+        )
+
+        inventory.armorInventory
+            .forEach {
+                writeNullableNbt(
+                    output,
+                    it,
+                )
+            }
+    }
+
+    private fun writeNullableNbt(
+        output: DataOutput,
+        nbt: NBTTagCompound?,
+    ) {
+        output.writeBoolean(
+            nbt != null,
+        )
+
+        if (nbt != null) {
+            writeNbt(
+                output,
+                nbt,
+            )
+        }
     }
 
     private fun writeChunk(

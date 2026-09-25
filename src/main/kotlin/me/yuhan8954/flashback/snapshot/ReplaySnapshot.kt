@@ -1,5 +1,7 @@
 package me.yuhan8954.flashback.snapshot
 
+import net.minecraft.nbt.NBTTagCompound
+
 data class ReplaySnapshot(
     val dimensionId: Int,
     val seed: Long,
@@ -17,12 +19,26 @@ data class ReplaySnapshot(
 
 data class ReplayPlayerSnapshot(
     val entityId: Int,
+
+    val profileId: String?,
+    val profileName: String,
+
     val x: Double,
     val y: Double,
     val z: Double,
+
     val yaw: Float,
     val pitch: Float,
+
     val motionX: Double,
     val motionY: Double,
     val motionZ: Double,
+
+    val inventory: ReplayInventorySnapshot,
+)
+
+data class ReplayInventorySnapshot(
+    val selectedSlot: Int,
+    val mainInventory: List<NBTTagCompound?>,
+    val armorInventory: List<NBTTagCompound?>,
 )

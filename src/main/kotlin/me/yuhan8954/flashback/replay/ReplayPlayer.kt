@@ -9,6 +9,9 @@ import net.minecraft.client.Minecraft
 import net.minecraft.network.Packet
 import net.minecraft.network.PacketBuffer
 import net.minecraft.network.play.client.C03PacketPlayer
+import net.minecraft.network.play.client.C09PacketHeldItemChange
+import net.minecraft.network.play.client.C0APacketAnimation
+import net.minecraft.network.play.client.C0BPacketEntityAction
 import java.io.File
 
 object ReplayPlayer {
@@ -378,33 +381,95 @@ object ReplayPlayer {
         currentSession: ReplaySession,
         packet: Packet,
     ) {
-        if (packet !is C03PacketPlayer) {
-            return
+        when (packet) {
+            is C03PacketPlayer -> {
+                val player =
+                    currentSession.player
+
+                player.prevPosX =
+                    player.posX
+
+                player.prevPosY =
+                    player.posY
+
+                player.prevPosZ =
+                    player.posZ
+
+                player.prevRotationYaw =
+                    player.rotationYaw
+
+                player.prevRotationPitch =
+                    player.rotationPitch
+
+                if (packet.func_149466_j()) {
+                    player.setPosition(
+                        packet.func_149464_c(),
+                        packet.func_149471_f(),
+                        packet.func_149472_e(),
+                    )
+                }
+
+                if (packet.func_149463_k()) {
+                    player.rotationYaw =
+                        packet.func_149462_g()
+
+                    player.rotationPitch =
+                        packet.func_149470_h()
+                }
+
+                player.onGround =
+                    packet.func_149465_i()
+            }
+
+            is C09PacketHeldItemChange -> {
+                val slot =
+                    packet.func_149614_c()
+
+                if (slot in 0..8) {
+                    currentSession.player
+                        .inventory
+                        .currentItem =
+                        slot
+                }
+            }
+
+            is C0APacketAnimation -> {
+                currentSession.player
+                    .swingItem()
+            }
+
+            is C0BPacketEntityAction -> {
+                val player =
+                    currentSession.player
+
+                when (
+                    packet.func_149513_d()
+                ) {
+                    1 ->
+                        player.setSneaking(
+                            true,
+                        )
+
+                    2 ->
+                        player.setSneaking(
+                            false,
+                        )
+
+                    4 ->
+                        player.setSprinting(
+                            true,
+                        )
+
+                    5 ->
+                        player.setSprinting(
+                            false,
+                        )
+                }
+            }
+
+            else ->
+                return
         }
-
-        val player =
-            currentSession.player
-
-        player.prevPosX = player.posX
-        player.prevPosY = player.posY
-        player.prevPosZ = player.posZ
-        player.prevRotationYaw = player.rotationYaw
-        player.prevRotationPitch = player.rotationPitch
-
-        if (packet.func_149466_j()) {
-            player.setPosition(
-                packet.func_149464_c(),
-                packet.func_149471_f(),
-                packet.func_149472_e(),
-            )
-        }
-
-        if (packet.func_149463_k()) {
-            player.rotationYaw = packet.func_149462_g()
-            player.rotationPitch = packet.func_149470_h()
-        }
-
-        player.onGround = packet.func_149465_i()
     }
 
     private fun decodeFmlProxyPacket(

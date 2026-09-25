@@ -10,6 +10,9 @@ import net.minecraft.client.Minecraft
 import net.minecraft.network.Packet
 import net.minecraft.network.PacketBuffer
 import net.minecraft.network.play.client.C03PacketPlayer
+import net.minecraft.network.play.client.C09PacketHeldItemChange
+import net.minecraft.network.play.client.C0APacketAnimation
+import net.minecraft.network.play.client.C0BPacketEntityAction
 import java.io.File
 
 object ReplayRecorder {
@@ -45,7 +48,6 @@ object ReplayRecorder {
     @Synchronized
     fun stop() {
         writer?.close()
-
         writer = null
     }
 
@@ -61,7 +63,12 @@ object ReplayRecorder {
     @JvmStatic
     @Synchronized
     fun recordOutbound(packet: Packet) {
-        if (packet !is C03PacketPlayer) {
+        if (
+            packet !is C03PacketPlayer &&
+            packet !is C09PacketHeldItemChange &&
+            packet !is C0APacketAnimation &&
+            packet !is C0BPacketEntityAction
+        ) {
             return
         }
 

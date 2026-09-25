@@ -93,6 +93,6 @@ class ReplayWriter(
 
         const val MAGIC = 0x46425231
 
-        const val FORMAT_VERSION = 5
+        const val FORMAT_VERSION = 6
     }
 }
