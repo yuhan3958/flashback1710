@@ -134,7 +134,6 @@ class ReplayMutationJournal {
         }
     }
 
-
     private fun captureTileEntityMutations(
         world: ReplayWorld,
     ) {
@@ -216,20 +215,18 @@ class ReplayMutationJournal {
         x: Int,
         y: Int,
         z: Int,
-    ): Long =
+    ): Long = (
+        x.toLong() and
+            0x3ffffffL
+        ) shl 38 xor
         (
-            x.toLong() and
+            z.toLong() and
                 0x3ffffffL
-            ) shl 38 xor
-            (
-                z.toLong() and
-                    0x3ffffffL
-                ) shl 12 xor
-            (
-                y.toLong() and
-                    0xfffL
-                )
-
+            ) shl 12 xor
+        (
+            y.toLong() and
+                0xfffL
+            )
 
     private fun trim() {
         val minimumTimeNanos =
@@ -302,8 +299,7 @@ data class ReplayTileEntityMutation(
     val x: Int,
     val y: Int,
     val z: Int,
-    val beforeNbt:
-        NBTTagCompound?,
+    val beforeNbt: NBTTagCompound?,
 ) : ReplayMutation {
 
     override fun undo(
@@ -371,8 +367,7 @@ data class ReplayEntityRemovedMutation(
 data class ReplayBlockState(
     val block: Block,
     val metadata: Int,
-    val tileEntityNbt:
-        NBTTagCompound?,
+    val tileEntityNbt: NBTTagCompound?,
 ) {
 
     companion object {
