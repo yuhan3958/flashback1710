@@ -4,6 +4,7 @@ import com.cleanroommc.modularui.screen.CustomModularScreen
 import com.cleanroommc.modularui.screen.ModularPanel
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext
 import me.yuhan8954.flashback.Flashback1710
+import org.lwjgl.input.Keyboard
 
 class ReplayMainPanel :
     CustomModularScreen(
@@ -13,6 +14,20 @@ class ReplayMainPanel :
     init {
         drawDarkBackground(
             false,
+        )
+    }
+
+    override fun onKeyPressed(
+        typedChar: Char,
+        keyCode: Int,
+    ): Boolean {
+        if (keyCode == Keyboard.KEY_ESCAPE) {
+            return true
+        }
+
+        return super.onKeyPressed(
+            typedChar,
+            keyCode,
         )
     }
 
