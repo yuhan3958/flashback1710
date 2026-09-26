@@ -3,6 +3,9 @@ package me.yuhan8954.flashback.replay
 import cpw.mods.fml.common.network.internal.FMLProxyPacket
 import cpw.mods.fml.relauncher.Side
 import io.netty.buffer.Unpooled
+import me.yuhan8954.flashback.editor.ReplayCameraKeyframe
+import me.yuhan8954.flashback.editor.ReplayEditorState
+import me.yuhan8954.flashback.editor.ReplayTimelineEvent
 import me.yuhan8954.flashback.io.ReplayReader
 import me.yuhan8954.flashback.ui.ReplayUiController
 import net.minecraft.client.Minecraft
@@ -40,6 +43,10 @@ object ReplayPlayer {
         ReplaySession? =
         null
 
+    private var editorState:
+        ReplayEditorState? =
+        null
+
     private var durationNanos =
         0L
 
@@ -71,6 +78,29 @@ object ReplayPlayer {
 
     val totalDurationNanos: Long
         get() = durationNanos
+
+    val inPointNanos: Long?
+        get() =
+            editorState?.inPointNanos
+
+    val outPointNanos: Long?
+        get() =
+            editorState?.outPointNanos
+
+    val timelineEvents: List<ReplayTimelineEvent>
+        get() =
+            editorState?.timelineEvents()
+                ?: emptyList()
+
+    val markerCount: Int
+        get() =
+            editorState?.markerCount()
+                ?: 0
+
+    val cameraKeyframeCount: Int
+        get() =
+            editorState?.cameraKeyframeCount()
+                ?: 0
 
     val freeCameraActive: Boolean
         get() =
@@ -104,6 +134,19 @@ object ReplayPlayer {
                 reader.checkpoints,
                 packets,
                 durationNanos,
+            )
+
+        editorState =
+            ReplayEditorState(
+                packetTimes =
+                packets.map {
+                    it.timestampNanos
+                },
+                checkpointTimes =
+                reader.checkpoints
+                    .map {
+                        it.timestampNanos
+                    },
             )
 
         clock.reset()
@@ -155,6 +198,10 @@ object ReplayPlayer {
 
         currentSession.cameraController.tick()
 
+        applyCameraTrack(
+            currentSession,
+        )
+
         if (
             speed >= 0.0 &&
             (
@@ -185,13 +232,40 @@ object ReplayPlayer {
 
         clock.update()
 
+        val editor =
+            editorState
+
+        val lowerBound =
+            editor?.inPointNanos
+                ?: 0L
+
+        val upperBound =
+            editor?.outPointNanos
+                ?: durationNanos
+
+        var reachedRangeBoundary =
+            false
+
         if (
             clock.currentTimeNanos >
-            durationNanos
+            upperBound
         ) {
             clock.seek(
-                durationNanos,
+                upperBound,
             )
+
+            reachedRangeBoundary =
+                true
+        } else if (
+            clock.currentTimeNanos <
+            lowerBound
+        ) {
+            clock.seek(
+                lowerBound,
+            )
+
+            reachedRangeBoundary =
+                true
         }
 
         if (
@@ -213,12 +287,15 @@ object ReplayPlayer {
         currentSession.cameraController.beginTick()
 
         if (
+            reachedRangeBoundary ||
             !clock.paused &&
             (
                 speed > 0.0 &&
-                    clock.currentTimeNanos >= durationNanos ||
+                    clock.currentTimeNanos >=
+                    upperBound ||
                     speed < 0.0 &&
-                    clock.currentTimeNanos <= 0L
+                    clock.currentTimeNanos <=
+                    lowerBound
                 )
         ) {
             clock.pause()
@@ -234,6 +311,9 @@ object ReplayPlayer {
         session?.close()
 
         session =
+            null
+
+        editorState =
             null
 
         packets =
@@ -342,6 +422,10 @@ object ReplayPlayer {
             targetTimeNanos,
         )
 
+        applyCameraTrack(
+            currentSession,
+        )
+
         return true
     }
 
@@ -358,13 +442,104 @@ object ReplayPlayer {
         return true
     }
 
+    fun addMarker(): Boolean {
+        val editor =
+            editorState ?: return false
+
+        editor.addMarker(
+            currentTimeNanos,
+            "Marker " +
+                (
+                    editor.markerCount() +
+                        1
+                    ),
+        )
+
+        return true
+    }
+
+    fun setInPoint(): Boolean {
+        val editor =
+            editorState ?: return false
+
+        editor.setInPoint(
+            currentTimeNanos,
+        )
+
+        return true
+    }
+
+    fun setOutPoint(): Boolean {
+        val editor =
+            editorState ?: return false
+
+        editor.setOutPoint(
+            currentTimeNanos,
+        )
+
+        return true
+    }
+
+    fun clearInOutRange(): Boolean {
+        val editor =
+            editorState ?: return false
+
+        editor.clearRange()
+        return true
+    }
+
+    fun addCameraKeyframe(): Boolean {
+        val currentSession =
+            session ?: return false
+
+        val pose =
+            currentSession.cameraController
+                .currentPose()
+                ?: return false
+
+        val editor =
+            editorState ?: return false
+
+        editor.addCameraKeyframe(
+            ReplayCameraKeyframe(
+                timestampNanos =
+                currentTimeNanos,
+                x =
+                pose.x,
+                y =
+                pose.y,
+                z =
+                pose.z,
+                yaw =
+                pose.yaw,
+                pitch =
+                pose.pitch,
+            ),
+        )
+
+        return true
+    }
+
     fun enableFreeCamera(): Boolean {
         if (!playing) {
             return false
         }
 
-        return session?.cameraController
-            ?.enable() == true
+        val currentSession =
+            session ?: return false
+
+        if (
+            !currentSession.cameraController
+                .enable()
+        ) {
+            return false
+        }
+
+        applyCameraTrack(
+            currentSession,
+        )
+
+        return true
     }
 
     fun disableFreeCamera(): Boolean {
@@ -406,6 +581,28 @@ object ReplayPlayer {
             deltaX,
             deltaY,
         ) == true
+
+    private fun applyCameraTrack(
+        currentSession: ReplaySession,
+    ) {
+        if (
+            !currentSession.cameraController
+                .state
+                .active
+        ) {
+            return
+        }
+
+        val pose =
+            editorState?.cameraPoseAt(
+                currentTimeNanos,
+            ) ?: return
+
+        currentSession.cameraController
+            .applyPose(
+                pose,
+            )
+    }
 
     private fun decode(
         recorded: RecordedPacket,

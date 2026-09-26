@@ -1,5 +1,6 @@
 package me.yuhan8954.flashback.camera
 
+import me.yuhan8954.flashback.editor.ReplayCameraPose
 import me.yuhan8954.flashback.replay.ReplaySession
 import me.yuhan8954.flashback.ui.ReplayUiScreen
 import net.minecraft.client.Minecraft
@@ -202,6 +203,62 @@ class ReplayCameraController(
                     multiplier,
             )
         }
+
+        return true
+    }
+
+    fun currentPose(): ReplayCameraPose? {
+        val currentCamera =
+            camera ?: return null
+
+        return ReplayCameraPose(
+            x =
+            currentCamera.posX,
+            y =
+            currentCamera.posY,
+            z =
+            currentCamera.posZ,
+            yaw =
+            currentCamera.rotationYaw,
+            pitch =
+            currentCamera.rotationPitch,
+        )
+    }
+
+    fun applyPose(
+        pose: ReplayCameraPose,
+    ): Boolean {
+        if (!state.active) {
+            return false
+        }
+
+        val currentCamera =
+            camera ?: return false
+
+        currentCamera.setPositionAndRotation(
+            pose.x,
+            pose.y,
+            pose.z,
+            pose.yaw,
+            pose.pitch,
+        )
+
+        currentCamera.prevPosX =
+            pose.x
+        currentCamera.prevPosY =
+            pose.y
+        currentCamera.prevPosZ =
+            pose.z
+        currentCamera.lastTickPosX =
+            pose.x
+        currentCamera.lastTickPosY =
+            pose.y
+        currentCamera.lastTickPosZ =
+            pose.z
+        currentCamera.prevRotationYaw =
+            pose.yaw
+        currentCamera.prevRotationPitch =
+            pose.pitch
 
         return true
     }
