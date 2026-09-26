@@ -391,6 +391,10 @@ class ReplayWorld(
                     before,
                 ),
             )
+
+            mutationJournal.rememberTileEntity(
+                tileEntity,
+            )
         }
     }
 
@@ -432,6 +436,12 @@ class ReplayWorld(
                 ),
             )
         }
+
+        mutationJournal.forgetTileEntity(
+            x,
+            y,
+            z,
+        )
     }
 
     override fun addEntityToWorld(
@@ -450,6 +460,10 @@ class ReplayWorld(
                 ReplayEntityAddedMutation(
                     entityId,
                 ),
+            )
+
+            mutationJournal.rememberEntity(
+                entity,
             )
         }
     }
@@ -486,6 +500,10 @@ class ReplayWorld(
                 ),
             )
         }
+
+        mutationJournal.forgetEntity(
+            entityId,
+        )
 
         return removed
     }
