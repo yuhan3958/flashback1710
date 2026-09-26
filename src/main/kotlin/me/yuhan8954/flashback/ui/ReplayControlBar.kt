@@ -19,45 +19,18 @@ class ReplayControlBar : ParentWidget<ReplayControlBar>() {
         )
 
         child(
-            ReplayTextWidget(
-                IKey.dynamic {
-                    ReplayTimeFormatter.format(
-                        ReplayPlayer.currentTimeNanos,
-                    )
-                },
-            ).left(6)
-                .top(4)
-                .width(76)
-                .height(9)
-                .color(
-                    ReplayUiStyle.TEXT_COLOR,
-                ),
-        )
-
-        child(
-            ReplayTextWidget(
-                IKey.dynamic {
-                    speedPrefix() +
-                        ReplayTimeFormatter.formatSpeed(
-                            ReplayPlayer.speed,
-                        )
-                },
-            ).left(82)
-                .top(4)
-                .width(34)
-                .height(9)
-                .textAlign(
-                    Alignment.CenterRight,
-                )
-                .color(
-                    ReplayUiStyle.TEXT_COLOR,
-                ),
+            transportButton(
+                "X",
+                4,
+            ) {
+                ReplayPlayer.stop()
+            },
         )
 
         child(
             transportButton(
                 "|<",
-                6,
+                24,
             ) {
                 ReplayUiController.skipBackward()
             },
@@ -66,7 +39,7 @@ class ReplayControlBar : ParentWidget<ReplayControlBar>() {
         child(
             transportButton(
                 "<<",
-                28,
+                44,
             ) {
                 ReplayUiController.decreaseSpeed()
             },
@@ -75,7 +48,7 @@ class ReplayControlBar : ParentWidget<ReplayControlBar>() {
         child(
             transportButton(
                 label = null,
-                left = 50,
+                left = 64,
                 dynamicLabel = {
                     if (ReplayPlayer.paused) {
                         ">"
@@ -91,7 +64,7 @@ class ReplayControlBar : ParentWidget<ReplayControlBar>() {
         child(
             transportButton(
                 ">>",
-                72,
+                84,
             ) {
                 ReplayUiController.increaseSpeed()
             },
@@ -100,19 +73,9 @@ class ReplayControlBar : ParentWidget<ReplayControlBar>() {
         child(
             transportButton(
                 ">|",
-                94,
+                104,
             ) {
                 ReplayUiController.skipForward()
-            },
-        )
-
-        child(
-            smallButton(
-                "X",
-                6,
-                34,
-            ) {
-                ReplayPlayer.stop()
             },
         )
 
@@ -120,27 +83,73 @@ class ReplayControlBar : ParentWidget<ReplayControlBar>() {
             ReplayTextWidget(
                 IKey.dynamic {
                     ReplayTimeFormatter.format(
-                        ReplayPlayer.totalDurationNanos,
+                        ReplayPlayer.currentTimeNanos,
                     )
                 },
-            ).left(28)
-                .top(36)
-                .width(88)
-                .height(9)
+            ).left(126)
+                .top(5)
+                .width(74)
+                .height(10)
                 .textAlign(
                     Alignment.CenterRight,
                 )
                 .color(
-                    ReplayUiStyle.MUTED_TEXT_COLOR,
+                    ReplayUiStyle.TEXT_COLOR,
                 ),
+        )
+
+        child(
+            ReplayTextWidget(
+                IKey.dynamic {
+                    speedPrefix() +
+                        ReplayTimeFormatter.formatSpeed(
+                            ReplayPlayer.speed,
+                        )
+                },
+            ).left(126)
+                .top(19)
+                .width(74)
+                .height(10)
+                .textAlign(
+                    Alignment.CenterRight,
+                )
+                .color(
+                    ReplayUiStyle.TEXT_COLOR,
+                ),
+        )
+
+        child(
+            cameraButton(
+                "P",
+                204,
+                active = {
+                    !ReplayPlayer.freeCameraActive
+                },
+                action = {
+                    ReplayPlayer.disableFreeCamera()
+                },
+            ),
+        )
+
+        child(
+            cameraButton(
+                "F",
+                224,
+                active = {
+                    ReplayPlayer.freeCameraActive
+                },
+                action = {
+                    ReplayPlayer.enableFreeCamera()
+                },
+            ),
         )
 
         child(
             ReplayTimelineWidget()
                 .left(TIMELINE_LEFT)
                 .right(4)
-                .top(4)
-                .bottom(4),
+                .top(3)
+                .bottom(3),
         )
     }
 
@@ -151,8 +160,8 @@ class ReplayControlBar : ParentWidget<ReplayControlBar>() {
         action: () -> Unit,
     ): ButtonWidget<*> = ReplayButtonWidget()
         .left(left)
-        .top(15)
-        .size(20, 17)
+        .top(11)
+        .size(18, 18)
         .background(
             ReplayUiStyle.buttonBackground(),
         )
@@ -175,22 +184,26 @@ class ReplayControlBar : ParentWidget<ReplayControlBar>() {
             }
         }
 
-    private fun smallButton(
+    private fun cameraButton(
         label: String,
         left: Int,
-        top: Int,
+        active: () -> Boolean,
         action: () -> Unit,
     ): ButtonWidget<*> = ReplayButtonWidget()
         .left(left)
-        .top(top)
-        .size(18, 14)
+        .top(11)
+        .size(18, 18)
         .background(
             ReplayUiStyle.buttonBackground(),
         )
         .overlay(
-            IKey.str(
-                label,
-            ),
+            IKey.dynamic {
+                if (active()) {
+                    "\u00A7b$label"
+                } else {
+                    "\u00A77$label"
+                }
+            },
         ).onMousePressed {
             if (it != 0) {
                 false
@@ -214,9 +227,9 @@ class ReplayControlBar : ParentWidget<ReplayControlBar>() {
     companion object {
 
         const val HEIGHT =
-            52
+            40
 
         private const val TIMELINE_LEFT =
-            122
+            246
     }
 }
