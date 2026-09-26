@@ -475,36 +475,57 @@ object ReplayPlayer {
         currentSession: ReplaySession,
         targetTimeNanos: Long,
     ) {
-        currentSession.world.undoMutationsTo(
-            currentSession,
-            targetTimeNanos,
-        )
-
-        var frame =
+        val journal =
             currentSession.world
                 .mutationJournal
-                .withoutRecording {
-                    reverseHistory.restoreAtOrBefore(
-                        currentSession,
-                        targetTimeNanos,
-                    )
-                }
 
-        if (frame == null) {
+        val reversePath =
+            ReplayReversePlanner.choose(
+                targetTimeNanos,
+                journal.coverage,
+                reverseHistory.coverage,
+            )
+
+        if (
+            reversePath ==
+            ReplayReversePath.REBUILD
+        ) {
+            rebuildReverseHistory(
+                currentSession,
+                targetTimeNanos,
+            )
+        } else {
+            currentSession.world.undoMutationsTo(
+                currentSession,
+                targetTimeNanos,
+            )
+        }
+
+        var frame =
+            journal.withoutRecording {
+                reverseHistory.restoreAtOrBefore(
+                    currentSession,
+                    targetTimeNanos,
+                )
+            }
+
+        if (
+            frame == null &&
+            reversePath ==
+            ReplayReversePath.IN_PLACE
+        ) {
             rebuildReverseHistory(
                 currentSession,
                 targetTimeNanos,
             )
 
             frame =
-                currentSession.world
-                    .mutationJournal
-                    .withoutRecording {
-                        reverseHistory.restoreAtOrBefore(
-                            currentSession,
-                            targetTimeNanos,
-                        )
-                    }
+                journal.withoutRecording {
+                    reverseHistory.restoreAtOrBefore(
+                        currentSession,
+                        targetTimeNanos,
+                    )
+                }
         }
 
         if (frame == null) {
