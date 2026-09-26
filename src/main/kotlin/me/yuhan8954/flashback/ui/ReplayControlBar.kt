@@ -216,17 +216,16 @@ class ReplayControlBar : ParentWidget<ReplayControlBar>() {
             }
         }
 
-    private fun speedPrefix(): String =
-        when {
-            ReplayPlayer.speed < 0.0 ->
-                "\u00A76"
+    private fun speedPrefix(): String = when {
+        ReplayPlayer.speed < 0.0 ->
+            "\u00A76"
 
-            ReplayPlayer.speed > 1.0 ->
-                "\u00A7a"
+        ReplayPlayer.speed > 1.0 ->
+            "\u00A7a"
 
-            else ->
-                "\u00A7f"
-        }
+        else ->
+            "\u00A7f"
+    }
 
     companion object {
 
