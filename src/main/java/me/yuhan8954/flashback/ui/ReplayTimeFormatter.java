@@ -72,10 +72,10 @@ public final class ReplayTimeFormatter {
                 return Long.toString(whole) + 'x';
             }
             if (remainder == 2L) {
-                return (quarters < 0 && whole == 0 ? "-" : Long.toString(whole))
+                return (quarters < 0 && whole == 0 ? "-0" : Long.toString(whole))
                     + ".5x";
             }
-            String prefix = quarters < 0 && whole == 0 ? "-" : Long.toString(whole);
+            String prefix = quarters < 0 && whole == 0 ? "-0" : Long.toString(whole);
             return prefix + (remainder == 1L ? ".25x" : ".75x");
         }
 
