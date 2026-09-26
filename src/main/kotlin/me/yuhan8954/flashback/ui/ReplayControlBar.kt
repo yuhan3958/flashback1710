@@ -38,9 +38,10 @@ class ReplayControlBar : ParentWidget<ReplayControlBar>() {
         child(
             ReplayTextWidget(
                 IKey.dynamic {
-                    ReplayTimeFormatter.formatSpeed(
-                        ReplayPlayer.speed,
-                    )
+                    speedPrefix() +
+                        ReplayTimeFormatter.formatSpeed(
+                            ReplayPlayer.speed,
+                        )
                 },
             ).left(104)
                 .top(6)
@@ -50,7 +51,7 @@ class ReplayControlBar : ParentWidget<ReplayControlBar>() {
                     Alignment.Right,
                 )
                 .color(
-                    speedColor(),
+                    ReplayUiStyle.TEXT_COLOR,
                 ),
         )
 
@@ -215,16 +216,16 @@ class ReplayControlBar : ParentWidget<ReplayControlBar>() {
             }
         }
 
-    private fun speedColor(): Int =
+    private fun speedPrefix(): String =
         when {
             ReplayPlayer.speed < 0.0 ->
-                ReplayUiStyle.SPEED_REVERSE_COLOR
+                "\u00A76"
 
             ReplayPlayer.speed > 1.0 ->
-                ReplayUiStyle.SPEED_FORWARD_COLOR
+                "\u00A7a"
 
             else ->
-                ReplayUiStyle.TEXT_COLOR
+                "\u00A7f"
         }
 
     companion object {
