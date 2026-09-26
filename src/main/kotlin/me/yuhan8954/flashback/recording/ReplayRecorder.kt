@@ -3,6 +3,7 @@ package me.yuhan8954.flashback.recording
 import cpw.mods.fml.common.network.internal.FMLProxyPacket
 import io.netty.buffer.Unpooled
 import me.yuhan8954.flashback.config.ReplayConfig
+import me.yuhan8954.flashback.io.ReplayLibrary
 import me.yuhan8954.flashback.io.ReplayWriter
 import me.yuhan8954.flashback.replay.PacketFlow
 import me.yuhan8954.flashback.replay.RecordedPacket
@@ -24,6 +25,11 @@ object ReplayRecorder {
         ReplayWriter? =
         null
 
+    var currentFile:
+        File? =
+        null
+        private set
+
     private var startTime =
         0L
 
@@ -42,6 +48,23 @@ object ReplayRecorder {
 
     @JvmStatic
     @Synchronized
+    fun startNew(
+        directory: File,
+    ): File {
+        val file =
+            ReplayLibrary.createRecordingFile(
+                directory,
+            )
+
+        start(
+            file,
+        )
+
+        return file
+    }
+
+    @JvmStatic
+    @Synchronized
     fun start(file: File) {
         stop()
 
@@ -55,6 +78,9 @@ object ReplayRecorder {
                 file,
                 snapshot,
             )
+
+        currentFile =
+            file
 
         checkpointSnapshot =
             snapshot
@@ -80,6 +106,7 @@ object ReplayRecorder {
     fun stop() {
         writer?.close()
         writer = null
+        currentFile = null
         checkpointSnapshot = null
         packetCount = 0
         nextDeltaCheckpointNanos = Long.MAX_VALUE

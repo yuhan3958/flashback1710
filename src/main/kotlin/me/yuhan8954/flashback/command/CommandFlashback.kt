@@ -4,6 +4,7 @@ import me.yuhan8954.flashback.camera.ReplayCameraController
 import me.yuhan8954.flashback.recording.ReplayRecorder
 import me.yuhan8954.flashback.replay.ReplayClock
 import me.yuhan8954.flashback.replay.ReplayPlayer
+import me.yuhan8954.flashback.ui.ReplayLibraryController
 import me.yuhan8954.flashback.ui.ReplayUiController
 import net.minecraft.client.Minecraft
 import net.minecraft.command.CommandBase
@@ -19,12 +20,9 @@ class CommandFlashback : CommandBase() {
     private val replayDirectory: File
         get() = File(mc.mcDataDir, "replays")
 
-    private val testReplay: File
-        get() = File(replayDirectory, "latest.fbr")
-
     override fun getCommandName(): String = "flashback"
 
-    override fun getCommandUsage(sender: ICommandSender): String = "/flashback <record|stop|play|pause|resume|toggle|speed|step|camera|ui>"
+    override fun getCommandUsage(sender: ICommandSender): String = "/flashback <record|stop|library|play|pause|resume|toggle|speed|step|camera|ui>"
 
     override fun getRequiredPermissionLevel(): Int = 0
 
@@ -44,11 +42,15 @@ class CommandFlashback : CommandBase() {
 
         when (args[0].lowercase()) {
             "record" -> {
-                replayDirectory.mkdirs()
+                val file =
+                    ReplayRecorder.startNew(
+                        replayDirectory,
+                    )
 
-                ReplayRecorder.start(testReplay)
-
-                send("Recording started")
+                send(
+                    "Recording started: " +
+                        file.name,
+                )
             }
 
             "stop" -> {
@@ -58,15 +60,49 @@ class CommandFlashback : CommandBase() {
                 send("Recording and playback stopped")
             }
 
+            "library" -> {
+                ReplayLibraryController.open()
+            }
+
             "play" -> {
-                if (!testReplay.exists()) {
+                val fileName =
+                    args.getOrNull(
+                        1,
+                    )
+
+                if (fileName == null) {
+                    ReplayLibraryController.open()
+                    return
+                }
+
+                val file =
+                    replayDirectory.listFiles()
+                        .orEmpty()
+                        .firstOrNull {
+                            it.isFile &&
+                                it.name ==
+                                fileName
+                        }
+
+                if (
+                    file == null ||
+                    !file.extension.equals(
+                        "fbr",
+                        ignoreCase = true,
+                    )
+                ) {
                     send("Replay file not found")
                     return
                 }
 
-                ReplayPlayer.play(testReplay)
+                ReplayPlayer.play(
+                    file,
+                )
 
-                send("Playback started paused")
+                send(
+                    "Playback started paused: " +
+                        file.name,
+                )
             }
 
             "pause" -> {
@@ -162,6 +198,7 @@ class CommandFlashback : CommandBase() {
                 args,
                 "record",
                 "stop",
+                "library",
                 "play",
                 "pause",
                 "resume",
@@ -170,6 +207,31 @@ class CommandFlashback : CommandBase() {
                 "step",
                 "camera",
                 "ui",
+            )
+        }
+
+        if (
+            args.size == 2 &&
+            args[0].equals(
+                "play",
+                ignoreCase = true,
+            )
+        ) {
+            return getListOfStringsMatchingLastWord(
+                args,
+                *replayDirectory.listFiles()
+                    .orEmpty()
+                    .asSequence()
+                    .filter {
+                        it.isFile &&
+                            it.extension.equals(
+                                "fbr",
+                                ignoreCase = true,
+                            )
+                    }.map {
+                        it.name
+                    }.toList()
+                    .toTypedArray(),
             )
         }
 
