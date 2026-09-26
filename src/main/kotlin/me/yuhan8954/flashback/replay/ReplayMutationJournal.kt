@@ -20,6 +20,9 @@ class ReplayMutationJournal {
     private var enabled =
         false
 
+    private var retainedStartTimeNanos =
+        0L
+
     private val tileEntityState =
         mutableMapOf<Long, NBTTagCompound>()
 
@@ -36,25 +39,17 @@ class ReplayMutationJournal {
                 0
 
     val coverage: ReplayReverseCoverage?
-        get() {
-            val first =
-                mutations.peekFirst()
-                    ?: return null
-
-            val last =
-                mutations.peekLast()
-                    ?: return null
-
-            return ReplayReverseCoverage(
-                startTimeNanos =
-                first.timestampNanos,
-                endTimeNanos =
-                maxOf(
+        get() =
+            if (enabled) {
+                ReplayReverseCoverage(
+                    startTimeNanos =
+                    retainedStartTimeNanos,
+                    endTimeNanos =
                     timestampNanos,
-                    last.timestampNanos,
-                ),
-            )
-        }
+                )
+            } else {
+                null
+            }
 
     fun clear() {
         mutations.clear()
@@ -69,6 +64,9 @@ class ReplayMutationJournal {
         clear()
 
         this.timestampNanos =
+            timestampNanos
+
+        retainedStartTimeNanos =
             timestampNanos
 
         enabled =
@@ -383,6 +381,12 @@ class ReplayMutationJournal {
                     HISTORY_DURATION_NANOS
                 ).coerceAtLeast(
                 0L,
+            )
+
+        retainedStartTimeNanos =
+            maxOf(
+                retainedStartTimeNanos,
+                minimumTimeNanos,
             )
 
         while (
