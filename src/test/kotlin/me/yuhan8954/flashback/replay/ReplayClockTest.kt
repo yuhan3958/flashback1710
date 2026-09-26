@@ -74,4 +74,81 @@ class ReplayClockTest {
             clock.currentTimeNanos,
         )
     }
+    @Test
+    fun `minus four speed rewinds at four times wall clock`() {
+        var wallTime = 0L
+        val clock =
+            ReplayClock {
+                wallTime
+            }
+
+        clock.reset()
+        clock.seek(
+            1_000_000_000L,
+        )
+        clock.setSpeed(
+            -4.0,
+        )
+        clock.resume()
+
+        wallTime +=
+            100_000_000L
+
+        clock.update()
+
+        assertEquals(
+            600_000_000L,
+            clock.currentTimeNanos,
+        )
+    }
+
+    @Test
+    fun `direction changes preserve accumulated replay position`() {
+        var wallTime = 0L
+        val clock =
+            ReplayClock {
+                wallTime
+            }
+
+        clock.reset()
+        clock.seek(
+            1_000_000_000L,
+        )
+        clock.resume()
+
+        wallTime +=
+            100_000_000L
+
+        clock.setSpeed(
+            -1.0,
+        )
+
+        assertEquals(
+            1_100_000_000L,
+            clock.currentTimeNanos,
+        )
+
+        wallTime +=
+            250_000_000L
+
+        clock.setSpeed(
+            2.0,
+        )
+
+        assertEquals(
+            850_000_000L,
+            clock.currentTimeNanos,
+        )
+
+        wallTime +=
+            100_000_000L
+
+        clock.update()
+
+        assertEquals(
+            1_050_000_000L,
+            clock.currentTimeNanos,
+        )
+    }
+
 }
