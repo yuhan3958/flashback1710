@@ -59,7 +59,7 @@ class ReplayCameraPanel : ParentWidget<ReplayCameraPanel>() {
                 .top(47)
                 .size(106, 18)
                 .background(
-                    GuiTextures.BUTTON_CLEAN,
+                    ReplayUiStyle.buttonBackground(),
                 )
                 .overlay(
                     IKey.str(
