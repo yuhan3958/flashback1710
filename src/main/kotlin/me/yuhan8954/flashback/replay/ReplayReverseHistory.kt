@@ -26,6 +26,24 @@ class ReplayReverseHistory {
             frames.peekLast()
                 ?.timestampNanos
 
+    val coverage: ReplayReverseCoverage?
+        get() {
+            val first =
+                frames.peekFirst()
+                    ?: return null
+
+            val last =
+                frames.peekLast()
+                    ?: return null
+
+            return ReplayReverseCoverage(
+                startTimeNanos =
+                first.timestampNanos,
+                endTimeNanos =
+                last.timestampNanos,
+            )
+        }
+
     fun clear() {
         frames.clear()
     }
