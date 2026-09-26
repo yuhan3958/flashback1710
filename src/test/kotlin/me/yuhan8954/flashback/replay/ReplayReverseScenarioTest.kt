@@ -234,13 +234,10 @@ class ReplayReverseScenarioTest {
     fun `repeated forward reverse traversal does not drift`() {
         val initial =
             ScenarioState(
-                block = "stone",
-                tileValue = 1,
                 entities =
                 mutableMapOf(
                     1 to 0.0,
                 ),
-                worldTime = 1000L,
             )
 
         repeat(20) {
