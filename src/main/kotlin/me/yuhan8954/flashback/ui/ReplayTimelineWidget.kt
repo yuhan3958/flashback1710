@@ -6,10 +6,12 @@ import com.cleanroommc.modularui.drawable.Rectangle
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext
 import com.cleanroommc.modularui.theme.WidgetThemeEntry
 import com.cleanroommc.modularui.widget.Widget
-import me.yuhan8954.flashback.replay.ReplayClock
 import me.yuhan8954.flashback.replay.ReplayPlayer
 import net.minecraft.client.Minecraft
 import kotlin.math.ceil
+import kotlin.math.max
+import kotlin.math.min
+import kotlin.math.pow
 import kotlin.math.roundToInt
 
 class ReplayTimelineWidget :
@@ -52,16 +54,19 @@ class ReplayTimelineWidget :
                 ReplayUiStyle.PLAYHEAD_COLOR,
             )
 
-    private var viewStartNanos =
-        0L
+    private var visibleStartNanos =
+        0.0
 
-    private var visibleDurationNanos =
-        0L
+    private var nanosPerPixel =
+        0.0
 
-    private var middleDragging =
+    private var lastDurationNanos =
+        -1L
+
+    private var panning =
         false
 
-    private var lastDragMouseX =
+    private var lastPanMouseX =
         0
 
     override fun draw(
@@ -81,12 +86,18 @@ class ReplayTimelineWidget :
             return
         }
 
-        val duration =
-            ReplayPlayer.totalDurationNanos
-
-        updateViewport(
-            duration,
+        ensureViewport(
+            width,
         )
+
+        if (
+            !ReplayPlayer.paused &&
+            !panning
+        ) {
+            followPlayhead(
+                width,
+            )
+        }
 
         background.draw(
             context,
@@ -96,10 +107,6 @@ class ReplayTimelineWidget :
             height,
             widgetTheme.theme,
         )
-
-        if (duration <= 0L) {
-            return
-        }
 
         drawRuler(
             context,
@@ -114,9 +121,9 @@ class ReplayTimelineWidget :
             (
                 height -
                     trackTop -
-                    2
+                    3
                 ).coerceAtLeast(
-                5,
+                6,
             )
 
         track.draw(
@@ -130,38 +137,44 @@ class ReplayTimelineWidget :
 
         val currentTime =
             ReplayPlayer.currentTimeNanos
+                .toDouble()
 
-        val playheadX =
-            timeToX(
-                currentTime,
-                width,
-            )
+        val progressWidth =
+            when {
+                currentTime <=
+                    visibleStartNanos ->
+                    0
 
-        val progressStart =
-            timeToX(
-                viewStartNanos,
-                width,
-            )
+                currentTime >=
+                    visibleEndNanos(
+                        width,
+                    ) ->
+                    width
 
-        if (
-            playheadX >
-            progressStart
-        ) {
+                else ->
+                    timeToX(
+                        currentTime,
+                    ).coerceIn(
+                        0,
+                        width,
+                    )
+            }
+
+        if (progressWidth > 0) {
             progress.draw(
                 context,
-                progressStart,
+                0,
                 trackTop,
-                (
-                    playheadX -
-                        progressStart
-                    ).coerceAtMost(
-                    width -
-                        progressStart,
-                ),
+                progressWidth,
                 trackHeight,
                 widgetTheme.theme,
             )
         }
+
+        val playheadX =
+            timeToX(
+                currentTime,
+            )
 
         if (
             playheadX in
@@ -172,7 +185,9 @@ class ReplayTimelineWidget :
                 playheadX,
                 RULER_HEIGHT - 2,
                 1,
-                height - RULER_HEIGHT + 2,
+                height -
+                    RULER_HEIGHT +
+                    2,
                 widgetTheme.theme,
             )
 
@@ -193,11 +208,11 @@ class ReplayTimelineWidget :
                 Interactable.Result.SUCCESS
             }
 
-            MIDDLE_MOUSE_BUTTON -> {
-                middleDragging =
+            2 -> {
+                panning =
                     true
 
-                lastDragMouseX =
+                lastPanMouseX =
                     context.absMouseX
 
                 Interactable.Result.SUCCESS
@@ -215,23 +230,23 @@ class ReplayTimelineWidget :
             0 ->
                 seekToMouse()
 
-            MIDDLE_MOUSE_BUTTON -> {
-                if (!middleDragging) {
-                    return
-                }
-
-                val currentMouseX =
+            2 -> {
+                val mouseX =
                     context.absMouseX
 
-                val deltaPixels =
-                    currentMouseX -
-                        lastDragMouseX
+                val deltaX =
+                    mouseX -
+                        lastPanMouseX
 
-                lastDragMouseX =
-                    currentMouseX
+                lastPanMouseX =
+                    mouseX
 
-                panPixels(
-                    deltaPixels,
+                visibleStartNanos -=
+                    deltaX *
+                        nanosPerPixel
+
+                clampViewport(
+                    area.width,
                 )
             }
         }
@@ -240,245 +255,95 @@ class ReplayTimelineWidget :
     override fun onMouseRelease(
         mouseButton: Int,
     ): Boolean {
-        if (
-            mouseButton ==
-            MIDDLE_MOUSE_BUTTON
-        ) {
-            middleDragging =
+        if (mouseButton == 2) {
+            panning =
                 false
-
-            return true
         }
 
         return mouseButton ==
-            0
+            0 ||
+            mouseButton ==
+            2
     }
 
     override fun onMouseScroll(
         scrollDirection: UpOrDown,
         amount: Int,
     ): Boolean {
-        if (
-            area.width <= 0 ||
-            ReplayPlayer.totalDurationNanos <=
-            0L
-        ) {
-            return false
-        }
+        val width =
+            area.width
 
-        val cursorFraction =
-            (
-                context.absMouseX -
-                    area.x
-                ).toDouble()
-                .div(
-                    area.width,
-                ).coerceIn(
-                    0.0,
-                    1.0,
-                )
-
-        val anchorTime =
-            viewStartNanos +
-                (
-                    visibleDurationNanos *
-                        cursorFraction
-                    ).toLong()
-
-        val zoomFactor =
-            if (
-                scrollDirection.modifier >
-                0
-            ) {
-                ZOOM_IN_FACTOR
-            } else {
-                ZOOM_OUT_FACTOR
-            }
-
-        val steps =
-            amount
-                .coerceAtLeast(
-                    1,
-                )
-
-        var newVisible =
-            visibleDurationNanos
-                .toDouble()
-
-        repeat(
-            steps,
-        ) {
-            newVisible *=
-                zoomFactor
-        }
-
-        visibleDurationNanos =
-            newVisible
-                .toLong()
-                .coerceIn(
-                    MIN_VISIBLE_DURATION_NANOS,
-                    ReplayPlayer.totalDurationNanos
-                        .coerceAtLeast(
-                            MIN_VISIBLE_DURATION_NANOS,
-                        ),
-                ).coerceAtMost(
-                    ReplayPlayer.totalDurationNanos,
-                )
-
-        viewStartNanos =
-            anchorTime -
-                (
-                    visibleDurationNanos *
-                        cursorFraction
-                    ).toLong()
-
-        clampViewport()
-
-        return true
-    }
-
-    private fun updateViewport(
-        duration: Long,
-    ) {
-        if (duration <= 0L) {
-            viewStartNanos =
-                0L
-
-            visibleDurationNanos =
-                0L
-
-            return
-        }
-
-        if (
-            visibleDurationNanos <= 0L ||
-            visibleDurationNanos >
-            duration
-        ) {
-            visibleDurationNanos =
-                duration
-                    .coerceAtMost(
-                        DEFAULT_VISIBLE_DURATION_NANOS,
-                    ).coerceAtLeast(
-                        MIN_VISIBLE_DURATION_NANOS
-                            .coerceAtMost(
-                                duration,
-                            ),
-                    )
-
-            viewStartNanos =
-                (
-                    ReplayPlayer.currentTimeNanos -
-                        visibleDurationNanos /
-                        5
-                    ).coerceAtLeast(
-                    0L,
-                )
-
-            clampViewport()
-        }
-
-        if (!ReplayPlayer.paused) {
-            followPlayhead()
-        }
-    }
-
-    private fun followPlayhead() {
-        val currentTime =
-            ReplayPlayer.currentTimeNanos
-
-        val leftEdge =
-            viewStartNanos +
-                (
-                    visibleDurationNanos *
-                        FOLLOW_EDGE_FRACTION
-                    ).toLong()
-
-        val rightEdge =
-            viewStartNanos +
-                visibleDurationNanos -
-                (
-                    visibleDurationNanos *
-                        FOLLOW_EDGE_FRACTION
-                    ).toLong()
-
-        when {
-            currentTime <
-                leftEdge ->
-                viewStartNanos =
-                    currentTime -
-                        (
-                            visibleDurationNanos *
-                                FOLLOW_TARGET_FRACTION
-                            ).toLong()
-
-            currentTime >
-                rightEdge ->
-                viewStartNanos =
-                    currentTime -
-                        (
-                            visibleDurationNanos *
-                                (
-                                    1.0 -
-                                        FOLLOW_TARGET_FRACTION
-                                    )
-                            ).toLong()
-        }
-
-        clampViewport()
-    }
-
-    private fun panPixels(
-        deltaPixels: Int,
-    ) {
-        if (
-            area.width <= 0 ||
-            visibleDurationNanos <= 0L
-        ) {
-            return
-        }
-
-        val deltaTime =
-            (
-                visibleDurationNanos
-                    .toDouble() *
-                    deltaPixels /
-                    area.width
-                ).toLong()
-
-        viewStartNanos -=
-            deltaTime
-
-        clampViewport()
-    }
-
-    private fun clampViewport() {
         val duration =
             ReplayPlayer.totalDurationNanos
 
         if (
-            duration <= 0L ||
-            visibleDurationNanos <= 0L
+            width <= 0 ||
+            duration <= 0L
         ) {
-            viewStartNanos =
-                0L
-
-            return
+            return false
         }
 
-        val maximumStart =
+        ensureViewport(
+            width,
+        )
+
+        val relativeX =
             (
-                duration -
-                    visibleDurationNanos
-                ).coerceAtLeast(
-                0L,
+                context.absMouseX -
+                    area.x
+                ).coerceIn(
+                0,
+                width,
             )
 
-        viewStartNanos =
-            viewStartNanos.coerceIn(
-                0L,
-                maximumStart,
+        val anchorTime =
+            visibleStartNanos +
+                relativeX *
+                nanosPerPixel
+
+        val zoomPower =
+            (
+                scrollDirection.modifier *
+                    max(
+                        amount,
+                        1,
+                    )
+                ).toDouble()
+
+        val fitNanosPerPixel =
+            duration.toDouble() /
+                width
+
+        val minNanosPerPixel =
+            min(
+                fitNanosPerPixel,
+                MIN_NANOS_PER_PIXEL,
             )
+
+        val newNanosPerPixel =
+            (
+                nanosPerPixel /
+                    ZOOM_FACTOR.pow(
+                        zoomPower,
+                    )
+                ).coerceIn(
+                minNanosPerPixel,
+                fitNanosPerPixel,
+            )
+
+        visibleStartNanos =
+            anchorTime -
+                relativeX *
+                newNanosPerPixel
+
+        nanosPerPixel =
+            newNanosPerPixel
+
+        clampViewport(
+            width,
+        )
+
+        return true
     }
 
     private fun drawRuler(
@@ -486,43 +351,55 @@ class ReplayTimelineWidget :
         widgetTheme: WidgetThemeEntry<*>,
         width: Int,
     ) {
-        val majorInterval =
-            chooseMajorInterval(
+        val duration =
+            ReplayPlayer.totalDurationNanos
+
+        if (duration <= 0L) {
+            return
+        }
+
+        val targetStepNanos =
+            nanosPerPixel *
+                LABEL_TARGET_PIXELS
+
+        val majorStep =
+            chooseMajorStep(
+                targetStepNanos,
+            )
+
+        val minorStep =
+            majorStep /
+                MINOR_DIVISIONS
+
+        val firstMinor =
+            ceil(
+                visibleStartNanos /
+                    minorStep,
+            ).toLong() *
+                minorStep
+
+        val visibleEnd =
+            visibleEndNanos(
                 width,
             )
 
-        val minorInterval =
-            (
-                majorInterval /
-                    MINOR_DIVISIONS
-                ).coerceAtLeast(
-                ReplayClock.MINECRAFT_TICK_NANOS,
-            )
+        var time =
+            firstMinor
 
-        val viewEnd =
-            (
-                viewStartNanos +
-                    visibleDurationNanos
-                ).coerceAtMost(
-                ReplayPlayer.totalDurationNanos,
-            )
-
-        var tick =
-            firstTickAtOrAfter(
-                viewStartNanos,
-                minorInterval,
-            )
-
-        while (tick <= viewEnd) {
+        while (
+            time.toDouble() <=
+            visibleEnd &&
+            time <=
+            duration
+        ) {
             val x =
                 timeToX(
-                    tick,
-                    width,
+                    time.toDouble(),
                 )
 
             val major =
-                tick %
-                    majorInterval ==
+                time %
+                    majorStep ==
                     0L
 
             val markHeight =
@@ -550,34 +427,27 @@ class ReplayTimelineWidget :
 
             if (major) {
                 drawTimeLabel(
-                    tick,
+                    time,
                     x,
-                    width,
                 )
             }
 
-            tick +=
-                minorInterval
+            time +=
+                minorStep
         }
     }
 
     private fun drawTimeLabel(
         timeNanos: Long,
         x: Int,
-        width: Int,
     ) {
-        val fontRenderer =
+        val font =
             Minecraft.getMinecraft()
                 .fontRenderer
 
         val label =
-            ReplayTimeFormatter.format(
+            ReplayTimeFormatter.formatRuler(
                 timeNanos,
-            )
-
-        val labelWidth =
-            fontRenderer.getStringWidth(
-                label,
             )
 
         val labelX =
@@ -585,47 +455,22 @@ class ReplayTimelineWidget :
                 x +
                     2
                 ).coerceAtMost(
-                (
-                    width -
-                        labelWidth -
-                        1
-                    ).coerceAtLeast(
+                max(
+                    area.width -
+                        font.getStringWidth(
+                            label,
+                        ),
                     0,
                 ),
             )
 
-        fontRenderer.drawString(
+        font.drawString(
             label,
             labelX,
             1,
-            LABEL_COLOR,
+            ReplayUiStyle.MUTED_TEXT_COLOR,
         )
     }
-
-    private fun chooseMajorInterval(
-        width: Int,
-    ): Long =
-        MAJOR_INTERVALS_NANOS
-            .firstOrNull {
-                (
-                    it.toDouble() /
-                        visibleDurationNanos *
-                        width
-                    ) >=
-                    MIN_MAJOR_PIXEL_SPACING
-            } ?: MAJOR_INTERVALS_NANOS.last()
-
-    private fun firstTickAtOrAfter(
-        timeNanos: Long,
-        intervalNanos: Long,
-    ): Long =
-        (
-            ceil(
-                timeNanos.toDouble() /
-                    intervalNanos,
-            ) *
-                intervalNanos
-            ).toLong()
 
     private fun drawPlayheadCap(
         context: ModularGuiContext,
@@ -635,17 +480,16 @@ class ReplayTimelineWidget :
         val capLeft =
             (
                 playheadX -
-                    3
+                    2
                 ).coerceAtLeast(
                 0,
             )
 
         val capWidth =
-            (
+            min(
+                5,
                 area.width -
-                    capLeft
-                ).coerceAtMost(
-                7,
+                    capLeft,
             )
 
         playhead.draw(
@@ -659,12 +503,16 @@ class ReplayTimelineWidget :
     }
 
     private fun seekToMouse() {
-        if (
-            area.width <= 0 ||
-            visibleDurationNanos <= 0L
-        ) {
+        val width =
+            area.width
+
+        if (width <= 0) {
             return
         }
+
+        ensureViewport(
+            width,
+        )
 
         val relativeX =
             (
@@ -672,89 +520,206 @@ class ReplayTimelineWidget :
                     area.x
                 ).coerceIn(
                 0,
-                area.width,
+                width,
             )
 
+        val targetTimeNanos =
+            (
+                visibleStartNanos +
+                    relativeX *
+                    nanosPerPixel
+                ).toLong()
+                .coerceIn(
+                    0L,
+                    ReplayPlayer
+                        .totalDurationNanos,
+                )
+
         ReplayPlayer.seek(
-            xToTime(
-                relativeX,
-                area.width,
-            ),
+            targetTimeNanos,
         )
     }
 
-    private fun timeToX(
-        timeNanos: Long,
+    private fun ensureViewport(
         width: Int,
+    ) {
+        val duration =
+            ReplayPlayer.totalDurationNanos
+
+        if (
+            duration <= 0L ||
+            width <= 0
+        ) {
+            visibleStartNanos =
+                0.0
+
+            nanosPerPixel =
+                1.0
+
+            lastDurationNanos =
+                duration
+
+            return
+        }
+
+        if (
+            nanosPerPixel <= 0.0 ||
+            lastDurationNanos !=
+            duration
+        ) {
+            nanosPerPixel =
+                duration.toDouble() /
+                    width
+
+            visibleStartNanos =
+                0.0
+
+            lastDurationNanos =
+                duration
+        }
+
+        clampViewport(
+            width,
+        )
+    }
+
+    private fun followPlayhead(
+        width: Int,
+    ) {
+        val current =
+            ReplayPlayer.currentTimeNanos
+                .toDouble()
+
+        val visibleDuration =
+            width *
+                nanosPerPixel
+
+        val margin =
+            visibleDuration *
+                FOLLOW_MARGIN
+
+        val visibleEnd =
+            visibleStartNanos +
+                visibleDuration
+
+        if (
+            current >
+            visibleEnd -
+                margin
+        ) {
+            visibleStartNanos =
+                current -
+                    visibleDuration *
+                    FOLLOW_POSITION
+        } else if (
+            current <
+            visibleStartNanos +
+                margin
+        ) {
+            visibleStartNanos =
+                current -
+                    visibleDuration *
+                    (
+                        1.0 -
+                            FOLLOW_POSITION
+                        )
+        }
+
+        clampViewport(
+            width,
+        )
+    }
+
+    private fun clampViewport(
+        width: Int,
+    ) {
+        val duration =
+            ReplayPlayer.totalDurationNanos
+                .toDouble()
+
+        val visibleDuration =
+            width *
+                nanosPerPixel
+
+        val maxStart =
+            max(
+                duration -
+                    visibleDuration,
+                0.0,
+            )
+
+        visibleStartNanos =
+            visibleStartNanos
+                .coerceIn(
+                    0.0,
+                    maxStart,
+                )
+    }
+
+    private fun visibleEndNanos(
+        width: Int,
+    ): Double =
+        visibleStartNanos +
+            width *
+            nanosPerPixel
+
+    private fun timeToX(
+        timeNanos: Double,
     ): Int =
         (
             (
                 timeNanos -
-                    viewStartNanos
-                ).toDouble() /
-                visibleDurationNanos *
-                width
+                    visibleStartNanos
+                ) /
+                nanosPerPixel
             ).roundToInt()
 
-    private fun xToTime(
-        x: Int,
-        width: Int,
-    ): Long =
-        (
-            viewStartNanos +
-                visibleDurationNanos *
-                (
-                    x.toDouble() /
-                        width
-                    )
-            ).toLong()
-            .coerceIn(
-                0L,
-                ReplayPlayer.totalDurationNanos,
-            )
+    private fun chooseMajorStep(
+        targetNanos: Double,
+    ): Long {
+        NICE_STEPS_NANOS.forEach {
+            if (
+                it >=
+                targetNanos
+            ) {
+                return it
+            }
+        }
+
+        return NICE_STEPS_NANOS
+            .last()
+    }
 
     companion object {
 
         private const val RULER_HEIGHT =
-            18
+            17
 
         private const val MINOR_MARK_HEIGHT =
             4
 
         private const val MAJOR_MARK_HEIGHT =
-            9
+            8
 
         private const val MINOR_DIVISIONS =
             5L
 
-        private const val MIN_MAJOR_PIXEL_SPACING =
+        private const val LABEL_TARGET_PIXELS =
             72.0
 
-        private const val DEFAULT_VISIBLE_DURATION_NANOS =
-            30_000_000_000L
+        private const val MIN_NANOS_PER_PIXEL =
+            5_000_000.0
 
-        private const val MIN_VISIBLE_DURATION_NANOS =
-            1_000_000_000L
-
-        private const val FOLLOW_EDGE_FRACTION =
-            0.08
-
-        private const val FOLLOW_TARGET_FRACTION =
-            0.18
-
-        private const val ZOOM_IN_FACTOR =
-            0.8
-
-        private const val ZOOM_OUT_FACTOR =
+        private const val ZOOM_FACTOR =
             1.25
 
-        private const val MIDDLE_MOUSE_BUTTON =
-            2
+        private const val FOLLOW_MARGIN =
+            0.08
 
-        private const val LABEL_COLOR =
-            0xA8A8A8
+        private const val FOLLOW_POSITION =
+            0.82
 
-        private val MAJOR_INTERVALS_NANOS =
+        private val NICE_STEPS_NANOS =
             longArrayOf(
                 50_000_000L,
                 100_000_000L,
