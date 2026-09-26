@@ -98,13 +98,78 @@ class ReplayCameraPanel : ParentWidget<ReplayCameraPanel>() {
                     ReplayUiStyle.buttonBackground(),
                 )
                 .overlay(
+                    IKey.dynamic {
+                        "Add Keyframe (" +
+                            ReplayPlayer
+                                .cameraKeyframeCount +
+                            ")"
+                    },
+                ).onMousePressed {
+                    it == 0 &&
+                        ReplayPlayer
+                            .addCameraKeyframe()
+                },
+        )
+
+        child(
+            ReplayButtonWidget()
+                .left(8)
+                .top(125)
+                .width(54)
+                .height(18)
+                .background(
+                    ReplayUiStyle.buttonBackground(),
+                )
+                .overlay(
+                    IKey.dynamic {
+                        "Mark " +
+                            ReplayPlayer
+                                .markerCount
+                    },
+                ).onMousePressed {
+                    it == 0 &&
+                        ReplayPlayer
+                            .addMarker()
+                },
+        )
+
+        child(
+            ReplayButtonWidget()
+                .left(66)
+                .top(125)
+                .width(42)
+                .height(18)
+                .background(
+                    ReplayUiStyle.buttonBackground(),
+                )
+                .overlay(
                     IKey.str(
-                        "Keyframes (Later)",
+                        "Set In",
                     ),
-                ).apply {
-                    setEnabled(
-                        false,
-                    )
+                ).onMousePressed {
+                    it == 0 &&
+                        ReplayPlayer
+                            .setInPoint()
+                },
+        )
+
+        child(
+            ReplayButtonWidget()
+                .left(112)
+                .top(125)
+                .width(46)
+                .height(18)
+                .background(
+                    ReplayUiStyle.buttonBackground(),
+                )
+                .overlay(
+                    IKey.str(
+                        "Set Out",
+                    ),
+                ).onMousePressed {
+                    it == 0 &&
+                        ReplayPlayer
+                            .setOutPoint()
                 },
         )
     }
