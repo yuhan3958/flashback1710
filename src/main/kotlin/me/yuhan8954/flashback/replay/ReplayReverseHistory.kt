@@ -596,8 +596,7 @@ object ReplayReverseMemoryEstimator {
     fun estimate(
         frameCount: Int,
         entityTransformCount: Int,
-    ): Long =
-        frameCount.toLong() *
+    ): Long = frameCount.toLong() *
         FRAME_BYTES +
         entityTransformCount.toLong() *
         ENTITY_TRANSFORM_BYTES
