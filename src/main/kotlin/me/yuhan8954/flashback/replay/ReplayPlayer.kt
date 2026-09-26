@@ -102,7 +102,6 @@ object ReplayPlayer {
             editorState?.cameraKeyframeCount()
                 ?: 0
 
-
     val freeCameraActive: Boolean
         get() =
             session?.cameraController
