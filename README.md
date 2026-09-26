@@ -24,8 +24,8 @@ Implemented:
 - ModularUI2 playback controls.
 - Explicit Stop control.
 - Replay boundary pause: reaching the beginning or end pauses playback instead of returning to the live world.
-- Replay format v7.
-- Backward loading support for replay format v6.
+- Replay format v8 with metadata, framed records, CRC32 validation, clean-close markers, and trailing-record recovery.
+- Backward loading support for replay formats v6 and v7.
 
 The project is still experimental. Compatibility with arbitrary modded packets, tile entities, world state, and long-running GTNH sessions has not yet been proven.
 
@@ -94,7 +94,7 @@ Checkpoint capture is performed at client tick END rather than inside the inboun
 
 ### Replay File Layout
 
-Replay format v7 is a mixed record stream.
+Replay format v8 adds metadata and framed records with per-record CRC32 validation.
 
 ```text
 magic
@@ -118,7 +118,10 @@ Record types are currently:
 0 = packet
 1 = full checkpoint
 2 = delta checkpoint
+3 = clean close
 ```
+
+See [Replay File Format](docs/FORMAT.md) for the binary layout, compatibility policy, and truncation/corruption recovery rules.
 
 The default checkpoint configuration is:
 
@@ -501,9 +504,9 @@ Current limitations include:
 - Perfect reverse playback requires a world-mutation journal or equivalent reversible state stream for every replay-relevant mutation, not only entity transforms.
 - Dimension transitions need dedicated stress testing.
 - Long-session memory, file-size, and seek-latency characteristics have not yet been benchmarked.
-- Crash recovery and partially written replay handling are not yet production-grade.
-- Replay format compatibility policy is not yet formally specified.
-- Automated replay correctness tests are not yet sufficient for a GTNH-scale integration proposal.
+- Replay recovery now preserves valid v8 record prefixes after trailing truncation or corruption, but broader crash/session recovery still needs integration testing.
+- Replay format compatibility and v8 framing are documented in `docs/FORMAT.md`.
+- Automated coverage now includes v8 framing/recovery, v6/v7 loading, snapshot delta invariants, checkpoint resolution, replay clock behavior, and time formatting; full Minecraft-runtime replay correctness coverage is still incomplete.
 
 ## Development Direction
 
