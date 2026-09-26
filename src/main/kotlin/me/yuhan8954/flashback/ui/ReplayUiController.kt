@@ -115,7 +115,6 @@ object ReplayUiController {
         1,
     )
 
-
     fun skipBackward(): Boolean = skipBy(
         -SKIP_INTERVAL_NANOS,
     )
