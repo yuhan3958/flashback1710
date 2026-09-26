@@ -50,6 +50,10 @@ public final class ReplayClock {
         return paused;
     }
 
+    public boolean getPaused() {
+        return paused;
+    }
+
     public void reset() {
         currentTimeNanos = 0L;
         speedMultiplier = DEFAULT_SPEED;
