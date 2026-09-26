@@ -476,14 +476,19 @@ object ReplayPlayer {
         targetTimeNanos: Long,
     ) {
         currentSession.world.undoMutationsTo(
+            currentSession,
             targetTimeNanos,
         )
 
         var frame =
-            reverseHistory.restoreAtOrBefore(
-                currentSession,
-                targetTimeNanos,
-            )
+            currentSession.world
+                .mutationJournal
+                .withoutRecording {
+                    reverseHistory.restoreAtOrBefore(
+                        currentSession,
+                        targetTimeNanos,
+                    )
+                }
 
         if (frame == null) {
             rebuildReverseHistory(
@@ -492,10 +497,14 @@ object ReplayPlayer {
             )
 
             frame =
-                reverseHistory.restoreAtOrBefore(
-                    currentSession,
-                    targetTimeNanos,
-                )
+                currentSession.world
+                    .mutationJournal
+                    .withoutRecording {
+                        reverseHistory.restoreAtOrBefore(
+                            currentSession,
+                            targetTimeNanos,
+                        )
+                    }
         }
 
         if (frame == null) {
@@ -749,10 +758,34 @@ object ReplayPlayer {
         currentSession: ReplaySession,
         recorded: RecordedPacket,
     ) {
-        currentSession.world
-            .mutationJournal
-            .timestampNanos =
+        val journal =
+            currentSession.world
+                .mutationJournal
+
+        journal.timestampNanos =
             recorded.timestampNanos
+
+        val beforePlayer =
+            if (
+                journal.recording
+            ) {
+                ReplayReversePlayerState.capture(
+                    currentSession.recordedPlayer,
+                )
+            } else {
+                null
+            }
+
+        val beforeWorld =
+            if (
+                journal.recording
+            ) {
+                ReplayWorldMutationState.capture(
+                    currentSession.world,
+                )
+            } else {
+                null
+            }
 
         try {
             val packet =
@@ -782,6 +815,17 @@ object ReplayPlayer {
             )
 
             throwable.printStackTrace()
+        } finally {
+            if (
+                beforePlayer != null &&
+                beforeWorld != null
+            ) {
+                journal.recordPacketState(
+                    currentSession,
+                    beforePlayer,
+                    beforeWorld,
+                )
+            }
         }
     }
 

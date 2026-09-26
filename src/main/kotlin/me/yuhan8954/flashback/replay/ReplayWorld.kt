@@ -119,10 +119,11 @@ class ReplayWorld(
     }
 
     fun undoMutationsTo(
+        session: ReplaySession,
         targetTimeNanos: Long,
     ) {
         mutationJournal.undoTo(
-            this,
+            session,
             targetTimeNanos,
         )
     }

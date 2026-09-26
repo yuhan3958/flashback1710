@@ -23,6 +23,9 @@ class ReplayMutationJournal {
     private val tileEntityState =
         mutableMapOf<Long, NBTTagCompound>()
 
+    private val entityState =
+        mutableMapOf<Int, ReplayReverseEntityState>()
+
     var timestampNanos =
         0L
 
@@ -35,6 +38,7 @@ class ReplayMutationJournal {
     fun clear() {
         mutations.clear()
         tileEntityState.clear()
+        entityState.clear()
     }
 
     fun start(
@@ -50,6 +54,10 @@ class ReplayMutationJournal {
             true
 
         snapshotTileEntities(
+            world,
+        )
+
+        snapshotEntities(
             world,
         )
     }
@@ -76,6 +84,10 @@ class ReplayMutationJournal {
             world,
         )
 
+        captureEntityMutations(
+            world,
+        )
+
         trim()
     }
 
@@ -99,7 +111,7 @@ class ReplayMutationJournal {
     }
 
     fun undoTo(
-        world: ReplayWorld,
+        session: ReplaySession,
         targetTimeNanos: Long,
     ) {
         withoutRecording {
@@ -112,7 +124,7 @@ class ReplayMutationJournal {
                 mutations.removeLast()
                     .mutation
                     .undo(
-                        world,
+                        session,
                     )
             }
         }
@@ -121,8 +133,55 @@ class ReplayMutationJournal {
             targetTimeNanos
 
         snapshotTileEntities(
-            world,
+            session.world,
         )
+
+        snapshotEntities(
+            session.world,
+        )
+    }
+
+    fun recordPacketState(
+        session: ReplaySession,
+        beforePlayer: ReplayReversePlayerState,
+        beforeWorld: ReplayWorldMutationState,
+    ) {
+        if (!recording) {
+            return
+        }
+
+        val afterPlayer =
+            ReplayReversePlayerState.capture(
+                session.recordedPlayer,
+            )
+
+        if (
+            !beforePlayer.sameJournalState(
+                afterPlayer,
+            )
+        ) {
+            record(
+                ReplayPlayerStateMutation(
+                    beforePlayer,
+                ),
+            )
+        }
+
+        val afterWorld =
+            ReplayWorldMutationState.capture(
+                session.world,
+            )
+
+        if (
+            beforeWorld !=
+            afterWorld
+        ) {
+            record(
+                ReplayWorldStateMutation(
+                    beforeWorld,
+                ),
+            )
+        }
     }
 
     fun <T> withoutRecording(
@@ -191,6 +250,49 @@ class ReplayMutationJournal {
         )
     }
 
+    private fun captureEntityMutations(
+        world: ReplayWorld,
+    ) {
+        val current =
+            mutableMapOf<Int, ReplayReverseEntityState>()
+
+        world.loadedEntityList
+            .filterIsInstance<Entity>()
+            .filter {
+                it !is EntityReplayPlayer &&
+                    it !is EntityReplaySpectator
+            }.forEach { entity ->
+                val state =
+                    ReplayReverseEntityState.capture(
+                        entity,
+                    ) ?: return@forEach
+
+                current[entity.entityId] =
+                    state
+
+                val previous =
+                    entityState[
+                        entity.entityId,
+                    ]
+
+                if (
+                    previous != null &&
+                    previous != state
+                ) {
+                    record(
+                        ReplayEntityStateMutation(
+                            previous,
+                        ),
+                    )
+                }
+            }
+
+        entityState.clear()
+        entityState.putAll(
+            current,
+        )
+    }
+
     private fun snapshotTileEntities(
         world: ReplayWorld,
     ) {
@@ -208,6 +310,28 @@ class ReplayMutationJournal {
                             tileEntity.yCoord,
                             tileEntity.zCoord,
                         ),
+                    ] =
+                        it
+                }
+            }
+    }
+
+    private fun snapshotEntities(
+        world: ReplayWorld,
+    ) {
+        entityState.clear()
+
+        world.loadedEntityList
+            .filterIsInstance<Entity>()
+            .filter {
+                it !is EntityReplayPlayer &&
+                    it !is EntityReplaySpectator
+            }.forEach { entity ->
+                ReplayReverseEntityState.capture(
+                    entity,
+                )?.let {
+                    entityState[
+                        entity.entityId,
                     ] =
                         it
                 }
@@ -265,7 +389,7 @@ data class TimestampedReplayMutation(
 sealed interface ReplayMutation {
 
     fun undo(
-        world: ReplayWorld,
+        session: ReplaySession,
     )
 }
 
@@ -275,8 +399,11 @@ data class ReplayChunkStateMutation(
 ) : ReplayMutation {
 
     override fun undo(
-        world: ReplayWorld,
+        session: ReplaySession,
     ) {
+        val world =
+            session.world
+
         SnapshotRestorer.restoreChunk(
             world,
             chunk,
@@ -297,8 +424,11 @@ data class ReplayChunkLoadedMutation(
 ) : ReplayMutation {
 
     override fun undo(
-        world: ReplayWorld,
+        session: ReplaySession,
     ) {
+        val world =
+            session.world
+
         world.doPreChunk(
             chunkX,
             chunkZ,
@@ -313,8 +443,11 @@ data class ReplayChunkUnloadedMutation(
 ) : ReplayMutation {
 
     override fun undo(
-        world: ReplayWorld,
+        session: ReplaySession,
     ) {
+        val world =
+            session.world
+
         SnapshotRestorer.restoreChunk(
             world,
             chunk,
@@ -337,8 +470,11 @@ data class ReplayBlockMutation(
 ) : ReplayMutation {
 
     override fun undo(
-        world: ReplayWorld,
+        session: ReplaySession,
     ) {
+        val world =
+            session.world
+
         world.setBlock(
             x,
             y,
@@ -366,8 +502,11 @@ data class ReplayTileEntityMutation(
 ) : ReplayMutation {
 
     override fun undo(
-        world: ReplayWorld,
+        session: ReplaySession,
     ) {
+        val world =
+            session.world
+
         restoreTileEntity(
             world,
             x,
@@ -378,13 +517,65 @@ data class ReplayTileEntityMutation(
     }
 }
 
+data class ReplayEntityStateMutation(
+    val before: ReplayReverseEntityState,
+) : ReplayMutation {
+
+    override fun undo(
+        session: ReplaySession,
+    ) {
+        val world =
+            session.world
+
+        val current =
+            world.getEntityByID(
+                before.entityId,
+            )
+
+        val target =
+            if (
+                current != null &&
+                current.javaClass.name ==
+                before.entityClass
+            ) {
+                current
+            } else {
+                if (current != null) {
+                    world.removeEntityFromWorld(
+                        before.entityId,
+                    )
+                }
+
+                before.create(
+                    world,
+                )?.also {
+                    world.addEntityToWorld(
+                        before.entityId,
+                        it,
+                    )
+                }
+            }
+
+        if (target != null) {
+            before.restore(
+                target,
+                newerState = null,
+                interpolation = 0.0,
+            )
+        }
+    }
+}
+
 data class ReplayEntityAddedMutation(
     val entityId: Int,
 ) : ReplayMutation {
 
     override fun undo(
-        world: ReplayWorld,
+        session: ReplaySession,
     ) {
+        val world =
+            session.world
+
         world.removeEntityFromWorld(
             entityId,
         )
@@ -396,8 +587,11 @@ data class ReplayEntityRemovedMutation(
 ) : ReplayMutation {
 
     override fun undo(
-        world: ReplayWorld,
+        session: ReplaySession,
     ) {
+        val world =
+            session.world
+
         val existing =
             world.getEntityByID(
                 state.entityId,
@@ -423,6 +617,87 @@ data class ReplayEntityRemovedMutation(
         world.addEntityToWorld(
             state.entityId,
             restored,
+        )
+    }
+}
+
+data class ReplayPlayerStateMutation(
+    val before: ReplayReversePlayerState,
+) : ReplayMutation {
+
+    override fun undo(
+        session: ReplaySession,
+    ) {
+        before.restore(
+            session.recordedPlayer,
+            newerState = null,
+            interpolation = 0.0,
+        )
+    }
+}
+
+data class ReplayWorldStateMutation(
+    val before: ReplayWorldMutationState,
+) : ReplayMutation {
+
+    override fun undo(
+        session: ReplaySession,
+    ) {
+        before.restore(
+            session.world,
+        )
+    }
+}
+
+data class ReplayWorldMutationState(
+    val worldTime: Long,
+    val totalWorldTime: Long,
+    val raining: Boolean,
+    val thundering: Boolean,
+    val rainStrength: Float,
+    val thunderStrength: Float,
+) {
+
+    fun restore(
+        world: ReplayWorld,
+    ) {
+        world.setWorldTime(
+            worldTime,
+        )
+        world.func_82738_a(
+            totalWorldTime,
+        )
+        world.worldInfo.setRaining(
+            raining,
+        )
+        world.worldInfo.setThundering(
+            thundering,
+        )
+        world.setRainStrength(
+            rainStrength,
+        )
+        world.setThunderStrength(
+            thunderStrength,
+        )
+    }
+
+    companion object {
+
+        fun capture(
+            world: ReplayWorld,
+        ): ReplayWorldMutationState = ReplayWorldMutationState(
+            worldTime =
+            world.worldTime,
+            totalWorldTime =
+            world.totalWorldTime,
+            raining =
+            world.worldInfo.isRaining,
+            thundering =
+            world.worldInfo.isThundering,
+            rainStrength =
+            world.rainingStrength,
+            thunderStrength =
+            world.thunderingStrength,
         )
     }
 }

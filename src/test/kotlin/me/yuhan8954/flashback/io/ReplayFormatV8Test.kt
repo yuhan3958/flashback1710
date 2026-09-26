@@ -619,7 +619,6 @@ class ReplayFormatV8Test {
             )
         }
     }
-
     private fun writeLegacyPacket(
         output: DataOutputStream,
         packet: RecordedPacket,
@@ -793,26 +792,34 @@ class ReplayFormatV8Test {
     private fun readInt(
         bytes: ByteArray,
         offset: Int,
-    ): Int = (
-        bytes[offset].toInt() and
-            0xff
-        ) shl 24 or
-        (
+    ): Int {
+        val first =
+            (
+                bytes[offset].toInt() and
+                    0xff
+                ) shl 24
+
+        val second =
             (
                 bytes[offset + 1].toInt() and
                     0xff
                 ) shl 16
-            ) or
-        (
+
+        val third =
             (
                 bytes[offset + 2].toInt() and
                     0xff
                 ) shl 8
-            ) or
-        (
+
+        val fourth =
             bytes[offset + 3].toInt() and
                 0xff
-            )
+
+        return first or
+            second or
+            third or
+            fourth
+    }
 
     private fun writeInt(
         bytes: ByteArray,
