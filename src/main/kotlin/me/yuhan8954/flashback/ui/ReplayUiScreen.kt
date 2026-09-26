@@ -1,5 +1,6 @@
 package me.yuhan8954.flashback.ui
 
+import com.cleanroommc.modularui.ModularUIConfig
 import com.cleanroommc.modularui.screen.GuiScreenWrapper
 import me.yuhan8954.flashback.replay.ReplayPlayer
 import org.lwjgl.input.Keyboard
@@ -10,6 +11,34 @@ class ReplayUiScreen(
 ) : GuiScreenWrapper(
     screen,
 ) {
+
+    private var previousDebugMode:
+        Boolean? =
+        null
+
+    override fun initGui() {
+        if (previousDebugMode == null) {
+            previousDebugMode =
+                ModularUIConfig.guiDebugMode
+        }
+
+        ModularUIConfig.guiDebugMode =
+            false
+
+        super.initGui()
+    }
+
+    override fun onGuiClosed() {
+        super.onGuiClosed()
+
+        previousDebugMode?.let {
+            ModularUIConfig.guiDebugMode =
+                it
+        }
+
+        previousDebugMode =
+            null
+    }
 
     override fun doesGuiPauseGame(): Boolean = false
 
