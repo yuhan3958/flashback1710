@@ -104,7 +104,6 @@ class ReplayMutationJournal {
         captureEntityMutations(
             world,
         )
-
     }
 
     fun record(
