@@ -323,6 +323,10 @@ data class ReplayReversePlayerState(
         sameInventory(
             armorInventory,
             other.armorInventory,
+        ) &&
+        sameJournalNbt(
+            nbt,
+            other.nbt,
         )
 
     fun restoreTransform(
@@ -644,6 +648,28 @@ data class ReplayReverseEntityState(
     val rotationYawHead: Float?,
     val nbt: NBTTagCompound,
 ) {
+
+    fun sameJournalState(
+        other: ReplayReverseEntityState,
+    ): Boolean =
+        entityType ==
+        other.entityType &&
+            entityClass ==
+            other.entityClass &&
+            playerProfileId ==
+            other.playerProfileId &&
+            playerProfileName ==
+            other.playerProfileName &&
+            onGround ==
+            other.onGround &&
+            sneaking ==
+            other.sneaking &&
+            sprinting ==
+            other.sprinting &&
+            sameJournalNbt(
+                nbt,
+                other.nbt,
+            )
 
     fun create(
         world: ReplayWorld,
@@ -1126,6 +1152,38 @@ data class ReplayReverseEntityState(
         }
     }
 }
+
+private fun sameJournalNbt(
+    first: NBTTagCompound,
+    second: NBTTagCompound,
+): Boolean {
+    val firstCopy =
+        first.copy() as
+            NBTTagCompound
+
+    val secondCopy =
+        second.copy() as
+            NBTTagCompound
+
+    TRANSFORM_NBT_KEYS.forEach {
+        firstCopy.removeTag(
+            it,
+        )
+        secondCopy.removeTag(
+            it,
+        )
+    }
+
+    return firstCopy ==
+        secondCopy
+}
+
+private val TRANSFORM_NBT_KEYS =
+    arrayOf(
+        "Pos",
+        "Motion",
+        "Rotation",
+    )
 
 private fun sameInventory(
     first: List<ItemStack?>,
