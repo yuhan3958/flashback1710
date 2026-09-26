@@ -38,7 +38,8 @@ public final class ReplayTimeFormatter {
 
         if (hours > 0L) {
             StringBuilder builder = new StringBuilder(8);
-            builder.append(hours).append(':');
+            builder.append(hours)
+                .append(':');
             appendTwo(builder, minutes);
             builder.append(':');
             appendTwo(builder, seconds);
@@ -72,8 +73,7 @@ public final class ReplayTimeFormatter {
                 return Long.toString(whole) + 'x';
             }
             if (remainder == 2L) {
-                return (quarters < 0 && whole == 0 ? "-0" : Long.toString(whole))
-                    + ".5x";
+                return (quarters < 0 && whole == 0 ? "-0" : Long.toString(whole)) + ".5x";
             }
             String prefix = quarters < 0 && whole == 0 ? "-0" : Long.toString(whole);
             return prefix + (remainder == 1L ? ".25x" : ".75x");

@@ -12,22 +12,18 @@ public final class SnapshotDelta {
     private SnapshotDelta() {}
 
     public static ReplaySnapshotDelta create(ReplaySnapshot previous, ReplaySnapshot current) {
-        boolean dimensionChanged =
-            previous.getDimensionId() != current.getDimensionId()
-                || previous.getSeed() != current.getSeed();
+        boolean dimensionChanged = previous.getDimensionId() != current.getDimensionId()
+            || previous.getSeed() != current.getSeed();
 
-        Map<Long, ReplayChunkSnapshot> previousChunks =
-            indexChunks(previous.getChunks());
-        Map<Long, ReplayChunkSnapshot> currentChunks =
-            indexChunks(current.getChunks());
+        Map<Long, ReplayChunkSnapshot> previousChunks = indexChunks(previous.getChunks());
+        Map<Long, ReplayChunkSnapshot> currentChunks = indexChunks(current.getChunks());
 
         List<ReplayChunkSnapshot> changedChunks = new ArrayList<>();
         if (dimensionChanged) {
             changedChunks.addAll(current.getChunks());
         } else {
             for (ReplayChunkSnapshot chunk : current.getChunks()) {
-                ReplayChunkSnapshot previousChunk = previousChunks.get(
-                    chunkKey(chunk.getChunkX(), chunk.getChunkZ()));
+                ReplayChunkSnapshot previousChunk = previousChunks.get(chunkKey(chunk.getChunkX(), chunk.getChunkZ()));
                 if (previousChunk == null || !sameChunk(previousChunk, chunk)) {
                     changedChunks.add(chunk);
                 }
@@ -38,29 +34,24 @@ public final class SnapshotDelta {
         for (ReplayChunkSnapshot chunk : previous.getChunks()) {
             long key = chunkKey(chunk.getChunkX(), chunk.getChunkZ());
             if (dimensionChanged || !currentChunks.containsKey(key)) {
-                removedChunks.add(new ReplayChunkPosition(
-                    chunk.getChunkX(),
-                    chunk.getChunkZ()));
+                removedChunks.add(new ReplayChunkPosition(chunk.getChunkX(), chunk.getChunkZ()));
             }
         }
 
-        Map<Long, ReplayTileEntitySnapshot> previousTileEntities =
-            indexTileEntities(previous.getTileEntities());
-        Map<Long, ReplayTileEntitySnapshot> currentTileEntities =
-            indexTileEntities(current.getTileEntities());
+        Map<Long, ReplayTileEntitySnapshot> previousTileEntities = indexTileEntities(previous.getTileEntities());
+        Map<Long, ReplayTileEntitySnapshot> currentTileEntities = indexTileEntities(current.getTileEntities());
 
         List<ReplayTileEntitySnapshot> changedTileEntities = new ArrayList<>();
         if (dimensionChanged) {
             changedTileEntities.addAll(current.getTileEntities());
         } else {
             for (ReplayTileEntitySnapshot tileEntity : current.getTileEntities()) {
-                ReplayTileEntitySnapshot previousTileEntity =
-                    previousTileEntities.get(tileEntityKey(
-                        tileEntity.getX(),
-                        tileEntity.getY(),
-                        tileEntity.getZ()));
-                if (previousTileEntity == null
-                    || !previousTileEntity.getNbt().equals(tileEntity.getNbt())) {
+                ReplayTileEntitySnapshot previousTileEntity = previousTileEntities
+                    .get(tileEntityKey(tileEntity.getX(), tileEntity.getY(), tileEntity.getZ()));
+                if (
+                    previousTileEntity == null || !previousTileEntity.getNbt()
+                        .equals(tileEntity.getNbt())
+                ) {
                     changedTileEntities.add(tileEntity);
                 }
             }
@@ -68,30 +59,22 @@ public final class SnapshotDelta {
 
         List<ReplayBlockPosition> removedTileEntities = new ArrayList<>();
         for (ReplayTileEntitySnapshot tileEntity : previous.getTileEntities()) {
-            long key = tileEntityKey(
-                tileEntity.getX(),
-                tileEntity.getY(),
-                tileEntity.getZ());
+            long key = tileEntityKey(tileEntity.getX(), tileEntity.getY(), tileEntity.getZ());
             if (dimensionChanged || !currentTileEntities.containsKey(key)) {
-                removedTileEntities.add(new ReplayBlockPosition(
-                    tileEntity.getX(),
-                    tileEntity.getY(),
-                    tileEntity.getZ()));
+                removedTileEntities
+                    .add(new ReplayBlockPosition(tileEntity.getX(), tileEntity.getY(), tileEntity.getZ()));
             }
         }
 
-        Map<Integer, ReplayEntitySnapshot> previousEntities =
-            indexEntities(previous.getEntities());
-        Map<Integer, ReplayEntitySnapshot> currentEntities =
-            indexEntities(current.getEntities());
+        Map<Integer, ReplayEntitySnapshot> previousEntities = indexEntities(previous.getEntities());
+        Map<Integer, ReplayEntitySnapshot> currentEntities = indexEntities(current.getEntities());
 
         List<ReplayEntitySnapshot> changedEntities = new ArrayList<>();
         if (dimensionChanged) {
             changedEntities.addAll(current.getEntities());
         } else {
             for (ReplayEntitySnapshot entity : current.getEntities()) {
-                ReplayEntitySnapshot previousEntity =
-                    previousEntities.get(entity.getEntityId());
+                ReplayEntitySnapshot previousEntity = previousEntities.get(entity.getEntityId());
                 if (previousEntity == null || !sameEntity(previousEntity, entity)) {
                     changedEntities.add(entity);
                 }
@@ -127,57 +110,52 @@ public final class SnapshotDelta {
             changedTileEntities,
             changedEntities);
 
-        return new ReplaySnapshotDelta(
-            changedSnapshot,
-            removedChunks,
-            removedTileEntities,
-            removedEntityIds);
+        return new ReplaySnapshotDelta(changedSnapshot, removedChunks, removedTileEntities, removedEntityIds);
     }
 
-    public static ReplaySnapshot apply(
-        ReplaySnapshot snapshot,
-        ReplaySnapshotDelta delta
-    ) {
-        Map<Long, ReplayChunkSnapshot> chunks =
-            new LinkedHashMap<>(expectedCapacity(snapshot.getChunks().size()));
+    public static ReplaySnapshot apply(ReplaySnapshot snapshot, ReplaySnapshotDelta delta) {
+        Map<Long, ReplayChunkSnapshot> chunks = new LinkedHashMap<>(
+            expectedCapacity(
+                snapshot.getChunks()
+                    .size()));
         for (ReplayChunkSnapshot chunk : snapshot.getChunks()) {
             chunks.put(chunkKey(chunk.getChunkX(), chunk.getChunkZ()), chunk);
         }
         for (ReplayChunkPosition position : delta.getRemovedChunks()) {
             chunks.remove(chunkKey(position.getChunkX(), position.getChunkZ()));
         }
-        for (ReplayChunkSnapshot chunk : delta.getSnapshot().getChunks()) {
+        for (ReplayChunkSnapshot chunk : delta.getSnapshot()
+            .getChunks()) {
             chunks.put(chunkKey(chunk.getChunkX(), chunk.getChunkZ()), chunk);
         }
 
-        Map<Long, ReplayTileEntitySnapshot> tileEntities =
-            new LinkedHashMap<>(expectedCapacity(snapshot.getTileEntities().size()));
+        Map<Long, ReplayTileEntitySnapshot> tileEntities = new LinkedHashMap<>(
+            expectedCapacity(
+                snapshot.getTileEntities()
+                    .size()));
         for (ReplayTileEntitySnapshot tileEntity : snapshot.getTileEntities()) {
-            tileEntities.put(
-                tileEntityKey(tileEntity.getX(), tileEntity.getY(), tileEntity.getZ()),
-                tileEntity);
+            tileEntities.put(tileEntityKey(tileEntity.getX(), tileEntity.getY(), tileEntity.getZ()), tileEntity);
         }
         for (ReplayBlockPosition position : delta.getRemovedTileEntities()) {
-            tileEntities.remove(tileEntityKey(
-                position.getX(),
-                position.getY(),
-                position.getZ()));
+            tileEntities.remove(tileEntityKey(position.getX(), position.getY(), position.getZ()));
         }
-        for (ReplayTileEntitySnapshot tileEntity : delta.getSnapshot().getTileEntities()) {
-            tileEntities.put(
-                tileEntityKey(tileEntity.getX(), tileEntity.getY(), tileEntity.getZ()),
-                tileEntity);
+        for (ReplayTileEntitySnapshot tileEntity : delta.getSnapshot()
+            .getTileEntities()) {
+            tileEntities.put(tileEntityKey(tileEntity.getX(), tileEntity.getY(), tileEntity.getZ()), tileEntity);
         }
 
-        Map<Integer, ReplayEntitySnapshot> entities =
-            new LinkedHashMap<>(expectedCapacity(snapshot.getEntities().size()));
+        Map<Integer, ReplayEntitySnapshot> entities = new LinkedHashMap<>(
+            expectedCapacity(
+                snapshot.getEntities()
+                    .size()));
         for (ReplayEntitySnapshot entity : snapshot.getEntities()) {
             entities.put(entity.getEntityId(), entity);
         }
         for (int entityId : delta.getRemovedEntityIds()) {
             entities.remove(entityId);
         }
-        for (ReplayEntitySnapshot entity : delta.getSnapshot().getEntities()) {
+        for (ReplayEntitySnapshot entity : delta.getSnapshot()
+            .getEntities()) {
             entities.put(entity.getEntityId(), entity);
         }
 
@@ -197,56 +175,39 @@ public final class SnapshotDelta {
             new ArrayList<>(entities.values()));
     }
 
-    private static Map<Long, ReplayChunkSnapshot> indexChunks(
-        List<ReplayChunkSnapshot> chunks
-    ) {
-        Map<Long, ReplayChunkSnapshot> result =
-            new HashMap<>(expectedCapacity(chunks.size()));
+    private static Map<Long, ReplayChunkSnapshot> indexChunks(List<ReplayChunkSnapshot> chunks) {
+        Map<Long, ReplayChunkSnapshot> result = new HashMap<>(expectedCapacity(chunks.size()));
         for (ReplayChunkSnapshot chunk : chunks) {
             result.put(chunkKey(chunk.getChunkX(), chunk.getChunkZ()), chunk);
         }
         return result;
     }
 
-    private static Map<Long, ReplayTileEntitySnapshot> indexTileEntities(
-        List<ReplayTileEntitySnapshot> tileEntities
-    ) {
-        Map<Long, ReplayTileEntitySnapshot> result =
-            new HashMap<>(expectedCapacity(tileEntities.size()));
+    private static Map<Long, ReplayTileEntitySnapshot> indexTileEntities(List<ReplayTileEntitySnapshot> tileEntities) {
+        Map<Long, ReplayTileEntitySnapshot> result = new HashMap<>(expectedCapacity(tileEntities.size()));
         for (ReplayTileEntitySnapshot tileEntity : tileEntities) {
-            result.put(
-                tileEntityKey(tileEntity.getX(), tileEntity.getY(), tileEntity.getZ()),
-                tileEntity);
+            result.put(tileEntityKey(tileEntity.getX(), tileEntity.getY(), tileEntity.getZ()), tileEntity);
         }
         return result;
     }
 
-    private static Map<Integer, ReplayEntitySnapshot> indexEntities(
-        List<ReplayEntitySnapshot> entities
-    ) {
-        Map<Integer, ReplayEntitySnapshot> result =
-            new HashMap<>(expectedCapacity(entities.size()));
+    private static Map<Integer, ReplayEntitySnapshot> indexEntities(List<ReplayEntitySnapshot> entities) {
+        Map<Integer, ReplayEntitySnapshot> result = new HashMap<>(expectedCapacity(entities.size()));
         for (ReplayEntitySnapshot entity : entities) {
             result.put(entity.getEntityId(), entity);
         }
         return result;
     }
 
-    private static boolean sameChunk(
-        ReplayChunkSnapshot first,
-        ReplayChunkSnapshot second
-    ) {
+    private static boolean sameChunk(ReplayChunkSnapshot first, ReplayChunkSnapshot second) {
         return Arrays.equals(first.getBlockIds(), second.getBlockIds())
             && Arrays.equals(first.getMetadata(), second.getMetadata())
             && Arrays.equals(first.getBiomes(), second.getBiomes());
     }
 
-    private static boolean sameEntity(
-        ReplayEntitySnapshot first,
-        ReplayEntitySnapshot second
-    ) {
-        return equalsNullable(first.getEntityType(), second.getEntityType())
-            && first.getEntityClass().equals(second.getEntityClass())
+    private static boolean sameEntity(ReplayEntitySnapshot first, ReplayEntitySnapshot second) {
+        return equalsNullable(first.getEntityType(), second.getEntityType()) && first.getEntityClass()
+            .equals(second.getEntityClass())
             && equalsNullable(first.getPlayerProfileId(), second.getPlayerProfileId())
             && equalsNullable(first.getPlayerProfileName(), second.getPlayerProfileName())
             && first.getServerPosX() == second.getServerPosX()
@@ -260,7 +221,8 @@ public final class SnapshotDelta {
             && Double.compare(first.getMotionX(), second.getMotionX()) == 0
             && Double.compare(first.getMotionY(), second.getMotionY()) == 0
             && Double.compare(first.getMotionZ(), second.getMotionZ()) == 0
-            && first.getNbt().equals(second.getNbt());
+            && first.getNbt()
+                .equals(second.getNbt());
     }
 
     private static boolean equalsNullable(Object first, Object second) {
@@ -272,9 +234,7 @@ public final class SnapshotDelta {
     }
 
     private static long tileEntityKey(int x, int y, int z) {
-        return ((long) x & 0x3ffffffL) << 38
-            ^ ((long) z & 0x3ffffffL) << 12
-            ^ ((long) y & 0xfffL);
+        return ((long) x & 0x3ffffffL) << 38 ^ ((long) z & 0x3ffffffL) << 12 ^ ((long) y & 0xfffL);
     }
 
     private static int expectedCapacity(int size) {
