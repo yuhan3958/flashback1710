@@ -119,8 +119,7 @@ class ReplayLibraryPanel(
                         } else {
                             entryForRow(
                                 row,
-                            )?.takeIf {
-                                entry ->
+                            )?.takeIf { entry ->
                                 entry.playable
                             }?.let(
                                 onPlay,
