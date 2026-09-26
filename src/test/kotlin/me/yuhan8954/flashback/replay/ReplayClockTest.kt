@@ -74,6 +74,7 @@ class ReplayClockTest {
             clock.currentTimeNanos,
         )
     }
+
     @Test
     fun `minus four speed rewinds at four times wall clock`() {
         var wallTime = 0L
@@ -150,5 +151,4 @@ class ReplayClockTest {
             clock.currentTimeNanos,
         )
     }
-
 }
