@@ -219,6 +219,8 @@ Do not move world mutation itself off the Minecraft client thread without provin
 
 ## Gate 5: Replay File Robustness
 
+Format v8 now provides metadata, framed records, CRC32 validation, bounded record lengths, a clean-close marker, and prefix recovery for trailing truncation/corruption. Remaining work is broader integration and adversarial testing.
+
 A production-quality format needs explicit failure behavior.
 
 Add:
@@ -690,10 +692,10 @@ At that point the project can be presented as an engineering result rather than 
 
 # Recommended Immediate Work Order
 
-1. Add unit tests for `ReplayClock`, `SnapshotDelta`, and `ReplayCheckpointResolver`.
-2. Document replay format v7.
-3. Add replay metadata and unique filenames.
-4. Add replay corruption/truncation handling.
+1. Extend deterministic replay-state tests beyond isolated core units.
+2. Replace `latest.fbr` with metadata-backed unique filenames.
+3. Add replay library management and user-visible recovery diagnostics.
+4. Expand malformed-file and crash/session recovery integration tests.
 5. Build a GTNH compatibility test world.
 6. Profile checkpoint capture in a late-game base.
 7. Record 30-minute and 2-hour benchmark sessions.
