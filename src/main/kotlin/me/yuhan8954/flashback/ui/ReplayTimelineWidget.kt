@@ -697,14 +697,13 @@ class ReplayTimelineWidget :
 
     private fun timeToX(
         timeNanos: Double,
-    ): Int =
+    ): Int = (
         (
-            (
-                timeNanos -
-                    visibleStartNanos
-                ) /
-                nanosPerPixel
-            ).roundToInt()
+            timeNanos -
+                visibleStartNanos
+            ) /
+            nanosPerPixel
+        ).roundToInt()
 
     private fun chooseMajorStep(
         targetNanos: Double,
