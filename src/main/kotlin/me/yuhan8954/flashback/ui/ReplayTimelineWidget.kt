@@ -85,7 +85,6 @@ class ReplayTimelineWidget :
                 ReplayUiStyle.RANGE_BOUNDARY_COLOR,
             )
 
-
     private var visibleStartNanos =
         0.0
 
