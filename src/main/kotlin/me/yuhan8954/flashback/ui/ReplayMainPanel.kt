@@ -23,12 +23,13 @@ class ReplayMainPanel :
     ).fullScreenInvisible()
         .child(
             ReplayControlBar()
-                .horizontalCenter()
-                .bottom(6),
+                .left(8)
+                .right(8)
+                .bottom(4),
         ).child(
             ReplayCameraPanel()
-                .right(8)
-                .top(8),
+                .right(6)
+                .top(6),
         )
 
     companion object {
