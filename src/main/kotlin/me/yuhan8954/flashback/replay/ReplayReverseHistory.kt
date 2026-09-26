@@ -384,6 +384,26 @@ data class ReplayReversePlayerState(
     val nbt: NBTTagCompound,
 ) {
 
+    fun sameJournalState(
+        other: ReplayReversePlayerState,
+    ): Boolean =
+        onGround ==
+        other.onGround &&
+            currentItem ==
+            other.currentItem &&
+            sneaking ==
+            other.sneaking &&
+            sprinting ==
+            other.sprinting &&
+            sameInventory(
+                mainInventory,
+                other.mainInventory,
+            ) &&
+            sameInventory(
+                armorInventory,
+                other.armorInventory,
+            )
+
     fun restore(
         player: EntityReplayPlayer,
         newerState: ReplayReversePlayerState?,
@@ -983,6 +1003,31 @@ data class ReplayReverseEntityState(
             null
         }
     }
+}
+
+private fun sameInventory(
+    first: List<ItemStack?>,
+    second: List<ItemStack?>,
+): Boolean {
+    if (
+        first.size !=
+        second.size
+    ) {
+        return false
+    }
+
+    first.indices.forEach { index ->
+        if (
+            !ItemStack.areItemStacksEqual(
+                first[index],
+                second[index],
+            )
+        ) {
+            return false
+        }
+    }
+
+    return true
 }
 
 private fun interpolateDouble(
