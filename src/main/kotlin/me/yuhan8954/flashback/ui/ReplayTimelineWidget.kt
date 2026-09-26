@@ -327,8 +327,8 @@ class ReplayTimelineWidget :
 
         visibleStartNanos =
             anchorTime -
-                relativeX *
-                newNanosPerPixel
+            relativeX *
+            newNanosPerPixel
 
         nanosPerPixel =
             newNanosPerPixel
@@ -563,7 +563,7 @@ class ReplayTimelineWidget :
         ) {
             nanosPerPixel =
                 duration.toDouble() /
-                    width
+                width
 
             visibleStartNanos =
                 0.0
@@ -599,24 +599,22 @@ class ReplayTimelineWidget :
         if (
             current >
             visibleEnd -
-                margin
+            margin
         ) {
             visibleStartNanos =
                 current -
-                    visibleDuration *
-                    FOLLOW_POSITION
+                visibleDuration *
+                FOLLOW_POSITION
         } else if (
             current <
             visibleStartNanos +
-                margin
+            margin
         ) {
             visibleStartNanos =
                 current -
-                    visibleDuration *
-                    (
-                        1.0 -
-                            FOLLOW_POSITION
-                        )
+                visibleDuration *
+                (
+                    1.0 -
         }
 
         clampViewport(
