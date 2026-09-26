@@ -170,9 +170,8 @@ class ReplayTimelineWidget :
 
     override fun onMouseRelease(
         mouseButton: Int,
-    ): Boolean =
-        mouseButton ==
-            0
+    ): Boolean = mouseButton ==
+        0
 
     private fun drawRuler(
         context: ModularGuiContext,
@@ -274,7 +273,7 @@ class ReplayTimelineWidget :
         val capWidth =
             if (
                 capLeft +
-                    7 >
+                7 >
                 area.width
             ) {
                 area.width -
@@ -301,13 +300,13 @@ class ReplayTimelineWidget :
 
         while (
             tickSpacing *
-                step <
+            step <
             MIN_MINOR_PIXEL_SPACING
         ) {
             step *=
                 if (
                     step %
-                        5L ==
+                    5L ==
                     0L
                 ) {
                     2L
