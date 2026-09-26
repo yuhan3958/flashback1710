@@ -285,7 +285,9 @@ class ReplayMutationJournal {
 
                 if (
                     previous != null &&
-                    previous != state
+                    !previous.sameJournalState(
+                        state,
+                    )
                 ) {
                     record(
                         ReplayEntityStateMutation(
