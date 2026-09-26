@@ -301,13 +301,8 @@ class ReplayTimelineWidget :
                 nanosPerPixel
 
         val zoomPower =
-            (
-                scrollDirection.modifier *
-                    max(
-                        amount,
-                        1,
-                    )
-                ).toDouble()
+            scrollDirection.modifier
+                .toDouble()
 
         val fitNanosPerPixel =
             duration.toDouble() /
