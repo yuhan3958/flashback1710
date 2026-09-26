@@ -10,17 +10,8 @@ public final class ReplayClock {
     public static final long MINECRAFT_TICK_NANOS = 50_000_000L;
     public static final double DEFAULT_SPEED = 1.0D;
 
-    public static final List<Double> SUPPORTED_SPEEDS = Collections.unmodifiableList(Arrays.asList(
-        -4.0D,
-        -2.0D,
-        -1.0D,
-        -0.5D,
-        -0.25D,
-        0.25D,
-        0.5D,
-        1.0D,
-        2.0D,
-        4.0D));
+    public static final List<Double> SUPPORTED_SPEEDS = Collections
+        .unmodifiableList(Arrays.asList(-4.0D, -2.0D, -1.0D, -0.5D, -0.25D, 0.25D, 0.5D, 1.0D, 2.0D, 4.0D));
 
     private final LongSupplier timeSource;
 
@@ -66,9 +57,7 @@ public final class ReplayClock {
         long wallTimeDelta = Math.max(now - lastUpdateNanos, 0L);
 
         if (!paused) {
-            currentTimeNanos = Math.max(
-                currentTimeNanos + (long) (wallTimeDelta * speedMultiplier),
-                0L);
+            currentTimeNanos = Math.max(currentTimeNanos + (long) (wallTimeDelta * speedMultiplier), 0L);
         }
 
         lastUpdateNanos = now;
