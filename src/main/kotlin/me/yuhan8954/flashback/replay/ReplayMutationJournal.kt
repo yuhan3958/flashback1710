@@ -99,7 +99,7 @@ class ReplayMutationJournal {
     }
 
     fun undoTo(
-        world: ReplayWorld,
+        session: ReplaySession,
         targetTimeNanos: Long,
     ) {
         withoutRecording {
@@ -112,7 +112,7 @@ class ReplayMutationJournal {
                 mutations.removeLast()
                     .mutation
                     .undo(
-                        world,
+                        session,
                     )
             }
         }
@@ -121,8 +121,51 @@ class ReplayMutationJournal {
             targetTimeNanos
 
         snapshotTileEntities(
-            world,
+            session.world,
         )
+    }
+
+    fun recordPacketState(
+        session: ReplaySession,
+        beforePlayer: ReplayReversePlayerState,
+        beforeWorld: ReplayWorldMutationState,
+    ) {
+        if (!recording) {
+            return
+        }
+
+        val afterPlayer =
+            ReplayReversePlayerState.capture(
+                session.recordedPlayer,
+            )
+
+        if (
+            !beforePlayer.sameJournalState(
+                afterPlayer,
+            )
+        ) {
+            record(
+                ReplayPlayerStateMutation(
+                    beforePlayer,
+                ),
+            )
+        }
+
+        val afterWorld =
+            ReplayWorldMutationState.capture(
+                session.world,
+            )
+
+        if (
+            beforeWorld !=
+            afterWorld
+        ) {
+            record(
+                ReplayWorldStateMutation(
+                    beforeWorld,
+                ),
+            )
+        }
     }
 
     fun <T> withoutRecording(
@@ -265,7 +308,7 @@ data class TimestampedReplayMutation(
 sealed interface ReplayMutation {
 
     fun undo(
-        world: ReplayWorld,
+        session: ReplaySession,
     )
 }
 
@@ -275,8 +318,11 @@ data class ReplayChunkStateMutation(
 ) : ReplayMutation {
 
     override fun undo(
-        world: ReplayWorld,
+        session: ReplaySession,
     ) {
+        val world =
+            session.world
+
         SnapshotRestorer.restoreChunk(
             world,
             chunk,
@@ -297,8 +343,11 @@ data class ReplayChunkLoadedMutation(
 ) : ReplayMutation {
 
     override fun undo(
-        world: ReplayWorld,
+        session: ReplaySession,
     ) {
+        val world =
+            session.world
+
         world.doPreChunk(
             chunkX,
             chunkZ,
@@ -313,8 +362,11 @@ data class ReplayChunkUnloadedMutation(
 ) : ReplayMutation {
 
     override fun undo(
-        world: ReplayWorld,
+        session: ReplaySession,
     ) {
+        val world =
+            session.world
+
         SnapshotRestorer.restoreChunk(
             world,
             chunk,
@@ -337,8 +389,11 @@ data class ReplayBlockMutation(
 ) : ReplayMutation {
 
     override fun undo(
-        world: ReplayWorld,
+        session: ReplaySession,
     ) {
+        val world =
+            session.world
+
         world.setBlock(
             x,
             y,
@@ -366,8 +421,11 @@ data class ReplayTileEntityMutation(
 ) : ReplayMutation {
 
     override fun undo(
-        world: ReplayWorld,
+        session: ReplaySession,
     ) {
+        val world =
+            session.world
+
         restoreTileEntity(
             world,
             x,
@@ -383,8 +441,11 @@ data class ReplayEntityAddedMutation(
 ) : ReplayMutation {
 
     override fun undo(
-        world: ReplayWorld,
+        session: ReplaySession,
     ) {
+        val world =
+            session.world
+
         world.removeEntityFromWorld(
             entityId,
         )
@@ -396,8 +457,11 @@ data class ReplayEntityRemovedMutation(
 ) : ReplayMutation {
 
     override fun undo(
-        world: ReplayWorld,
+        session: ReplaySession,
     ) {
+        val world =
+            session.world
+
         val existing =
             world.getEntityByID(
                 state.entityId,
@@ -423,6 +487,87 @@ data class ReplayEntityRemovedMutation(
         world.addEntityToWorld(
             state.entityId,
             restored,
+        )
+    }
+}
+
+data class ReplayPlayerStateMutation(
+    val before: ReplayReversePlayerState,
+) : ReplayMutation {
+
+    override fun undo(
+        session: ReplaySession,
+    ) {
+        before.restore(
+            session.recordedPlayer,
+            newerState = null,
+            interpolation = 0.0,
+        )
+    }
+}
+
+data class ReplayWorldStateMutation(
+    val before: ReplayWorldMutationState,
+) : ReplayMutation {
+
+    override fun undo(
+        session: ReplaySession,
+    ) {
+        before.restore(
+            session.world,
+        )
+    }
+}
+
+data class ReplayWorldMutationState(
+    val worldTime: Long,
+    val totalWorldTime: Long,
+    val raining: Boolean,
+    val thundering: Boolean,
+    val rainStrength: Float,
+    val thunderStrength: Float,
+) {
+
+    fun restore(
+        world: ReplayWorld,
+    ) {
+        world.setWorldTime(
+            worldTime,
+        )
+        world.func_82738_a(
+            totalWorldTime,
+        )
+        world.worldInfo.setRaining(
+            raining,
+        )
+        world.worldInfo.setThundering(
+            thundering,
+        )
+        world.setRainStrength(
+            rainStrength,
+        )
+        world.setThunderStrength(
+            thunderStrength,
+        )
+    }
+
+    companion object {
+
+        fun capture(
+            world: ReplayWorld,
+        ): ReplayWorldMutationState = ReplayWorldMutationState(
+            worldTime =
+            world.worldTime,
+            totalWorldTime =
+            world.totalWorldTime,
+            raining =
+            world.worldInfo.isRaining,
+            thundering =
+            world.worldInfo.isThundering,
+            rainStrength =
+            world.rainingStrength,
+            thunderStrength =
+            world.thunderingStrength,
         )
     }
 }
