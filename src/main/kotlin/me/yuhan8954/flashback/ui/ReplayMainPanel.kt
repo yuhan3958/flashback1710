@@ -24,8 +24,8 @@ class ReplayMainPanel :
     ).fullScreenInvisible()
         .child(
             ReplayContainerWidget()
-                .left(4)
-                .top(4)
+                .left(0)
+                .top(0)
                 .widthRel(VIEW_WIDTH)
                 .heightRel(WORKSPACE_HEIGHT)
                 .background(
@@ -43,15 +43,15 @@ class ReplayMainPanel :
                 ),
         ).child(
             ReplayCameraPanel()
-                .right(4)
-                .top(4)
+                .right(0)
+                .top(0)
                 .widthRel(SETTINGS_WIDTH)
                 .heightRel(WORKSPACE_HEIGHT),
         ).child(
             ReplayControlBar()
-                .left(4)
-                .right(4)
-                .bottom(4)
+                .left(0)
+                .right(0)
+                .bottom(0)
                 .heightRel(TIMELINE_HEIGHT),
         )
 
@@ -61,15 +61,15 @@ class ReplayMainPanel :
             "replay_main"
 
         private const val VIEW_WIDTH =
-            0.66f
+            0.667f
 
         private const val SETTINGS_WIDTH =
-            0.33f
+            0.333f
 
         private const val WORKSPACE_HEIGHT =
-            0.60f
+            0.667f
 
         private const val TIMELINE_HEIGHT =
-            0.37f
+            0.333f
     }
 }
