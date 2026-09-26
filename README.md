@@ -354,6 +354,8 @@ Free-camera movement remains usable while the replay UI is open. Hold the right 
 
 Playback opens a ModularUI2 editing workspace modeled after desktop video editors.
 
+The screen follows the 2:1 reference split from the UI mockup: roughly two thirds of the height is the workspace, one third is the timeline; the upper workspace is split roughly two thirds VIEW to one third SETTINGS.
+
 The screen is divided into three regions:
 
 ```text
@@ -368,11 +370,11 @@ The screen is divided into three regions:
 +-----------------------------------------+
 ```
 
-The upper-left **VIEW** region intentionally leaves the replay world visible instead of painting an opaque panel over it. The upper-right **SETTINGS** region currently exposes replay-camera controls and is reserved for future camera/keyframe settings. The bottom **TIMELINE** region owns transport controls and the editor-style timeline viewport.
+The upper-left **VIEW** region intentionally leaves the replay world visible instead of painting an opaque panel over it. The upper-right **SETTINGS** region currently exposes replay-camera controls and is reserved for future camera/keyframe settings. The bottom **TIMELINE** region spans the full screen width and owns transport controls plus the editor-style timeline viewport. The three regions are edge-aligned without decorative outer gutters so the separators match the reference wireframe directly.
 
 The timeline is no longer scaled permanently to the full replay duration. It maintains a horizontal time viewport:
 
-- mouse wheel: zoom around the cursor position,
+- mouse wheel: zoom around the cursor position (one-hand scale control),
 - Shift + mouse wheel: horizontal pan,
 - middle-mouse drag: horizontal pan,
 - left click / drag: seek,
