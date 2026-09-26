@@ -48,7 +48,7 @@ class ReplayControlBar : ParentWidget<ReplayControlBar>() {
                 .width(36)
                 .height(10)
                 .textAlign(
-                    Alignment.Right,
+                    Alignment.CenterRight,
                 )
                 .color(
                     ReplayUiStyle.TEXT_COLOR,
@@ -144,7 +144,7 @@ class ReplayControlBar : ParentWidget<ReplayControlBar>() {
                 .width(80)
                 .height(10)
                 .textAlign(
-                    Alignment.Right,
+                    Alignment.CenterRight,
                 )
                 .color(
                     ReplayUiStyle.MUTED_TEXT_COLOR,
