@@ -1,12 +1,17 @@
 package me.yuhan8954.flashback.ui
 
+import com.cleanroommc.modularui.api.UpOrDown
 import com.cleanroommc.modularui.api.widget.Interactable
 import com.cleanroommc.modularui.drawable.Rectangle
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext
 import com.cleanroommc.modularui.theme.WidgetThemeEntry
 import com.cleanroommc.modularui.widget.Widget
-import me.yuhan8954.flashback.replay.ReplayClock
 import me.yuhan8954.flashback.replay.ReplayPlayer
+import net.minecraft.client.Minecraft
+import kotlin.math.ceil
+import kotlin.math.max
+import kotlin.math.min
+import kotlin.math.pow
 import kotlin.math.roundToInt
 
 class ReplayTimelineWidget :
@@ -49,6 +54,21 @@ class ReplayTimelineWidget :
                 ReplayUiStyle.PLAYHEAD_COLOR,
             )
 
+    private var visibleStartNanos =
+        0.0
+
+    private var nanosPerPixel =
+        0.0
+
+    private var lastDurationNanos =
+        -1L
+
+    private var panning =
+        false
+
+    private var lastPanMouseX =
+        0
+
     override fun draw(
         context: ModularGuiContext,
         widgetTheme: WidgetThemeEntry<*>,
@@ -64,6 +84,19 @@ class ReplayTimelineWidget :
             height <= 0
         ) {
             return
+        }
+
+        ensureViewport(
+            width,
+        )
+
+        if (
+            !ReplayPlayer.paused &&
+            !panning
+        ) {
+            followPlayhead(
+                width,
+            )
         }
 
         background.draw(
@@ -82,14 +115,13 @@ class ReplayTimelineWidget :
         )
 
         val trackTop =
-            RULER_HEIGHT +
-                TRACK_MARGIN_TOP
+            RULER_HEIGHT
 
         val trackHeight =
             (
                 height -
                     trackTop -
-                    5
+                    3
                 ).coerceAtLeast(
                 6,
             )
@@ -103,15 +135,30 @@ class ReplayTimelineWidget :
             widgetTheme.theme,
         )
 
+        val currentTime =
+            ReplayPlayer.currentTimeNanos
+                .toDouble()
+
         val progressWidth =
-            (
-                width *
-                    progressFraction()
-                ).roundToInt()
-                .coerceIn(
-                    0,
-                    width,
-                )
+            when {
+                currentTime <=
+                    visibleStartNanos ->
+                    0
+
+                currentTime >=
+                    visibleEndNanos(
+                        width,
+                    ) ->
+                    width
+
+                else ->
+                    timeToX(
+                        currentTime,
+                    ).coerceIn(
+                        0,
+                        width,
+                    )
+            }
 
         if (progressWidth > 0) {
             progress.draw(
@@ -125,53 +172,212 @@ class ReplayTimelineWidget :
         }
 
         val playheadX =
-            progressWidth
-                .coerceIn(
-                    0,
-                    width - 1,
-                )
+            timeToX(
+                currentTime,
+            )
 
-        playhead.draw(
-            context,
-            playheadX,
-            RULER_HEIGHT - 1,
-            1,
-            height - RULER_HEIGHT + 1,
-            widgetTheme.theme,
-        )
+        if (
+            playheadX in
+            0 until width
+        ) {
+            playhead.draw(
+                context,
+                playheadX,
+                RULER_HEIGHT - 2,
+                1,
+                height -
+                    RULER_HEIGHT +
+                    2,
+                widgetTheme.theme,
+            )
 
-        drawPlayheadCap(
-            context,
-            widgetTheme,
-            playheadX,
-        )
+            drawPlayheadCap(
+                context,
+                widgetTheme,
+                playheadX,
+            )
+        }
     }
 
     override fun onMousePressed(
         mouseButton: Int,
-    ): Interactable.Result {
-        if (mouseButton != 0) {
-            return Interactable.Result.IGNORE
+    ): Interactable.Result = when (mouseButton) {
+        0 -> {
+            seekToMouse()
+            Interactable.Result.SUCCESS
         }
 
-        seekToMouse()
+        2 -> {
+            panning =
+                true
 
-        return Interactable.Result.SUCCESS
+            lastPanMouseX =
+                context.absMouseX
+
+            Interactable.Result.SUCCESS
+        }
+
+        else ->
+            Interactable.Result.IGNORE
     }
 
     override fun onMouseDrag(
         mouseButton: Int,
         timeSinceClick: Long,
     ) {
-        if (mouseButton == 0) {
-            seekToMouse()
+        when (mouseButton) {
+            0 ->
+                seekToMouse()
+
+            2 ->
+                panToMouse()
         }
     }
 
     override fun onMouseRelease(
         mouseButton: Int,
-    ): Boolean = mouseButton ==
-        0
+    ): Boolean {
+        if (mouseButton == 2) {
+            panning =
+                false
+        }
+
+        return mouseButton ==
+            0 ||
+            mouseButton ==
+            2
+    }
+
+    override fun onMouseScroll(
+        scrollDirection: UpOrDown,
+        amount: Int,
+    ): Boolean {
+        val width =
+            area.width
+
+        val duration =
+            ReplayPlayer.totalDurationNanos
+
+        if (
+            width <= 0 ||
+            duration <= 0L
+        ) {
+            return false
+        }
+
+        ensureViewport(
+            width,
+        )
+
+        if (Interactable.hasShiftDown()) {
+            panByWheel(
+                scrollDirection,
+                width,
+            )
+
+            return true
+        }
+
+        zoomAtMouse(
+            scrollDirection,
+            width,
+            duration,
+        )
+
+        return true
+    }
+
+    private fun panToMouse() {
+        val mouseX =
+            context.absMouseX
+
+        val deltaX =
+            mouseX -
+                lastPanMouseX
+
+        lastPanMouseX =
+            mouseX
+
+        visibleStartNanos -=
+            deltaX *
+            nanosPerPixel
+
+        clampViewport(
+            area.width,
+        )
+    }
+
+    private fun panByWheel(
+        scrollDirection: UpOrDown,
+        width: Int,
+    ) {
+        val visibleDuration =
+            width *
+                nanosPerPixel
+
+        visibleStartNanos -=
+            scrollDirection.modifier *
+            visibleDuration *
+            WHEEL_PAN_FRACTION
+
+        clampViewport(
+            width,
+        )
+    }
+
+    private fun zoomAtMouse(
+        scrollDirection: UpOrDown,
+        width: Int,
+        duration: Long,
+    ) {
+        val relativeX =
+            (
+                context.absMouseX -
+                    area.x
+                ).coerceIn(
+                0,
+                width,
+            )
+
+        val anchorTime =
+            visibleStartNanos +
+                relativeX *
+                nanosPerPixel
+
+        val fitNanosPerPixel =
+            duration.toDouble() /
+                width
+
+        val minNanosPerPixel =
+            min(
+                fitNanosPerPixel,
+                MIN_NANOS_PER_PIXEL,
+            )
+
+        val newNanosPerPixel =
+            (
+                nanosPerPixel /
+                    ZOOM_FACTOR.pow(
+                        scrollDirection.modifier
+                            .toDouble(),
+                    )
+                ).coerceIn(
+                minNanosPerPixel,
+                fitNanosPerPixel,
+            )
+
+        visibleStartNanos =
+            anchorTime -
+            relativeX *
+            newNanosPerPixel
+
+        nanosPerPixel =
+            newNanosPerPixel
+
+        clampViewport(
+            width,
+        )
+    }
 
     private fun drawRuler(
         context: ModularGuiContext,
@@ -181,51 +387,51 @@ class ReplayTimelineWidget :
         val duration =
             ReplayPlayer.totalDurationNanos
 
-        if (
-            duration <= 0L ||
-            width <= 0
-        ) {
+        if (duration <= 0L) {
             return
         }
 
-        val totalTicks =
-            (
-                duration /
-                    ReplayClock.MINECRAFT_TICK_NANOS
-                ).coerceAtLeast(
-                1L,
-            )
-
-        val tickSpacing =
-            width.toDouble() /
-                totalTicks
-
-        val minorStep =
-            chooseMinorStep(
-                tickSpacing,
-            )
+        val targetStepNanos =
+            nanosPerPixel *
+                LABEL_TARGET_PIXELS
 
         val majorStep =
-            minorStep *
-                MAJOR_TICKS_PER_GROUP
+            chooseMajorStep(
+                targetStepNanos,
+            )
 
-        var tick =
-            0L
+        val minorStep =
+            majorStep /
+                MINOR_DIVISIONS
 
-        while (tick <= totalTicks) {
+        val firstMinor =
+            ceil(
+                visibleStartNanos /
+                    minorStep,
+            ).toLong() *
+                minorStep
+
+        val visibleEnd =
+            visibleEndNanos(
+                width,
+            )
+
+        var time =
+            firstMinor
+
+        while (
+            time.toDouble() <=
+            visibleEnd &&
+            time <=
+            duration
+        ) {
             val x =
-                (
-                    tick.toDouble() /
-                        totalTicks *
-                        width
-                    ).roundToInt()
-                    .coerceIn(
-                        0,
-                        width - 1,
-                    )
+                timeToX(
+                    time.toDouble(),
+                )
 
             val major =
-                tick %
+                time %
                     majorStep ==
                     0L
 
@@ -252,9 +458,51 @@ class ReplayTimelineWidget :
                 widgetTheme.theme,
             )
 
-            tick +=
+            if (major) {
+                drawTimeLabel(
+                    time,
+                    x,
+                )
+            }
+
+            time +=
                 minorStep
         }
+    }
+
+    private fun drawTimeLabel(
+        timeNanos: Long,
+        x: Int,
+    ) {
+        val font =
+            Minecraft.getMinecraft()
+                .fontRenderer
+
+        val label =
+            ReplayTimeFormatter.formatRuler(
+                timeNanos,
+            )
+
+        val labelX =
+            (
+                x +
+                    2
+                ).coerceAtMost(
+                max(
+                    area.width -
+                        font.getStringWidth(
+                            label,
+                        ),
+                    0,
+                ),
+            )
+
+        font.drawString(
+            label,
+            labelX,
+            1,
+            ReplayUiStyle.MUTED_TEXT_COLOR,
+        )
     }
 
     private fun drawPlayheadCap(
@@ -265,22 +513,17 @@ class ReplayTimelineWidget :
         val capLeft =
             (
                 playheadX -
-                    3
+                    2
                 ).coerceAtLeast(
                 0,
             )
 
         val capWidth =
-            if (
-                capLeft +
-                7 >
-                area.width
-            ) {
+            min(
+                5,
                 area.width -
-                    capLeft
-            } else {
-                7
-            }
+                    capLeft,
+            )
 
         playhead.draw(
             context,
@@ -292,39 +535,17 @@ class ReplayTimelineWidget :
         )
     }
 
-    private fun chooseMinorStep(
-        tickSpacing: Double,
-    ): Long {
-        var step =
-            1L
-
-        while (
-            tickSpacing *
-            step <
-            MIN_MINOR_PIXEL_SPACING
-        ) {
-            step *=
-                if (
-                    step %
-                    5L ==
-                    0L
-                ) {
-                    2L
-                } else {
-                    5L
-                }
-        }
-
-        return step
-    }
-
     private fun seekToMouse() {
-        if (
-            area.width <=
-            0
-        ) {
+        val width =
+            area.width
+
+        if (width <= 0) {
             return
         }
+
+        ensureViewport(
+            width,
+        )
 
         val relativeX =
             (
@@ -332,61 +553,223 @@ class ReplayTimelineWidget :
                     area.x
                 ).coerceIn(
                 0,
-                area.width,
+                width,
             )
-
-        val fraction =
-            relativeX.toDouble() /
-                area.width
 
         val targetTimeNanos =
             (
-                ReplayPlayer
-                    .totalDurationNanos *
-                    fraction
+                visibleStartNanos +
+                    relativeX *
+                    nanosPerPixel
                 ).toLong()
+                .coerceIn(
+                    0L,
+                    ReplayPlayer
+                        .totalDurationNanos,
+                )
 
         ReplayPlayer.seek(
             targetTimeNanos,
         )
     }
 
-    private fun progressFraction(): Double {
+    private fun ensureViewport(
+        width: Int,
+    ) {
         val duration =
             ReplayPlayer.totalDurationNanos
 
-        if (duration <= 0L) {
-            return 0.0
+        if (
+            duration <= 0L ||
+            width <= 0
+        ) {
+            visibleStartNanos =
+                0.0
+
+            nanosPerPixel =
+                1.0
+
+            lastDurationNanos =
+                duration
+
+            return
         }
 
-        return (
-            ReplayPlayer.currentTimeNanos
-                .toDouble() /
+        if (
+            nanosPerPixel <= 0.0 ||
+            lastDurationNanos !=
+            duration
+        ) {
+            nanosPerPixel =
+                duration.toDouble() /
+                width
+
+            visibleStartNanos =
+                0.0
+
+            lastDurationNanos =
                 duration
-            ).coerceIn(
-            0.0,
-            1.0,
+        }
+
+        clampViewport(
+            width,
         )
+    }
+
+    private fun followPlayhead(
+        width: Int,
+    ) {
+        val current =
+            ReplayPlayer.currentTimeNanos
+                .toDouble()
+
+        val visibleDuration =
+            width *
+                nanosPerPixel
+
+        val margin =
+            visibleDuration *
+                FOLLOW_MARGIN
+
+        val visibleEnd =
+            visibleStartNanos +
+                visibleDuration
+
+        if (
+            current >
+            visibleEnd -
+            margin
+        ) {
+            visibleStartNanos =
+                current -
+                visibleDuration *
+                FOLLOW_POSITION
+        } else if (
+            current <
+            visibleStartNanos +
+            margin
+        ) {
+            visibleStartNanos =
+                current -
+                visibleDuration *
+                (
+                    1.0 -
+                        FOLLOW_POSITION
+                    )
+        }
+
+        clampViewport(
+            width,
+        )
+    }
+
+    private fun clampViewport(
+        width: Int,
+    ) {
+        val duration =
+            ReplayPlayer.totalDurationNanos
+                .toDouble()
+
+        val visibleDuration =
+            width *
+                nanosPerPixel
+
+        val maxStart =
+            max(
+                duration -
+                    visibleDuration,
+                0.0,
+            )
+
+        visibleStartNanos =
+            visibleStartNanos
+                .coerceIn(
+                    0.0,
+                    maxStart,
+                )
+    }
+
+    private fun visibleEndNanos(
+        width: Int,
+    ): Double = visibleStartNanos +
+        width *
+        nanosPerPixel
+
+    private fun timeToX(
+        timeNanos: Double,
+    ): Int = (
+        (
+            timeNanos -
+                visibleStartNanos
+            ) /
+            nanosPerPixel
+        ).roundToInt()
+
+    private fun chooseMajorStep(
+        targetNanos: Double,
+    ): Long {
+        NICE_STEPS_NANOS.forEach {
+            if (
+                it >=
+                targetNanos
+            ) {
+                return it
+            }
+        }
+
+        return NICE_STEPS_NANOS
+            .last()
     }
 
     companion object {
 
         private const val RULER_HEIGHT =
-            16
-
-        private const val TRACK_MARGIN_TOP =
-            3
+            18
 
         private const val MINOR_MARK_HEIGHT =
-            5
+            4
 
         private const val MAJOR_MARK_HEIGHT =
-            10
+            8
 
-        private const val MAJOR_TICKS_PER_GROUP =
+        private const val MINOR_DIVISIONS =
             5L
 
-        private const val MIN_MINOR_PIXEL_SPACING =
-            8.0
+        private const val LABEL_TARGET_PIXELS =
+            72.0
+
+        private const val MIN_NANOS_PER_PIXEL =
+            5_000_000.0
+
+        private const val ZOOM_FACTOR =
+            1.25
+
+        private const val WHEEL_PAN_FRACTION =
+            0.12
+
+        private const val FOLLOW_MARGIN =
+            0.08
+
+        private const val FOLLOW_POSITION =
+            0.82
+
+        private val NICE_STEPS_NANOS =
+            longArrayOf(
+                50_000_000L,
+                100_000_000L,
+                250_000_000L,
+                500_000_000L,
+                1_000_000_000L,
+                2_000_000_000L,
+                5_000_000_000L,
+                10_000_000_000L,
+                30_000_000_000L,
+                60_000_000_000L,
+                120_000_000_000L,
+                300_000_000_000L,
+                600_000_000_000L,
+                1_800_000_000_000L,
+                3_600_000_000_000L,
+            )
     }
 }

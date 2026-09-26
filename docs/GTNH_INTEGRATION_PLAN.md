@@ -282,11 +282,22 @@ A GTNH proposal should not require users to manually manage one hard-coded devel
 
 ## Gate 8: Playback UX
 
+The current playback UI uses a three-region editor workspace:
+
+- replay view in the upper-left,
+- settings/camera panel in the upper-right,
+- full-width timeline editor across the bottom.
+
+The timeline is a horizontal viewport rather than a fixed full-duration progress bar. It supports cursor-anchored wheel zoom, Shift+wheel horizontal scrolling, middle-mouse drag panning, adaptive ruler spacing, and real replay-time labels on major marks.
+
 Minimum proposal-ready controls:
 
 - play/pause,
 - Stop,
 - timeline seek,
+- horizontal timeline pan,
+- timeline zoom,
+- labeled time ruler,
 - reverse playback,
 - speed control,
 - frame/tick stepping,
@@ -301,7 +312,8 @@ Additional useful controls:
 - configurable seek step,
 - hotkeys,
 - camera path keyframes,
-- hide replay UI for capture.
+- hide replay UI for capture,
+- resizable or user-configurable workspace splits.
 
 The UI should clearly distinguish:
 

@@ -48,6 +48,62 @@ object ReplayTimeFormatter {
         }
     }
 
+    fun formatRuler(
+        nanoseconds: Long,
+    ): String {
+        val totalMilliseconds =
+            nanoseconds
+                .coerceAtLeast(
+                    0L,
+                ) /
+                NANOS_PER_MILLISECOND
+
+        val hours =
+            totalMilliseconds /
+                MILLIS_PER_HOUR
+
+        val minutes =
+            totalMilliseconds %
+                MILLIS_PER_HOUR /
+                MILLIS_PER_MINUTE
+
+        val seconds =
+            totalMilliseconds %
+                MILLIS_PER_MINUTE /
+                MILLIS_PER_SECOND
+
+        val milliseconds =
+            totalMilliseconds %
+                MILLIS_PER_SECOND
+
+        return when {
+            hours > 0L ->
+                String.format(
+                    Locale.ROOT,
+                    "%d:%02d:%02d",
+                    hours,
+                    minutes,
+                    seconds,
+                )
+
+            totalMilliseconds <
+                MILLIS_PER_SECOND ->
+                String.format(
+                    Locale.ROOT,
+                    "00.%03d",
+                    milliseconds,
+                )
+
+            else ->
+                String.format(
+                    Locale.ROOT,
+                    "%02d:%02d",
+                    minutes,
+                    seconds,
+                )
+        }
+    }
+
     fun formatSpeed(speed: Double): String = String.format(
         Locale.ROOT,
         "%.2fx",
