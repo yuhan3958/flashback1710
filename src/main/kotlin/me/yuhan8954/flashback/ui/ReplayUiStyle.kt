@@ -34,6 +34,21 @@ object ReplayUiStyle {
     const val PLAYHEAD_COLOR =
         0xFFFFFFFF.toInt()
 
+    const val PACKET_EVENT_COLOR =
+        0xFF4F6C8A.toInt()
+
+    const val CHECKPOINT_EVENT_COLOR =
+        0xFF8A6C4F.toInt()
+
+    const val MARKER_EVENT_COLOR =
+        0xFFE8D75A.toInt()
+
+    const val CAMERA_KEYFRAME_COLOR =
+        0xFF6FD6FF.toInt()
+
+    const val RANGE_BOUNDARY_COLOR =
+        0xFFFF8A65.toInt()
+
     const val SPEED_FORWARD_COLOR =
         0xFF80FF80.toInt()
 
