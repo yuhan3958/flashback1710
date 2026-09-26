@@ -9,8 +9,7 @@ import me.yuhan8954.flashback.replay.ReplayPlayer
 class ReplayControlBar : ParentWidget<ReplayControlBar>() {
 
     init {
-        size(
-            WIDTH,
+        height(
             HEIGHT,
         )
 
@@ -26,10 +25,10 @@ class ReplayControlBar : ParentWidget<ReplayControlBar>() {
                         ReplayPlayer.currentTimeNanos,
                     )
                 },
-            ).left(8)
-                .top(6)
-                .width(96)
-                .height(10)
+            ).left(6)
+                .top(4)
+                .width(76)
+                .height(9)
                 .color(
                     ReplayUiStyle.TEXT_COLOR,
                 ),
@@ -43,10 +42,10 @@ class ReplayControlBar : ParentWidget<ReplayControlBar>() {
                             ReplayPlayer.speed,
                         )
                 },
-            ).left(104)
-                .top(6)
-                .width(36)
-                .height(10)
+            ).left(82)
+                .top(4)
+                .width(34)
+                .height(9)
                 .textAlign(
                     Alignment.CenterRight,
                 )
@@ -58,7 +57,7 @@ class ReplayControlBar : ParentWidget<ReplayControlBar>() {
         child(
             transportButton(
                 "|<",
-                8,
+                6,
             ) {
                 ReplayUiController.skipBackward()
             },
@@ -67,7 +66,7 @@ class ReplayControlBar : ParentWidget<ReplayControlBar>() {
         child(
             transportButton(
                 "<<",
-                34,
+                28,
             ) {
                 ReplayUiController.decreaseSpeed()
             },
@@ -76,7 +75,7 @@ class ReplayControlBar : ParentWidget<ReplayControlBar>() {
         child(
             transportButton(
                 label = null,
-                left = 60,
+                left = 50,
                 dynamicLabel = {
                     if (ReplayPlayer.paused) {
                         ">"
@@ -92,7 +91,7 @@ class ReplayControlBar : ParentWidget<ReplayControlBar>() {
         child(
             transportButton(
                 ">>",
-                86,
+                72,
             ) {
                 ReplayUiController.increaseSpeed()
             },
@@ -101,7 +100,7 @@ class ReplayControlBar : ParentWidget<ReplayControlBar>() {
         child(
             transportButton(
                 ">|",
-                112,
+                94,
             ) {
                 ReplayUiController.skipForward()
             },
@@ -110,26 +109,11 @@ class ReplayControlBar : ParentWidget<ReplayControlBar>() {
         child(
             smallButton(
                 "X",
-                8,
-                48,
+                6,
+                34,
             ) {
                 ReplayPlayer.stop()
             },
-        )
-
-        child(
-            ReplayTextWidget(
-                "5s",
-            ).left(34)
-                .top(52)
-                .width(24)
-                .height(10)
-                .textAlign(
-                    Alignment.Center,
-                )
-                .color(
-                    ReplayUiStyle.MUTED_TEXT_COLOR,
-                ),
         )
 
         child(
@@ -139,10 +123,10 @@ class ReplayControlBar : ParentWidget<ReplayControlBar>() {
                         ReplayPlayer.totalDurationNanos,
                     )
                 },
-            ).left(60)
-                .top(52)
-                .width(80)
-                .height(10)
+            ).left(28)
+                .top(36)
+                .width(88)
+                .height(9)
                 .textAlign(
                     Alignment.CenterRight,
                 )
@@ -154,9 +138,9 @@ class ReplayControlBar : ParentWidget<ReplayControlBar>() {
         child(
             ReplayTimelineWidget()
                 .left(TIMELINE_LEFT)
-                .right(8)
-                .top(6)
-                .bottom(6),
+                .right(4)
+                .top(4)
+                .bottom(4),
         )
     }
 
@@ -167,8 +151,8 @@ class ReplayControlBar : ParentWidget<ReplayControlBar>() {
         action: () -> Unit,
     ): ButtonWidget<*> = ReplayButtonWidget()
         .left(left)
-        .top(22)
-        .size(24, 22)
+        .top(15)
+        .size(20, 17)
         .background(
             ReplayUiStyle.buttonBackground(),
         )
@@ -199,7 +183,7 @@ class ReplayControlBar : ParentWidget<ReplayControlBar>() {
     ): ButtonWidget<*> = ReplayButtonWidget()
         .left(left)
         .top(top)
-        .size(20, 16)
+        .size(18, 14)
         .background(
             ReplayUiStyle.buttonBackground(),
         )
@@ -229,13 +213,10 @@ class ReplayControlBar : ParentWidget<ReplayControlBar>() {
 
     companion object {
 
-        const val WIDTH =
-            560
-
         const val HEIGHT =
-            70
+            52
 
         private const val TIMELINE_LEFT =
-            148
+            122
     }
 }
