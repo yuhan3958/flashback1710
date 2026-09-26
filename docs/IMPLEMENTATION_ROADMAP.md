@@ -41,6 +41,8 @@ The acceptance criterion is state equivalence, not merely visually plausible pla
 
 ## 2. Harden the Replay File Format
 
+**Status: implemented for format v8; continue extending tests as the format evolves.**
+
 Treat replay files as durable user data rather than development artifacts.
 
 Extend the replay metadata header with:
@@ -62,7 +64,7 @@ Add defensive record framing:
 
 `ReplayReader` should recover up to the last valid record where possible instead of failing the entire file.
 
-Document the format in:
+The current format is documented in:
 
 `docs/FORMAT.md`
 
