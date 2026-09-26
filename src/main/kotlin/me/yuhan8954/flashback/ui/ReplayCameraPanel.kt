@@ -12,6 +12,7 @@ class ReplayCameraPanel : ParentWidget<ReplayCameraPanel>() {
             WIDTH,
             HEIGHT,
         )
+
         background(
             ReplayUiStyle.panelBackground(),
             ReplayUiStyle.panelBorder(),
@@ -19,18 +20,18 @@ class ReplayCameraPanel : ParentWidget<ReplayCameraPanel>() {
 
         child(
             ReplayTextWidget(
-                "CAMERA",
-            ).left(8)
-                .top(7)
+                "CAM",
+            ).left(5)
+                .top(4)
                 .color(
-                    ReplayUiStyle.TEXT_COLOR,
+                    ReplayUiStyle.MUTED_TEXT_COLOR,
                 ),
         )
 
         child(
             cameraButton(
                 "Player",
-                8,
+                5,
                 active = {
                     !ReplayPlayer.freeCameraActive
                 },
@@ -43,7 +44,7 @@ class ReplayCameraPanel : ParentWidget<ReplayCameraPanel>() {
         child(
             cameraButton(
                 "Free",
-                61,
+                45,
                 active = {
                     ReplayPlayer.freeCameraActive
                 },
@@ -54,38 +55,19 @@ class ReplayCameraPanel : ParentWidget<ReplayCameraPanel>() {
         )
 
         child(
-            ReplayButtonWidget()
-                .left(8)
-                .top(47)
-                .size(106, 18)
-                .background(
-                    ReplayUiStyle.buttonBackground(),
-                )
-                .overlay(
-                    IKey.str(
-                        "Keyframes (Later)",
-                    ),
-                ).apply {
-                    setEnabled(
-                        false,
-                    )
-                },
-        )
-
-        child(
             ReplayTextWidget(
                 IKey.dynamic {
                     if (ReplayPlayer.freeCameraActive) {
-                        "Free speed: " +
+                        "x" +
                             ReplayPlayer.cameraSpeed
                     } else {
-                        "Following replay player"
+                        "follow"
                     }
                 },
-            ).left(8)
-                .top(70)
-                .width(106)
-                .height(10)
+            ).left(5)
+                .top(37)
+                .width(78)
+                .height(8)
                 .color(
                     ReplayUiStyle.MUTED_TEXT_COLOR,
                 ),
@@ -99,8 +81,8 @@ class ReplayCameraPanel : ParentWidget<ReplayCameraPanel>() {
         action: () -> Unit,
     ): ButtonWidget<*> = ReplayButtonWidget()
         .left(left)
-        .top(24)
-        .size(49, 18)
+        .top(16)
+        .size(36, 16)
         .background(
             ReplayUiStyle.buttonBackground(),
         )
@@ -123,7 +105,10 @@ class ReplayCameraPanel : ParentWidget<ReplayCameraPanel>() {
 
     companion object {
 
-        const val WIDTH = 122
-        const val HEIGHT = 88
+        const val WIDTH =
+            86
+
+        const val HEIGHT =
+            48
     }
 }
