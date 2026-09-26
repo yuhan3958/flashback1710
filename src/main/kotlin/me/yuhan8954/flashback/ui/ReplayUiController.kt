@@ -115,6 +115,32 @@ object ReplayUiController {
         1,
     )
 
+    fun skipBackward(): Boolean = skipBy(
+        -SKIP_INTERVAL_NANOS,
+    )
+
+    fun skipForward(): Boolean = skipBy(
+        SKIP_INTERVAL_NANOS,
+    )
+
+    private fun skipBy(
+        deltaNanos: Long,
+    ): Boolean {
+        if (!ReplayPlayer.playing) {
+            return false
+        }
+
+        return ReplayPlayer.seek(
+            (
+                ReplayPlayer.currentTimeNanos +
+                    deltaNanos
+                ).coerceIn(
+                0L,
+                ReplayPlayer.totalDurationNanos,
+            ),
+        )
+    }
+
     private fun changeSpeed(direction: Int): Boolean {
         val speeds =
             ReplayClock.SUPPORTED_SPEEDS
@@ -143,4 +169,7 @@ object ReplayUiController {
             speeds[nextIndex],
         )
     }
+
+    private const val SKIP_INTERVAL_NANOS =
+        5_000_000_000L
 }
