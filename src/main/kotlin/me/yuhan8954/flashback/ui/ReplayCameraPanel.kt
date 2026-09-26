@@ -1,7 +1,6 @@
 package me.yuhan8954.flashback.ui
 
 import com.cleanroommc.modularui.api.drawable.IKey
-import com.cleanroommc.modularui.drawable.GuiTextures
 import com.cleanroommc.modularui.widget.ParentWidget
 import com.cleanroommc.modularui.widgets.ButtonWidget
 import me.yuhan8954.flashback.replay.ReplayPlayer
@@ -20,7 +19,7 @@ class ReplayCameraPanel : ParentWidget<ReplayCameraPanel>() {
 
         child(
             ReplayTextWidget(
-                "Camera",
+                "CAMERA",
             ).left(8)
                 .top(7)
                 .color(
@@ -103,7 +102,7 @@ class ReplayCameraPanel : ParentWidget<ReplayCameraPanel>() {
         .top(24)
         .size(49, 18)
         .background(
-            GuiTextures.BUTTON_CLEAN,
+            ReplayUiStyle.buttonBackground(),
         )
         .overlay(
             IKey.dynamic {
