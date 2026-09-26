@@ -338,7 +338,7 @@ class ReplayReader(
             ) {
                 if (
                     throwable is
-                    VirtualMachineError
+                        VirtualMachineError
                 ) {
                     throw throwable
                 }

@@ -380,12 +380,12 @@ class ReplayFormatV8Test {
 
         bytes[
             frame +
-                FRAME_HEADER_BYTES
+                FRAME_HEADER_BYTES,
         ] =
             (
                 bytes[
                     frame +
-                        FRAME_HEADER_BYTES
+                        FRAME_HEADER_BYTES,
                 ].toInt() xor
                     0x01
                 ).toByte()
@@ -462,7 +462,6 @@ class ReplayFormatV8Test {
             reader.packets.isEmpty(),
         )
     }
-
 
     @Test
     fun `v7 replay remains readable`() {
@@ -620,7 +619,6 @@ class ReplayFormatV8Test {
             )
         }
     }
-
 
     private fun writeLegacyPacket(
         output: DataOutputStream,
@@ -795,27 +793,26 @@ class ReplayFormatV8Test {
     private fun readInt(
         bytes: ByteArray,
         offset: Int,
-    ): Int =
+    ): Int = (
+        bytes[offset].toInt() and
+            0xff
+        ) shl 24 or
         (
-            bytes[offset].toInt() and
-                0xff
-            ) shl 24 or
             (
-                (
-                    bytes[offset + 1].toInt() and
-                        0xff
-                    ) shl 16
-                ) or
-            (
-                (
-                    bytes[offset + 2].toInt() and
-                        0xff
-                    ) shl 8
-                ) or
-            (
-                bytes[offset + 3].toInt() and
+                bytes[offset + 1].toInt() and
                     0xff
-                )
+                ) shl 16
+            ) or
+        (
+            (
+                bytes[offset + 2].toInt() and
+                    0xff
+                ) shl 8
+            ) or
+        (
+            bytes[offset + 3].toInt() and
+                0xff
+            )
 
     private fun writeInt(
         bytes: ByteArray,
