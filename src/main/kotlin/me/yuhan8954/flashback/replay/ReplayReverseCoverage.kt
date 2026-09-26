@@ -16,9 +16,8 @@ data class ReplayReverseCoverage(
 
     fun contains(
         targetTimeNanos: Long,
-    ): Boolean =
-        targetTimeNanos in
-            startTimeNanos..endTimeNanos
+    ): Boolean = targetTimeNanos in
+        startTimeNanos..endTimeNanos
 }
 
 enum class ReplayReversePath {
