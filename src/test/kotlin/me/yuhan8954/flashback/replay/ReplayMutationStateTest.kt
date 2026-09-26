@@ -97,7 +97,6 @@ class ReplayMutationStateTest {
         )
     }
 
-
     @Test
     fun `player journal comparison ignores transform nbt but detects persistent nbt`() {
         val first =
@@ -218,6 +217,7 @@ class ReplayMutationStateTest {
         armorInventory = emptyList(),
         nbt = NBTTagCompound(),
     )
+
     private fun entityState(
         x: Double,
         marker: Int,
@@ -260,6 +260,4 @@ class ReplayMutationStateTest {
             )
         },
     )
-
-
 }
