@@ -386,23 +386,22 @@ data class ReplayReversePlayerState(
 
     fun sameJournalState(
         other: ReplayReversePlayerState,
-    ): Boolean =
-        onGround ==
+    ): Boolean = onGround ==
         other.onGround &&
-            currentItem ==
-            other.currentItem &&
-            sneaking ==
-            other.sneaking &&
-            sprinting ==
-            other.sprinting &&
-            sameInventory(
-                mainInventory,
-                other.mainInventory,
-            ) &&
-            sameInventory(
-                armorInventory,
-                other.armorInventory,
-            )
+        currentItem ==
+        other.currentItem &&
+        sneaking ==
+        other.sneaking &&
+        sprinting ==
+        other.sprinting &&
+        sameInventory(
+            mainInventory,
+            other.mainInventory,
+        ) &&
+        sameInventory(
+            armorInventory,
+            other.armorInventory,
+        )
 
     fun restore(
         player: EntityReplayPlayer,
