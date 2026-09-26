@@ -352,18 +352,37 @@ Free-camera movement remains usable while the replay UI is open. Hold the right 
 
 ## Replay UI
 
-Playback opens a ModularUI2 interface containing:
+Playback opens a ModularUI2 editing workspace modeled after desktop video editors.
 
-- timeline,
-- current time,
-- duration,
-- playback speed,
-- seek interaction,
-- step,
-- play/pause,
-- speed controls,
-- Stop,
-- camera controls.
+The screen is divided into three regions:
+
+```text
++---------------------------+-------------+
+|                           |             |
+|           VIEW            |  SETTINGS   |
+|                           |             |
++---------------------------+-------------+
+|                                         |
+|                TIMELINE                 |
+|                                         |
++-----------------------------------------+
+```
+
+The upper-left **VIEW** region intentionally leaves the replay world visible instead of painting an opaque panel over it. The upper-right **SETTINGS** region currently exposes replay-camera controls and is reserved for future camera/keyframe settings. The bottom **TIMELINE** region owns transport controls and the editor-style timeline viewport.
+
+The timeline is no longer scaled permanently to the full replay duration. It maintains a horizontal time viewport:
+
+- mouse wheel: zoom around the cursor position,
+- Shift + mouse wheel: horizontal pan,
+- middle-mouse drag: horizontal pan,
+- left click / drag: seek,
+- major ruler marks: real replay-time labels,
+- minor ruler marks: adaptive subdivisions,
+- playback: automatically keeps the playhead inside the visible viewport.
+
+Ruler spacing uses human-friendly time steps rather than fixed Minecraft-tick spacing, so zooming changes the visible scale without changing replay time.
+
+Transport controls include current time, total duration, playback speed, skip backward/forward, speed changes, play/pause, and Stop.
 
 Stop is intentionally distinct from Pause.
 
