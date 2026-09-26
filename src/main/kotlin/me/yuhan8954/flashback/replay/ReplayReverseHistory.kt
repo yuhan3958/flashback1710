@@ -26,6 +26,24 @@ class ReplayReverseHistory {
             frames.peekLast()
                 ?.timestampNanos
 
+    val coverage: ReplayReverseCoverage?
+        get() {
+            val first =
+                frames.peekFirst()
+                    ?: return null
+
+            val last =
+                frames.peekLast()
+                    ?: return null
+
+            return ReplayReverseCoverage(
+                startTimeNanos =
+                first.timestampNanos,
+                endTimeNanos =
+                last.timestampNanos,
+            )
+        }
+
     fun clear() {
         frames.clear()
     }
@@ -173,44 +191,12 @@ data class ReplayReverseFrame(
         newerFrame: ReplayReverseFrame?,
         interpolation: Double,
     ) {
-        val world =
-            session.world
-
-        val recordedPlayer =
-            session.recordedPlayer
-
-        playerState.restore(
-            recordedPlayer,
+        playerState.restoreTransform(
+            session.recordedPlayer,
             newerFrame
                 ?.playerState,
             interpolation,
         )
-
-        val currentEntities =
-            world.loadedEntityList
-                .filterIsInstance<Entity>()
-                .filter {
-                    it !== recordedPlayer &&
-                        it !== session.player
-                }.associateBy {
-                    it.entityId
-                }
-
-        currentEntities.forEach {
-                (
-                    entityId,
-                    _,
-                ),
-            ->
-            if (
-                entityId !in
-                entityStates
-            ) {
-                world.removeEntityFromWorld(
-                    entityId,
-                )
-            }
-        }
 
         entityStates.forEach {
                 (
@@ -218,94 +204,30 @@ data class ReplayReverseFrame(
                     state,
                 ),
             ->
-            val newerState =
+            val target =
+                session.world
+                    .getEntityByID(
+                        entityId,
+                    )
+                    ?: return@forEach
+
+            if (
+                target.javaClass.name !=
+                state.entityClass
+            ) {
+                return@forEach
+            }
+
+            state.restoreTransform(
+                target,
                 newerFrame
                     ?.entityStates
                     ?.get(
                         entityId,
-                    )
-
-            val current =
-                world.getEntityByID(
-                    entityId,
-                )
-
-            val target =
-                if (
-                    current != null &&
-                    current.javaClass.name ==
-                    state.entityClass
-                ) {
-                    current
-                } else {
-                    if (current != null) {
-                        world.removeEntityFromWorld(
-                            entityId,
-                        )
-                    }
-
-                    state.create(
-                        world,
-                    )?.also {
-                        world.addEntityToWorld(
-                            entityId,
-                            it,
-                        )
-                    }
-                }
-
-            if (target != null) {
-                state.restore(
-                    target,
-                    newerState,
-                    interpolation,
-                )
-            }
+                    ),
+                interpolation,
+            )
         }
-
-        world.setWorldTime(
-            interpolateLong(
-                worldTime,
-                newerFrame
-                    ?.worldTime,
-                interpolation,
-            ),
-        )
-
-        world.func_82738_a(
-            interpolateLong(
-                totalWorldTime,
-                newerFrame
-                    ?.totalWorldTime,
-                interpolation,
-            ),
-        )
-
-        world.worldInfo.setRaining(
-            raining,
-        )
-
-        world.worldInfo.setThundering(
-            thundering,
-        )
-
-        world.setRainStrength(
-            interpolateFloat(
-                rainStrength,
-                newerFrame
-                    ?.rainStrength,
-                interpolation,
-            ),
-        )
-
-        world.setThunderStrength(
-            interpolateFloat(
-                thunderStrength,
-                newerFrame
-                    ?.thunderStrength,
-                interpolation,
-            ),
-        )
     }
 
     companion object {
@@ -401,7 +323,96 @@ data class ReplayReversePlayerState(
         sameInventory(
             armorInventory,
             other.armorInventory,
+        ) &&
+        sameJournalNbt(
+            nbt,
+            other.nbt,
         )
+
+    fun restoreTransform(
+        player: EntityReplayPlayer,
+        newerState: ReplayReversePlayerState?,
+        interpolation: Double,
+    ) {
+        val previousX =
+            player.posX
+
+        val previousY =
+            player.posY
+
+        val previousZ =
+            player.posZ
+
+        val previousYaw =
+            player.rotationYaw
+
+        val previousPitch =
+            player.rotationPitch
+
+        player.setPositionAndRotation(
+            interpolateDouble(
+                x,
+                newerState?.x,
+                interpolation,
+            ),
+            interpolateDouble(
+                y,
+                newerState?.y,
+                interpolation,
+            ),
+            interpolateDouble(
+                z,
+                newerState?.z,
+                interpolation,
+            ),
+            interpolateAngle(
+                yaw,
+                newerState?.yaw,
+                interpolation,
+            ),
+            interpolateFloat(
+                pitch,
+                newerState?.pitch,
+                interpolation,
+            ),
+        )
+
+        player.prevPosX =
+            previousX
+        player.prevPosY =
+            previousY
+        player.prevPosZ =
+            previousZ
+        player.lastTickPosX =
+            previousX
+        player.lastTickPosY =
+            previousY
+        player.lastTickPosZ =
+            previousZ
+        player.prevRotationYaw =
+            previousYaw
+        player.prevRotationPitch =
+            previousPitch
+
+        player.motionX =
+            interpolateDouble(
+                motionX,
+                newerState?.motionX,
+                interpolation,
+            )
+        player.motionY =
+            interpolateDouble(
+                motionY,
+                newerState?.motionY,
+                interpolation,
+            )
+        player.motionZ =
+            interpolateDouble(
+                motionZ,
+                newerState?.motionZ,
+                interpolation,
+            )
+    }
 
     fun restore(
         player: EntityReplayPlayer,
@@ -638,6 +649,27 @@ data class ReplayReverseEntityState(
     val nbt: NBTTagCompound,
 ) {
 
+    fun sameJournalState(
+        other: ReplayReverseEntityState,
+    ): Boolean = entityType ==
+        other.entityType &&
+        entityClass ==
+        other.entityClass &&
+        playerProfileId ==
+        other.playerProfileId &&
+        playerProfileName ==
+        other.playerProfileName &&
+        onGround ==
+        other.onGround &&
+        sneaking ==
+        other.sneaking &&
+        sprinting ==
+        other.sprinting &&
+        sameJournalNbt(
+            nbt,
+            other.nbt,
+        )
+
     fun create(
         world: ReplayWorld,
     ): Entity? {
@@ -675,6 +707,122 @@ data class ReplayReverseEntityState(
         )
 
         return entity
+    }
+
+    fun restoreTransform(
+        target: Entity,
+        newerState: ReplayReverseEntityState?,
+        interpolation: Double,
+    ) {
+        val previousX =
+            target.posX
+        val previousY =
+            target.posY
+        val previousZ =
+            target.posZ
+        val previousYaw =
+            target.rotationYaw
+        val previousPitch =
+            target.rotationPitch
+
+        target.setPositionAndRotation(
+            interpolateDouble(
+                x,
+                newerState?.x,
+                interpolation,
+            ),
+            interpolateDouble(
+                y,
+                newerState?.y,
+                interpolation,
+            ),
+            interpolateDouble(
+                z,
+                newerState?.z,
+                interpolation,
+            ),
+            interpolateAngle(
+                yaw,
+                newerState?.yaw,
+                interpolation,
+            ),
+            interpolateFloat(
+                pitch,
+                newerState?.pitch,
+                interpolation,
+            ),
+        )
+
+        target.prevPosX =
+            previousX
+        target.prevPosY =
+            previousY
+        target.prevPosZ =
+            previousZ
+        target.lastTickPosX =
+            previousX
+        target.lastTickPosY =
+            previousY
+        target.lastTickPosZ =
+            previousZ
+        target.prevRotationYaw =
+            previousYaw
+        target.prevRotationPitch =
+            previousPitch
+
+        target.motionX =
+            interpolateDouble(
+                motionX,
+                newerState?.motionX,
+                interpolation,
+            )
+        target.motionY =
+            interpolateDouble(
+                motionY,
+                newerState?.motionY,
+                interpolation,
+            )
+        target.motionZ =
+            interpolateDouble(
+                motionZ,
+                newerState?.motionZ,
+                interpolation,
+            )
+
+        target.serverPosX =
+            interpolateInt(
+                serverPosX,
+                newerState?.serverPosX,
+                interpolation,
+            )
+        target.serverPosY =
+            interpolateInt(
+                serverPosY,
+                newerState?.serverPosY,
+                interpolation,
+            )
+        target.serverPosZ =
+            interpolateInt(
+                serverPosZ,
+                newerState?.serverPosZ,
+                interpolation,
+            )
+
+        if (
+            target is EntityLivingBase &&
+            rotationYawHead != null
+        ) {
+            target.prevRotationYawHead =
+                target.rotationYawHead
+
+            target.rotationYawHead =
+                interpolateAngle(
+                    rotationYawHead,
+                    newerState
+                        ?.rotationYawHead,
+                    interpolation,
+                )
+        }
     }
 
     fun restore(
@@ -1003,6 +1151,38 @@ data class ReplayReverseEntityState(
         }
     }
 }
+
+private fun sameJournalNbt(
+    first: NBTTagCompound,
+    second: NBTTagCompound,
+): Boolean {
+    val firstCopy =
+        first.copy() as
+            NBTTagCompound
+
+    val secondCopy =
+        second.copy() as
+            NBTTagCompound
+
+    TRANSFORM_NBT_KEYS.forEach {
+        firstCopy.removeTag(
+            it,
+        )
+        secondCopy.removeTag(
+            it,
+        )
+    }
+
+    return firstCopy ==
+        secondCopy
+}
+
+private val TRANSFORM_NBT_KEYS =
+    arrayOf(
+        "Pos",
+        "Motion",
+        "Rotation",
+    )
 
 private fun sameInventory(
     first: List<ItemStack?>,

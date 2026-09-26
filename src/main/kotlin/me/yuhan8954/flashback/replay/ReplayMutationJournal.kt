@@ -7,12 +7,13 @@ import net.minecraft.block.Block
 import net.minecraft.entity.Entity
 import net.minecraft.nbt.NBTTagCompound
 import net.minecraft.tileentity.TileEntity
-import java.util.ArrayDeque
 
 class ReplayMutationJournal {
 
-    private val mutations =
-        ArrayDeque<TimestampedReplayMutation>()
+    private val timeline =
+        ReplayMutationTimeline<ReplayMutation>(
+            HISTORY_DURATION_NANOS,
+        )
 
     private var suspendedDepth =
         0
@@ -35,8 +36,16 @@ class ReplayMutationJournal {
                 suspendedDepth ==
                 0
 
+    val coverage: ReplayReverseCoverage?
+        get() =
+            if (enabled) {
+                timeline.coverage
+            } else {
+                null
+            }
+
     fun clear() {
-        mutations.clear()
+        timeline.clear()
         tileEntityState.clear()
         entityState.clear()
     }
@@ -49,6 +58,10 @@ class ReplayMutationJournal {
 
         this.timestampNanos =
             timestampNanos
+
+        timeline.start(
+            timestampNanos,
+        )
 
         enabled =
             true
@@ -80,6 +93,10 @@ class ReplayMutationJournal {
         this.timestampNanos =
             timestampNanos
 
+        timeline.advanceTo(
+            timestampNanos,
+        )
+
         captureTileEntityMutations(
             world,
         )
@@ -87,8 +104,6 @@ class ReplayMutationJournal {
         captureEntityMutations(
             world,
         )
-
-        trim()
     }
 
     fun record(
@@ -98,34 +113,26 @@ class ReplayMutationJournal {
             return
         }
 
-        mutations.addLast(
-            TimestampedReplayMutation(
-                timestampNanos =
-                timestampNanos,
-                mutation =
-                mutation,
-            ),
+        timeline.append(
+            timestampNanos,
+            mutation,
         )
-
-        trim()
     }
 
     fun undoTo(
         session: ReplaySession,
         targetTimeNanos: Long,
     ) {
+        val mutationsToUndo =
+            timeline.removeAfter(
+                targetTimeNanos,
+            )
+
         withoutRecording {
-            while (
-                mutations.isNotEmpty() &&
-                mutations.peekLast()
-                    .timestampNanos >
-                targetTimeNanos
-            ) {
-                mutations.removeLast()
-                    .mutation
-                    .undo(
-                        session,
-                    )
+            mutationsToUndo.forEach {
+                it.undo(
+                    session,
+                )
             }
         }
 
@@ -277,7 +284,9 @@ class ReplayMutationJournal {
 
                 if (
                     previous != null &&
-                    previous != state
+                    !previous.sameJournalState(
+                        state,
+                    )
                 ) {
                     record(
                         ReplayEntityStateMutation(
@@ -355,36 +364,12 @@ class ReplayMutationJournal {
                 0xfffL
             )
 
-    private fun trim() {
-        val minimumTimeNanos =
-            (
-                timestampNanos -
-                    HISTORY_DURATION_NANOS
-                ).coerceAtLeast(
-                0L,
-            )
-
-        while (
-            mutations.isNotEmpty() &&
-            mutations.peekFirst()
-                .timestampNanos <
-            minimumTimeNanos
-        ) {
-            mutations.removeFirst()
-        }
-    }
-
     companion object {
 
         const val HISTORY_DURATION_NANOS =
             ReplayReverseHistory.HISTORY_DURATION_NANOS
     }
 }
-
-data class TimestampedReplayMutation(
-    val timestampNanos: Long,
-    val mutation: ReplayMutation,
-)
 
 sealed interface ReplayMutation {
 
