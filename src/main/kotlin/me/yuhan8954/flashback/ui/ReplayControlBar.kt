@@ -98,7 +98,7 @@ class ReplayControlBar : ParentWidget<ReplayControlBar>() {
                 },
             ).left(8)
                 .top(27)
-                .width(180)
+                .width(210)
                 .height(10)
                 .color(
                     ReplayUiStyle.MUTED_TEXT_COLOR,
