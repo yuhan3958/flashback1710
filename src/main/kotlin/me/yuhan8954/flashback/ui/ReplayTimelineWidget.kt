@@ -6,6 +6,7 @@ import com.cleanroommc.modularui.drawable.Rectangle
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext
 import com.cleanroommc.modularui.theme.WidgetThemeEntry
 import com.cleanroommc.modularui.widget.Widget
+import me.yuhan8954.flashback.editor.ReplayTimelineEventType
 import me.yuhan8954.flashback.replay.ReplayPlayer
 import net.minecraft.client.Minecraft
 import kotlin.math.ceil
@@ -53,6 +54,37 @@ class ReplayTimelineWidget :
             .color(
                 ReplayUiStyle.PLAYHEAD_COLOR,
             )
+
+    private val packetEvent =
+        Rectangle()
+            .color(
+                ReplayUiStyle.PACKET_EVENT_COLOR,
+            )
+
+    private val checkpointEvent =
+        Rectangle()
+            .color(
+                ReplayUiStyle.CHECKPOINT_EVENT_COLOR,
+            )
+
+    private val markerEvent =
+        Rectangle()
+            .color(
+                ReplayUiStyle.MARKER_EVENT_COLOR,
+            )
+
+    private val cameraKeyframeEvent =
+        Rectangle()
+            .color(
+                ReplayUiStyle.CAMERA_KEYFRAME_COLOR,
+            )
+
+    private val rangeBoundary =
+        Rectangle()
+            .color(
+                ReplayUiStyle.RANGE_BOUNDARY_COLOR,
+            )
+
 
     private var visibleStartNanos =
         0.0
@@ -112,6 +144,13 @@ class ReplayTimelineWidget :
             context,
             widgetTheme,
             width,
+        )
+
+        drawEditorOverlays(
+            context,
+            widgetTheme,
+            width,
+            height,
         )
 
         val trackTop =
@@ -285,6 +324,134 @@ class ReplayTimelineWidget :
         )
 
         return true
+    }
+
+    private fun drawEditorOverlays(
+        context: ModularGuiContext,
+        widgetTheme: WidgetThemeEntry<*>,
+        width: Int,
+        height: Int,
+    ) {
+        drawRangeBoundary(
+            context,
+            widgetTheme,
+            ReplayPlayer.inPointNanos,
+            width,
+            height,
+        )
+
+        drawRangeBoundary(
+            context,
+            widgetTheme,
+            ReplayPlayer.outPointNanos,
+            width,
+            height,
+        )
+
+        var lastPacketX =
+            Int.MIN_VALUE
+
+        ReplayPlayer.timelineEvents
+            .forEach { event ->
+                val x =
+                    timeToX(
+                        event.timestampNanos
+                            .toDouble(),
+                    )
+
+                if (
+                    x !in
+                    0 until width
+                ) {
+                    return@forEach
+                }
+
+                when (event.type) {
+                    ReplayTimelineEventType.PACKET -> {
+                        if (x == lastPacketX) {
+                            return@forEach
+                        }
+
+                        lastPacketX =
+                            x
+
+                        packetEvent.draw(
+                            context,
+                            x,
+                            RULER_HEIGHT,
+                            1,
+                            3,
+                            widgetTheme.theme,
+                        )
+                    }
+
+                    ReplayTimelineEventType.CHECKPOINT ->
+                        checkpointEvent.draw(
+                            context,
+                            x,
+                            RULER_HEIGHT,
+                            2,
+                            7,
+                            widgetTheme.theme,
+                        )
+
+                    ReplayTimelineEventType.EVENT ->
+                        markerEvent.draw(
+                            context,
+                            x,
+                            RULER_HEIGHT - 2,
+                            2,
+                            height -
+                                RULER_HEIGHT +
+                                2,
+                            widgetTheme.theme,
+                        )
+
+                    ReplayTimelineEventType.CAMERA_KEYFRAME ->
+                        cameraKeyframeEvent.draw(
+                            context,
+                            x,
+                            RULER_HEIGHT,
+                            2,
+                            11,
+                            widgetTheme.theme,
+                        )
+                }
+            }
+    }
+
+    private fun drawRangeBoundary(
+        context: ModularGuiContext,
+        widgetTheme: WidgetThemeEntry<*>,
+        timestampNanos: Long?,
+        width: Int,
+        height: Int,
+    ) {
+        val time =
+            timestampNanos ?: return
+
+        val x =
+            timeToX(
+                time.toDouble(),
+            )
+
+        if (
+            x !in
+            0 until width
+        ) {
+            return
+        }
+
+        rangeBoundary.draw(
+            context,
+            x,
+            RULER_HEIGHT - 2,
+            1,
+            height -
+                RULER_HEIGHT +
+                2,
+            widgetTheme.theme,
+        )
     }
 
     private fun panToMouse() {
