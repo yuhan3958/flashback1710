@@ -651,25 +651,24 @@ data class ReplayReverseEntityState(
 
     fun sameJournalState(
         other: ReplayReverseEntityState,
-    ): Boolean =
-        entityType ==
+    ): Boolean = entityType ==
         other.entityType &&
-            entityClass ==
-            other.entityClass &&
-            playerProfileId ==
-            other.playerProfileId &&
-            playerProfileName ==
-            other.playerProfileName &&
-            onGround ==
-            other.onGround &&
-            sneaking ==
-            other.sneaking &&
-            sprinting ==
-            other.sprinting &&
-            sameJournalNbt(
-                nbt,
-                other.nbt,
-            )
+        entityClass ==
+        other.entityClass &&
+        playerProfileId ==
+        other.playerProfileId &&
+        playerProfileName ==
+        other.playerProfileName &&
+        onGround ==
+        other.onGround &&
+        sneaking ==
+        other.sneaking &&
+        sprinting ==
+        other.sprinting &&
+        sameJournalNbt(
+            nbt,
+            other.nbt,
+        )
 
     fun create(
         world: ReplayWorld,
