@@ -201,26 +201,25 @@ class ReplayTimelineWidget :
 
     override fun onMousePressed(
         mouseButton: Int,
-    ): Interactable.Result =
-        when (mouseButton) {
-            0 -> {
-                seekToMouse()
-                Interactable.Result.SUCCESS
-            }
-
-            2 -> {
-                panning =
-                    true
-
-                lastPanMouseX =
-                    context.absMouseX
-
-                Interactable.Result.SUCCESS
-            }
-
-            else ->
-                Interactable.Result.IGNORE
+    ): Interactable.Result = when (mouseButton) {
+        0 -> {
+            seekToMouse()
+            Interactable.Result.SUCCESS
         }
+
+        2 -> {
+            panning =
+                true
+
+            lastPanMouseX =
+                context.absMouseX
+
+            Interactable.Result.SUCCESS
+        }
+
+        else ->
+            Interactable.Result.IGNORE
+    }
 
     override fun onMouseDrag(
         mouseButton: Int,
@@ -243,7 +242,7 @@ class ReplayTimelineWidget :
 
                 visibleStartNanos -=
                     deltaX *
-                        nanosPerPixel
+                    nanosPerPixel
 
                 clampViewport(
                     area.width,
