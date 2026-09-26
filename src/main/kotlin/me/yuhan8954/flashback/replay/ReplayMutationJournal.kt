@@ -27,6 +27,12 @@ class ReplayMutationJournal {
     private val entityState =
         mutableMapOf<Int, ReplayReverseEntityState>()
 
+    private val dirtyTileEntities =
+        mutableSetOf<Long>()
+
+    private val dirtyEntities =
+        mutableSetOf<Int>()
+
     var timestampNanos =
         0L
 
@@ -48,6 +54,8 @@ class ReplayMutationJournal {
         timeline.clear()
         tileEntityState.clear()
         entityState.clear()
+        dirtyTileEntities.clear()
+        dirtyEntities.clear()
     }
 
     fun start(
@@ -97,13 +105,118 @@ class ReplayMutationJournal {
             timestampNanos,
         )
 
-        captureTileEntityMutations(
+        captureDirtyTileEntityMutations(
             world,
         )
 
-        captureEntityMutations(
+        captureDirtyEntityMutations(
             world,
         )
+    }
+
+    fun markTileEntityDirty(
+        tileEntity: TileEntity,
+    ) {
+        if (!recording) {
+            return
+        }
+
+        dirtyTileEntities +=
+            tileEntityKey(
+                tileEntity.xCoord,
+                tileEntity.yCoord,
+                tileEntity.zCoord,
+            )
+    }
+
+    fun markEntityDirty(
+        entity: Entity,
+    ) {
+        if (
+            !recording ||
+            entity is EntityReplayPlayer ||
+            entity is EntityReplaySpectator
+        ) {
+            return
+        }
+
+        dirtyEntities +=
+            entity.entityId
+    }
+
+    fun rememberTileEntity(
+        tileEntity: TileEntity,
+    ) {
+        val key =
+            tileEntityKey(
+                tileEntity.xCoord,
+                tileEntity.yCoord,
+                tileEntity.zCoord,
+            )
+
+        captureTileEntity(
+            tileEntity,
+        )?.let {
+            tileEntityState[
+                key,
+            ] =
+                it
+        }
+
+        dirtyTileEntities -=
+            key
+    }
+
+    fun forgetTileEntity(
+        x: Int,
+        y: Int,
+        z: Int,
+    ) {
+        val key =
+            tileEntityKey(
+                x,
+                y,
+                z,
+            )
+
+        tileEntityState.remove(
+            key,
+        )
+        dirtyTileEntities -=
+            key
+    }
+
+    fun rememberEntity(
+        entity: Entity,
+    ) {
+        if (
+            entity is EntityReplayPlayer ||
+            entity is EntityReplaySpectator
+        ) {
+            return
+        }
+
+        ReplayReverseEntityState.capture(
+            entity,
+        )?.let {
+            entityState[
+                entity.entityId,
+            ] =
+                it
+        }
+
+        dirtyEntities -=
+            entity.entityId
+    }
+
+    fun forgetEntity(
+        entityId: Int,
+    ) {
+        entityState.remove(
+            entityId,
+        )
+        dirtyEntities -=
+            entityId
     }
 
     fun record(
@@ -203,103 +316,125 @@ class ReplayMutationJournal {
         }
     }
 
-    private fun captureTileEntityMutations(
+    private fun captureDirtyTileEntityMutations(
         world: ReplayWorld,
     ) {
-        val current =
-            mutableMapOf<Long, NBTTagCompound>()
+        val dirty =
+            dirtyTileEntities.toList()
 
-        world.loadedTileEntityList
-            .filterIsInstance<TileEntity>()
-            .forEach { tileEntity ->
-                val nbt =
-                    captureTileEntity(
-                        tileEntity,
-                    ) ?: return@forEach
+        dirtyTileEntities.clear()
 
-                val key =
-                    tileEntityKey(
-                        tileEntity.xCoord,
-                        tileEntity.yCoord,
-                        tileEntity.zCoord,
-                    )
+        dirty.forEach { key ->
+            val x =
+                unpackSigned26(
+                    key ushr 38,
+                )
 
-                current[key] =
-                    nbt
+            val y =
+                (
+                    key and
+                        0xfffL
+                    ).toInt()
 
-                val previous =
-                    tileEntityState[
-                        key,
-                    ]
+            val z =
+                unpackSigned26(
+                    key ushr 12,
+                )
 
-                if (
-                    previous != null &&
-                    previous != nbt
-                ) {
-                    record(
-                        ReplayTileEntityMutation(
-                            x =
-                            tileEntity.xCoord,
-                            y =
-                            tileEntity.yCoord,
-                            z =
-                            tileEntity.zCoord,
-                            beforeNbt =
-                            previous,
-                        ),
-                    )
-                }
+            val previous =
+                tileEntityState[
+                    key,
+                ]
+
+            val current =
+                captureTileEntity(
+                    world.getTileEntity(
+                        x,
+                        y,
+                        z,
+                    ),
+                )
+
+            if (
+                previous != null &&
+                current != null &&
+                previous != current
+            ) {
+                record(
+                    ReplayTileEntityMutation(
+                        x =
+                        x,
+                        y =
+                        y,
+                        z =
+                        z,
+                        beforeNbt =
+                        previous,
+                    ),
+                )
             }
 
-        tileEntityState.clear()
-        tileEntityState.putAll(
-            current,
-        )
+            if (current == null) {
+                tileEntityState.remove(
+                    key,
+                )
+            } else {
+                tileEntityState[
+                    key,
+                ] =
+                    current
+            }
+        }
     }
 
-    private fun captureEntityMutations(
+    private fun captureDirtyEntityMutations(
         world: ReplayWorld,
     ) {
-        val current =
-            mutableMapOf<Int, ReplayReverseEntityState>()
+        val dirty =
+            dirtyEntities.toList()
 
-        world.loadedEntityList
-            .filterIsInstance<Entity>()
-            .filter {
-                it !is EntityReplayPlayer &&
-                    it !is EntityReplaySpectator
-            }.forEach { entity ->
-                val state =
+        dirtyEntities.clear()
+
+        dirty.forEach { entityId ->
+            val previous =
+                entityState[
+                    entityId,
+                ]
+
+            val current =
+                world.getEntityByID(
+                    entityId,
+                )?.let {
                     ReplayReverseEntityState.capture(
-                        entity,
-                    ) ?: return@forEach
-
-                current[entity.entityId] =
-                    state
-
-                val previous =
-                    entityState[
-                        entity.entityId,
-                    ]
-
-                if (
-                    previous != null &&
-                    !previous.sameJournalState(
-                        state,
-                    )
-                ) {
-                    record(
-                        ReplayEntityStateMutation(
-                            previous,
-                        ),
+                        it,
                     )
                 }
+
+            if (
+                previous != null &&
+                current != null &&
+                !previous.sameJournalState(
+                    current,
+                )
+            ) {
+                record(
+                    ReplayEntityStateMutation(
+                        previous,
+                    ),
+                )
             }
 
-        entityState.clear()
-        entityState.putAll(
-            current,
-        )
+            if (current == null) {
+                entityState.remove(
+                    entityId,
+                )
+            } else {
+                entityState[
+                    entityId,
+                ] =
+                    current
+            }
+        }
     }
 
     private fun snapshotTileEntities(
@@ -345,6 +480,25 @@ class ReplayMutationJournal {
                         it
                 }
             }
+    }
+
+    private fun unpackSigned26(
+        value: Long,
+    ): Int {
+        val masked =
+            value.toInt() and
+                0x3ffffff
+
+        return if (
+            masked and
+            0x2000000 !=
+            0
+        ) {
+            masked or
+                -0x4000000
+        } else {
+            masked
+        }
     }
 
     private fun tileEntityKey(
