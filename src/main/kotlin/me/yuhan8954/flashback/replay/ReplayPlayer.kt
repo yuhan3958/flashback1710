@@ -481,10 +481,14 @@ object ReplayPlayer {
         )
 
         var frame =
-            reverseHistory.restoreAtOrBefore(
-                currentSession,
-                targetTimeNanos,
-            )
+            currentSession.world
+                .mutationJournal
+                .withoutRecording {
+                    reverseHistory.restoreAtOrBefore(
+                        currentSession,
+                        targetTimeNanos,
+                    )
+                }
 
         if (frame == null) {
             rebuildReverseHistory(
@@ -493,10 +497,14 @@ object ReplayPlayer {
             )
 
             frame =
-                reverseHistory.restoreAtOrBefore(
-                    currentSession,
-                    targetTimeNanos,
-                )
+                currentSession.world
+                    .mutationJournal
+                    .withoutRecording {
+                        reverseHistory.restoreAtOrBefore(
+                            currentSession,
+                            targetTimeNanos,
+                        )
+                    }
         }
 
         if (frame == null) {
