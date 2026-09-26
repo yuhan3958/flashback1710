@@ -239,11 +239,9 @@ class ReplayEditorState(
         )
     }
 
-    fun markerCount(): Int =
-        markers.size
+    fun markerCount(): Int = markers.size
 
-    fun cameraKeyframeCount(): Int =
-        cameraKeyframes.size
+    fun cameraKeyframeCount(): Int = cameraKeyframes.size
 
     private fun normalizeRange() {
         val start =
