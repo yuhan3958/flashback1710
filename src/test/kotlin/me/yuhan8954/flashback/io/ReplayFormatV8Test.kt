@@ -6,8 +6,11 @@ import me.yuhan8954.flashback.snapshot.ReplayInventorySnapshot
 import me.yuhan8954.flashback.snapshot.ReplayPlayerSnapshot
 import me.yuhan8954.flashback.snapshot.ReplaySnapshot
 import me.yuhan8954.flashback.snapshot.SnapshotReader
+import me.yuhan8954.flashback.snapshot.SnapshotWriter
 import java.io.ByteArrayInputStream
 import java.io.DataInputStream
+import java.io.DataOutputStream
+import java.io.FileOutputStream
 import java.nio.file.Files
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
@@ -460,6 +463,113 @@ class ReplayFormatV8Test {
         )
     }
 
+
+    @Test
+    fun `v7 replay remains readable`() {
+        val file =
+            Files.createTempFile(
+                "flashback-v7-compat",
+                ".fbr",
+            ).toFile()
+
+        DataOutputStream(
+            FileOutputStream(
+                file,
+            ),
+        ).use { output ->
+            output.writeInt(
+                ReplayWriter.MAGIC,
+            )
+            output.writeInt(
+                ReplayWriter.LEGACY_FORMAT_VERSION,
+            )
+            SnapshotWriter.write(
+                output,
+                snapshot(),
+            )
+            output.writeByte(
+                ReplayWriter.RECORD_PACKET,
+            )
+            writeLegacyPacket(
+                output,
+                packet(
+                    77L,
+                    byteArrayOf(
+                        7,
+                    ),
+                ),
+            )
+        }
+
+        val reader =
+            ReplayReader(
+                file,
+            )
+
+        assertEquals(
+            ReplayReadStatus.LEGACY,
+            reader.status,
+        )
+        assertNull(
+            reader.metadata,
+        )
+        assertEquals(
+            77L,
+            reader.packets.single()
+                .timestampNanos,
+        )
+    }
+
+    @Test
+    fun `v6 replay remains readable`() {
+        val file =
+            Files.createTempFile(
+                "flashback-v6-compat",
+                ".fbr",
+            ).toFile()
+
+        DataOutputStream(
+            FileOutputStream(
+                file,
+            ),
+        ).use { output ->
+            output.writeInt(
+                ReplayWriter.MAGIC,
+            )
+            output.writeInt(
+                6,
+            )
+            SnapshotWriter.write(
+                output,
+                snapshot(),
+            )
+            writeLegacyPacket(
+                output,
+                packet(
+                    88L,
+                    byteArrayOf(
+                        8,
+                    ),
+                ),
+            )
+        }
+
+        val reader =
+            ReplayReader(
+                file,
+            )
+
+        assertEquals(
+            ReplayReadStatus.LEGACY,
+            reader.status,
+        )
+        assertEquals(
+            88L,
+            reader.packets.single()
+                .timestampNanos,
+        )
+    }
+
     @Test
     fun `writer close is idempotent`() {
         val file =
@@ -509,6 +619,57 @@ class ReplayFormatV8Test {
                 ),
             )
         }
+    }
+
+
+    private fun writeLegacyPacket(
+        output: DataOutputStream,
+        packet: RecordedPacket,
+    ) {
+        val classBytes =
+            packet.packetClass.toByteArray(
+                Charsets.UTF_8,
+            )
+
+        output.writeLong(
+            packet.timestampNanos,
+        )
+        output.writeByte(
+            packet.flow.ordinal,
+        )
+        output.writeInt(
+            classBytes.size,
+        )
+        output.write(
+            classBytes,
+        )
+
+        val channel =
+            packet.channel
+
+        if (channel == null) {
+            output.writeInt(
+                -1,
+            )
+        } else {
+            val channelBytes =
+                channel.toByteArray(
+                    Charsets.UTF_8,
+                )
+            output.writeInt(
+                channelBytes.size,
+            )
+            output.write(
+                channelBytes,
+            )
+        }
+
+        output.writeInt(
+            packet.payload.size,
+        )
+        output.write(
+            packet.payload,
+        )
     }
 
     private fun packet(
