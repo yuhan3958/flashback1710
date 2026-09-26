@@ -90,31 +90,15 @@ class ReplayControlBar : ParentWidget<ReplayControlBar>() {
                 IKey.dynamic {
                     ReplayTimeFormatter.format(
                         ReplayPlayer.currentTimeNanos,
-                    )
-                },
-            ).left(210)
-                .top(7)
-                .width(88)
-                .height(10)
-                .textAlign(
-                    Alignment.CenterRight,
-                )
-                .color(
-                    ReplayUiStyle.TEXT_COLOR,
-                ),
-        )
-
-        child(
-            ReplayTextWidget(
-                IKey.dynamic {
-                    " / " +
+                    ) +
+                        " / " +
                         ReplayTimeFormatter.format(
                             ReplayPlayer.totalDurationNanos,
                         )
                 },
-            ).left(298)
-                .top(7)
-                .width(94)
+            ).left(8)
+                .top(27)
+                .width(210)
                 .height(10)
                 .color(
                     ReplayUiStyle.MUTED_TEXT_COLOR,
@@ -129,8 +113,8 @@ class ReplayControlBar : ParentWidget<ReplayControlBar>() {
                             ReplayPlayer.speed,
                         )
                 },
-            ).left(400)
-                .top(7)
+            ).right(8)
+                .top(27)
                 .width(48)
                 .height(10)
                 .textAlign(
@@ -142,25 +126,10 @@ class ReplayControlBar : ParentWidget<ReplayControlBar>() {
         )
 
         child(
-            ReplayTextWidget(
-                "Wheel: zoom  Shift+wheel / MMB drag: pan",
-            ).right(8)
-                .top(7)
-                .width(220)
-                .height(10)
-                .textAlign(
-                    Alignment.CenterRight,
-                )
-                .color(
-                    ReplayUiStyle.MUTED_TEXT_COLOR,
-                ),
-        )
-
-        child(
             ReplayTimelineWidget()
                 .left(8)
                 .right(8)
-                .top(28)
+                .top(42)
                 .bottom(8),
         )
     }

@@ -49,7 +49,7 @@ class ReplayCameraPanel : ParentWidget<ReplayCameraPanel>() {
         child(
             cameraButton(
                 "Free",
-                70,
+                56,
                 active = {
                     ReplayPlayer.freeCameraActive
                 },
@@ -63,10 +63,10 @@ class ReplayCameraPanel : ParentWidget<ReplayCameraPanel>() {
             ReplayTextWidget(
                 IKey.dynamic {
                     if (ReplayPlayer.freeCameraActive) {
-                        "Free camera speed: " +
+                        "Speed: " +
                             ReplayPlayer.cameraSpeed
                     } else {
-                        "Following replay player"
+                        "Player camera"
                     }
                 },
             ).left(8)
@@ -80,7 +80,7 @@ class ReplayCameraPanel : ParentWidget<ReplayCameraPanel>() {
 
         child(
             ReplayTextWidget(
-                "RMB drag: look",
+                "RMB: look",
             ).left(8)
                 .top(83)
                 .color(
@@ -92,7 +92,8 @@ class ReplayCameraPanel : ParentWidget<ReplayCameraPanel>() {
             ReplayButtonWidget()
                 .left(8)
                 .top(103)
-                .size(124, 18)
+                .right(8)
+                .height(18)
                 .background(
                     ReplayUiStyle.buttonBackground(),
                 )
@@ -116,7 +117,7 @@ class ReplayCameraPanel : ParentWidget<ReplayCameraPanel>() {
     ): ButtonWidget<*> = ReplayButtonWidget()
         .left(left)
         .top(40)
-        .size(56, 20)
+        .size(44, 20)
         .background(
             ReplayUiStyle.buttonBackground(),
         )
