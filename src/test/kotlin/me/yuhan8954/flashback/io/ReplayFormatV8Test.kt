@@ -462,6 +462,7 @@ class ReplayFormatV8Test {
             reader.packets.isEmpty(),
         )
     }
+
     @Test
     fun `v7 replay remains readable`() {
         val file =
