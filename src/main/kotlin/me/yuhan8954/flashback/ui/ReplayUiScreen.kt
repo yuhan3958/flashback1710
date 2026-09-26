@@ -24,9 +24,26 @@ class ReplayUiScreen(
         character: Char,
         keyCode: Int,
     ) {
-        if (keyCode == Keyboard.KEY_F1) {
-            ReplayUiController.toggleHudVisibility()
-            return
+        when (keyCode) {
+            Keyboard.KEY_F1 -> {
+                ReplayUiController.toggleHudVisibility()
+                return
+            }
+
+            Keyboard.KEY_SPACE -> {
+                ReplayPlayer.togglePause()
+                return
+            }
+
+            Keyboard.KEY_LEFT -> {
+                ReplayUiController.skipBackward()
+                return
+            }
+
+            Keyboard.KEY_RIGHT -> {
+                ReplayUiController.skipForward()
+                return
+            }
         }
 
         super.keyTyped(
