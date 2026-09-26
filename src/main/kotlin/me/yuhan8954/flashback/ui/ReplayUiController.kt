@@ -1,5 +1,6 @@
 package me.yuhan8954.flashback.ui
 
+import com.cleanroommc.modularui.ModularUIConfig
 import com.cleanroommc.modularui.screen.UISettings
 import me.yuhan8954.flashback.replay.ReplayClock
 import me.yuhan8954.flashback.replay.ReplayPlayer
@@ -39,6 +40,9 @@ object ReplayUiController {
         }
 
         openRequested = false
+
+        ModularUIConfig.guiDebugMode =
+            false
 
         val replayPanel =
             ReplayMainPanel()
