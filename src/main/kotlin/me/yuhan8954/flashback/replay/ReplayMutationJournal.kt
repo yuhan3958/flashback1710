@@ -23,6 +23,9 @@ class ReplayMutationJournal {
     private val tileEntityState =
         mutableMapOf<Long, NBTTagCompound>()
 
+    private val entityState =
+        mutableMapOf<Int, ReplayReverseEntityState>()
+
     var timestampNanos =
         0L
 
@@ -35,6 +38,7 @@ class ReplayMutationJournal {
     fun clear() {
         mutations.clear()
         tileEntityState.clear()
+        entityState.clear()
     }
 
     fun start(
@@ -50,6 +54,10 @@ class ReplayMutationJournal {
             true
 
         snapshotTileEntities(
+            world,
+        )
+
+        snapshotEntities(
             world,
         )
     }
@@ -73,6 +81,10 @@ class ReplayMutationJournal {
             timestampNanos
 
         captureTileEntityMutations(
+            world,
+        )
+
+        captureEntityMutations(
             world,
         )
 
@@ -121,6 +133,10 @@ class ReplayMutationJournal {
             targetTimeNanos
 
         snapshotTileEntities(
+            session.world,
+        )
+
+        snapshotEntities(
             session.world,
         )
     }
@@ -234,6 +250,49 @@ class ReplayMutationJournal {
         )
     }
 
+    private fun captureEntityMutations(
+        world: ReplayWorld,
+    ) {
+        val current =
+            mutableMapOf<Int, ReplayReverseEntityState>()
+
+        world.loadedEntityList
+            .filterIsInstance<Entity>()
+            .filter {
+                it !is EntityReplayPlayer &&
+                    it !is EntityReplaySpectator
+            }.forEach { entity ->
+                val state =
+                    ReplayReverseEntityState.capture(
+                        entity,
+                    ) ?: return@forEach
+
+                current[entity.entityId] =
+                    state
+
+                val previous =
+                    entityState[
+                        entity.entityId,
+                    ]
+
+                if (
+                    previous != null &&
+                    previous != state
+                ) {
+                    record(
+                        ReplayEntityStateMutation(
+                            previous,
+                        ),
+                    )
+                }
+            }
+
+        entityState.clear()
+        entityState.putAll(
+            current,
+        )
+    }
+
     private fun snapshotTileEntities(
         world: ReplayWorld,
     ) {
@@ -251,6 +310,28 @@ class ReplayMutationJournal {
                             tileEntity.yCoord,
                             tileEntity.zCoord,
                         ),
+                    ] =
+                        it
+                }
+            }
+    }
+
+    private fun snapshotEntities(
+        world: ReplayWorld,
+    ) {
+        entityState.clear()
+
+        world.loadedEntityList
+            .filterIsInstance<Entity>()
+            .filter {
+                it !is EntityReplayPlayer &&
+                    it !is EntityReplaySpectator
+            }.forEach { entity ->
+                ReplayReverseEntityState.capture(
+                    entity,
+                )?.let {
+                    entityState[
+                        entity.entityId,
                     ] =
                         it
                 }
@@ -433,6 +514,55 @@ data class ReplayTileEntityMutation(
             z,
             beforeNbt,
         )
+    }
+}
+
+data class ReplayEntityStateMutation(
+    val before: ReplayReverseEntityState,
+) : ReplayMutation {
+
+    override fun undo(
+        session: ReplaySession,
+    ) {
+        val world =
+            session.world
+
+        val current =
+            world.getEntityByID(
+                before.entityId,
+            )
+
+        val target =
+            if (
+                current != null &&
+                current.javaClass.name ==
+                before.entityClass
+            ) {
+                current
+            } else {
+                if (current != null) {
+                    world.removeEntityFromWorld(
+                        before.entityId,
+                    )
+                }
+
+                before.create(
+                    world,
+                )?.also {
+                    world.addEntityToWorld(
+                        before.entityId,
+                        it,
+                    )
+                }
+            }
+
+        if (target != null) {
+            before.restore(
+                target,
+                newerState = null,
+                interpolation = 0.0,
+            )
+        }
     }
 }
 
