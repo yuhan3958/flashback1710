@@ -35,6 +35,27 @@ class ReplayMutationJournal {
                 suspendedDepth ==
                 0
 
+    val coverage: ReplayReverseCoverage?
+        get() {
+            val first =
+                mutations.peekFirst()
+                    ?: return null
+
+            val last =
+                mutations.peekLast()
+                    ?: return null
+
+            return ReplayReverseCoverage(
+                startTimeNanos =
+                first.timestampNanos,
+                endTimeNanos =
+                maxOf(
+                    timestampNanos,
+                    last.timestampNanos,
+                ),
+            )
+        }
+
     fun clear() {
         mutations.clear()
         tileEntityState.clear()
