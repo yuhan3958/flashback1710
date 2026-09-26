@@ -526,8 +526,21 @@ object ReplayPlayer {
             return false
         }
 
-        return session?.cameraController
-            ?.enable() == true
+        val currentSession =
+            session ?: return false
+
+        if (
+            !currentSession.cameraController
+                .enable()
+        ) {
+            return false
+        }
+
+        applyCameraTrack(
+            currentSession,
+        )
+
+        return true
     }
 
     fun disableFreeCamera(): Boolean {
