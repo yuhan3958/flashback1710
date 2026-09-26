@@ -615,6 +615,8 @@ class ReplayTimelineWidget :
                 visibleDuration *
                 (
                     1.0 -
+                    FOLLOW_POSITION
+                )
         }
 
         clampViewport(
