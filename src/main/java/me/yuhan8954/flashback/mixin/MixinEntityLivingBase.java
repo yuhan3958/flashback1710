@@ -7,7 +7,6 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import me.yuhan8954.flashback.replay.ReplayMutationHooks;
 
@@ -25,7 +24,7 @@ public abstract class MixinEntityLivingBase {
     }
 
     @Inject(method = "removePotionEffectClient", at = @At("RETURN"))
-    private void flashback1710$removePotionEffectClient(int potionId, CallbackInfoReturnable<PotionEffect> cir) {
+    private void flashback1710$removePotionEffectClient(int potionId, CallbackInfo ci) {
         ReplayMutationHooks.markEntityDirty((EntityLivingBase) (Object) this);
     }
 
