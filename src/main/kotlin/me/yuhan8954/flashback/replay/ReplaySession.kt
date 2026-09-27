@@ -8,6 +8,7 @@ import me.yuhan8954.flashback.snapshot.SnapshotRestorer
 import net.minecraft.client.Minecraft
 import net.minecraft.client.entity.EntityClientPlayerMP
 import net.minecraft.client.gui.GuiMainMenu
+import net.minecraft.client.multiplayer.PlayerControllerMP
 import net.minecraft.client.multiplayer.WorldClient
 import net.minecraft.entity.EntityLivingBase
 import net.minecraft.network.Packet
@@ -60,6 +61,10 @@ class ReplaySession(
         EntityLivingBase? =
         null
 
+    private var livePlayerController:
+        PlayerControllerMP? =
+        null
+
     var active =
         false
         private set
@@ -77,6 +82,9 @@ class ReplaySession(
 
         liveViewEntity =
             minecraft.renderViewEntity
+
+        livePlayerController =
+            minecraft.playerController
 
         networkManager =
             ReplayNetworkManager()
@@ -162,6 +170,11 @@ class ReplaySession(
         try {
             minecraft.thePlayer =
                 player
+
+            minecraft.playerController =
+                PlayerControllerMP(minecraft, handler).also {
+                    it.setGameType(WorldSettings.GameType.CREATIVE)
+                }
 
             minecraft.loadWorld(
                 world,
@@ -304,6 +317,11 @@ class ReplaySession(
         minecraft.thePlayer =
             player
 
+        minecraft.playerController =
+            PlayerControllerMP(minecraft, handler).also {
+                it.setGameType(WorldSettings.GameType.CREATIVE)
+            }
+
         minecraft.loadWorld(
             world,
             "Seeking replay...",
@@ -359,6 +377,8 @@ class ReplaySession(
     }
 
     private fun restoreLiveWorld() {
+        minecraft.playerController = livePlayerController
+
         val restoredWorld =
             liveWorld
 
@@ -397,5 +417,6 @@ class ReplaySession(
         liveWorld = null
         livePlayer = null
         liveViewEntity = null
+        livePlayerController = null
     }
 }
