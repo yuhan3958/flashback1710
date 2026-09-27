@@ -6,7 +6,10 @@ import io.netty.buffer.Unpooled
 import me.yuhan8954.flashback.editor.ReplayCameraKeyframe
 import me.yuhan8954.flashback.editor.ReplayEditorState
 import me.yuhan8954.flashback.editor.ReplayTimelineEvent
+import me.yuhan8954.flashback.editor.ReplayTimelineEventType
 import me.yuhan8954.flashback.io.ReplayReader
+import me.yuhan8954.flashback.io.ReplayEditStore
+import me.yuhan8954.flashback.Flashback1710
 import me.yuhan8954.flashback.ui.ReplayUiController
 import net.minecraft.client.Minecraft
 import net.minecraft.network.Packet
@@ -46,6 +49,8 @@ object ReplayPlayer {
     private var editorState:
         ReplayEditorState? =
         null
+
+    private var replayFile: File? = null
 
     private var durationNanos =
         0L
@@ -102,6 +107,51 @@ object ReplayPlayer {
             editorState?.cameraKeyframeCount()
                 ?: 0
 
+    val selectedKeyframeTimeNanos: Long?
+        get() = editorState?.selectedKeyframeTimeNanos
+
+    fun timelineFilterEnabled(type: ReplayTimelineEventType): Boolean {
+        val editor = editorState ?: return false
+        return when (type) {
+            ReplayTimelineEventType.PACKET -> editor.showPacketEvents
+            ReplayTimelineEventType.CHECKPOINT -> editor.showCheckpointEvents
+            ReplayTimelineEventType.EVENT -> editor.showMarkers
+            ReplayTimelineEventType.CAMERA_KEYFRAME -> editor.showCameraKeyframes
+        }
+    }
+
+    fun toggleTimelineFilter(type: ReplayTimelineEventType): Boolean {
+        val editor = editorState ?: return false
+        when (type) {
+            ReplayTimelineEventType.PACKET -> editor.showPacketEvents = !editor.showPacketEvents
+            ReplayTimelineEventType.CHECKPOINT -> editor.showCheckpointEvents = !editor.showCheckpointEvents
+            ReplayTimelineEventType.EVENT -> editor.showMarkers = !editor.showMarkers
+            ReplayTimelineEventType.CAMERA_KEYFRAME -> editor.showCameraKeyframes = !editor.showCameraKeyframes
+        }
+        return true
+    }
+
+    fun selectCameraKeyframe(timestampNanos: Long): Boolean =
+        editorState?.selectCameraKeyframe(timestampNanos) == true
+
+    fun deleteSelectedCameraKeyframe(): Boolean {
+        val editor = editorState ?: return false
+        if (!editor.deleteSelectedCameraKeyframe()) return false
+        saveEditorEdits(editor)
+        applyCameraTrack(session ?: return true)
+        return true
+    }
+
+    fun moveSelectedCameraKeyframeToPlayhead(): Boolean {
+        val editor = editorState ?: return false
+        if (!editor.moveSelectedCameraKeyframe(currentTimeNanos)) return false
+        saveEditorEdits(editor)
+        return true
+    }
+
+    fun seekToSelectedCameraKeyframe(): Boolean =
+        selectedKeyframeTimeNanos?.let(::seek) == true
+
     val freeCameraActive: Boolean
         get() =
             session?.cameraController
@@ -116,6 +166,8 @@ object ReplayPlayer {
 
     fun play(file: File) {
         stop()
+
+        replayFile = file
 
         val reader =
             ReplayReader(
@@ -148,6 +200,11 @@ object ReplayPlayer {
                         it.timestampNanos
                     },
             )
+
+        editorState?.let { editor ->
+            runCatching { ReplayEditStore.load(file, editor) }
+                .onFailure { Flashback1710.LOG.warn("Could not load camera edits for {}", file.name, it) }
+        }
 
         clock.reset()
 
@@ -198,9 +255,11 @@ object ReplayPlayer {
 
         currentSession.cameraController.tick()
 
-        applyCameraTrack(
-            currentSession,
-        )
+        if (!paused) {
+            applyCameraTrack(
+                currentSession,
+            )
+        }
 
         if (
             speed >= 0.0 &&
@@ -315,6 +374,8 @@ object ReplayPlayer {
 
         editorState =
             null
+
+        replayFile = null
 
         packets =
             emptyList()
@@ -455,6 +516,8 @@ object ReplayPlayer {
                     ),
         )
 
+        saveEditorEdits(editor)
+
         return true
     }
 
@@ -465,6 +528,8 @@ object ReplayPlayer {
         editor.setInPoint(
             currentTimeNanos,
         )
+
+        saveEditorEdits(editor)
 
         return true
     }
@@ -477,6 +542,8 @@ object ReplayPlayer {
             currentTimeNanos,
         )
 
+        saveEditorEdits(editor)
+
         return true
     }
 
@@ -485,6 +552,7 @@ object ReplayPlayer {
             editorState ?: return false
 
         editor.clearRange()
+        saveEditorEdits(editor)
         return true
     }
 
@@ -517,7 +585,26 @@ object ReplayPlayer {
             ),
         )
 
+        saveEditorEdits(editor)
+
         return true
+    }
+
+    fun updateSelectedCameraKeyframePose(): Boolean {
+        val editor = editorState ?: return false
+        val timestamp = editor.selectedKeyframeTimeNanos ?: return false
+        val pose = session?.cameraController?.currentPose() ?: return false
+        editor.addCameraKeyframe(
+            ReplayCameraKeyframe(timestamp, pose.x, pose.y, pose.z, pose.yaw, pose.pitch),
+        )
+        saveEditorEdits(editor)
+        return true
+    }
+
+    private fun saveEditorEdits(editor: ReplayEditorState) {
+        val file = replayFile ?: return
+        runCatching { ReplayEditStore.save(file, editor) }
+            .onFailure { Flashback1710.LOG.error("Could not save camera edits for {}", file.name, it) }
     }
 
     fun enableFreeCamera(): Boolean {

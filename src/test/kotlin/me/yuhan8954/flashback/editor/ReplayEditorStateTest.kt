@@ -154,6 +154,9 @@ class ReplayEditorStateTest {
             ),
         )
 
+        state.showPacketEvents = true
+        state.showCheckpointEvents = true
+
         val events =
             state.timelineEvents()
 
@@ -230,5 +233,30 @@ class ReplayEditorStateTest {
                 10L,
             )?.x,
         )
+    }
+
+    @Test
+    fun `selected keyframe can move and be deleted without changing its pose`() {
+        val state = ReplayEditorState(emptyList(), emptyList())
+        state.addCameraKeyframe(ReplayCameraKeyframe(10L, 1.0, 2.0, 3.0, 4.0f, 5.0f))
+        state.addCameraKeyframe(ReplayCameraKeyframe(20L, 6.0, 7.0, 8.0, 9.0f, 10.0f))
+
+        assertTrue(state.selectCameraKeyframe(10L))
+        assertTrue(state.moveSelectedCameraKeyframe(15L))
+        assertEquals(15L, state.selectedKeyframeTimeNanos)
+        assertEquals(1.0, state.selectedCameraKeyframe()?.x)
+        assertTrue(state.deleteSelectedCameraKeyframe())
+        assertEquals(listOf(20L), state.cameraKeyframeTimes())
+    }
+
+    @Test
+    fun `timeline filters hide packet events without removing keyframes`() {
+        val state = ReplayEditorState(listOf(10L), listOf(15L))
+        state.addCameraKeyframe(ReplayCameraKeyframe(20L, 0.0, 0.0, 0.0, 0.0f, 0.0f))
+
+        assertEquals(listOf(ReplayTimelineEventType.CAMERA_KEYFRAME), state.timelineEvents().map { it.type })
+        state.showPacketEvents = true
+        assertEquals(2, state.timelineEvents().size)
+        assertEquals(1, state.cameraKeyframeCount())
     }
 }

@@ -79,6 +79,9 @@ class ReplayTimelineWidget :
                 ReplayUiStyle.CAMERA_KEYFRAME_COLOR,
             )
 
+    private val selectedKeyframeEvent =
+        Rectangle().color(ReplayUiStyle.PLAYHEAD_COLOR)
+
     private val rangeBoundary =
         Rectangle()
             .color(
@@ -95,6 +98,9 @@ class ReplayTimelineWidget :
         -1L
 
     private var panning =
+        false
+
+    private var keyframePressed =
         false
 
     private var lastPanMouseX =
@@ -143,13 +149,6 @@ class ReplayTimelineWidget :
             context,
             widgetTheme,
             width,
-        )
-
-        drawEditorOverlays(
-            context,
-            widgetTheme,
-            width,
-            height,
         )
 
         val trackTop =
@@ -209,6 +208,13 @@ class ReplayTimelineWidget :
             )
         }
 
+        drawEditorOverlays(
+            context,
+            widgetTheme,
+            width,
+            height,
+        )
+
         val playheadX =
             timeToX(
                 currentTime,
@@ -241,7 +247,8 @@ class ReplayTimelineWidget :
         mouseButton: Int,
     ): Interactable.Result = when (mouseButton) {
         0 -> {
-            seekToMouse()
+            keyframePressed = selectKeyframeAtMouse()
+            if (!keyframePressed) seekToMouse()
             Interactable.Result.SUCCESS
         }
 
@@ -265,7 +272,7 @@ class ReplayTimelineWidget :
     ) {
         when (mouseButton) {
             0 ->
-                seekToMouse()
+                if (!keyframePressed) seekToMouse()
 
             2 ->
                 panToMouse()
@@ -275,6 +282,7 @@ class ReplayTimelineWidget :
     override fun onMouseRelease(
         mouseButton: Int,
     ): Boolean {
+        if (mouseButton == 0) keyframePressed = false
         if (mouseButton == 2) {
             panning =
                 false
@@ -407,7 +415,11 @@ class ReplayTimelineWidget :
                         )
 
                     ReplayTimelineEventType.CAMERA_KEYFRAME ->
-                        cameraKeyframeEvent.draw(
+                        (if (event.timestampNanos == ReplayPlayer.selectedKeyframeTimeNanos) {
+                            selectedKeyframeEvent
+                        } else {
+                            cameraKeyframeEvent
+                        }).draw(
                             context,
                             x,
                             RULER_HEIGHT,
@@ -417,6 +429,20 @@ class ReplayTimelineWidget :
                         )
                 }
             }
+    }
+
+    private fun selectKeyframeAtMouse(): Boolean {
+        val y = context.absMouseY - area.y
+        if (y !in RULER_HEIGHT..(RULER_HEIGHT + 13)) return false
+        val mouseX = context.absMouseX - area.x
+        val nearest = ReplayPlayer.timelineEvents
+            .asSequence()
+            .filter { it.type == ReplayTimelineEventType.CAMERA_KEYFRAME }
+            .map { it.timestampNanos to kotlin.math.abs(timeToX(it.timestampNanos.toDouble()) - mouseX) }
+            .filter { it.second <= KEYFRAME_HIT_RADIUS }
+            .minByOrNull { it.second }
+            ?: return false
+        return ReplayPlayer.selectCameraKeyframe(nearest.first)
     }
 
     private fun drawRangeBoundary(
@@ -891,6 +917,8 @@ class ReplayTimelineWidget :
 
         private const val RULER_HEIGHT =
             18
+
+        private const val KEYFRAME_HIT_RADIUS = 5
 
         private const val MINOR_MARK_HEIGHT =
             4

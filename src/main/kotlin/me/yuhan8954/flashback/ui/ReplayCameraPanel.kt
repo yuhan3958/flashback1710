@@ -3,6 +3,7 @@ package me.yuhan8954.flashback.ui
 import com.cleanroommc.modularui.api.drawable.IKey
 import com.cleanroommc.modularui.widget.ParentWidget
 import com.cleanroommc.modularui.widgets.ButtonWidget
+import me.yuhan8954.flashback.editor.ReplayTimelineEventType
 import me.yuhan8954.flashback.replay.ReplayPlayer
 
 class ReplayCameraPanel : ParentWidget<ReplayCameraPanel>() {
@@ -92,14 +93,14 @@ class ReplayCameraPanel : ParentWidget<ReplayCameraPanel>() {
             ReplayButtonWidget()
                 .left(8)
                 .top(103)
-                .right(8)
+                .width(100)
                 .height(18)
                 .background(
                     ReplayUiStyle.buttonBackground(),
                 )
                 .overlay(
                     IKey.dynamic {
-                        "Add Keyframe (" +
+                        "Add Key (" +
                             ReplayPlayer
                                 .cameraKeyframeCount +
                             ")"
@@ -110,6 +111,10 @@ class ReplayCameraPanel : ParentWidget<ReplayCameraPanel>() {
                             .addCameraKeyframe()
                 },
         )
+
+        child(editorButton("Update pose", 112, 103, 90) {
+            ReplayPlayer.updateSelectedCameraKeyframePose()
+        })
 
         child(
             ReplayButtonWidget()
@@ -172,7 +177,63 @@ class ReplayCameraPanel : ParentWidget<ReplayCameraPanel>() {
                             .setOutPoint()
                 },
         )
+
+        child(editorButton("Clear", 162, 125, 44) {
+            ReplayPlayer.clearInOutRange()
+        })
+
+        child(
+            ReplayTextWidget(IKey.dynamic {
+                ReplayPlayer.selectedKeyframeTimeNanos?.let {
+                    "Selected: " + ReplayTimeFormatter.format(it)
+                } ?: "Selected: none"
+            }).left(8).right(8).top(151).height(10)
+                .color(ReplayUiStyle.MUTED_TEXT_COLOR),
+        )
+        child(editorButton("Go to", 8, 166, 48) {
+            ReplayPlayer.seekToSelectedCameraKeyframe()
+        })
+        child(editorButton("Move here", 60, 166, 68) {
+            ReplayPlayer.moveSelectedCameraKeyframeToPlayhead()
+        })
+        child(editorButton("Delete", 132, 166, 50) {
+            ReplayPlayer.deleteSelectedCameraKeyframe()
+        })
+        child(
+            ReplayTextWidget("Timeline filters")
+                .left(8).top(185).color(ReplayUiStyle.MUTED_TEXT_COLOR),
+        )
+        child(filterButton("Packets", ReplayTimelineEventType.PACKET, 8, 199, 56))
+        child(filterButton("Checkpoints", ReplayTimelineEventType.CHECKPOINT, 68, 199, 90))
+        child(filterButton("Markers", ReplayTimelineEventType.EVENT, 8, 219, 56))
+        child(filterButton("Keyframes", ReplayTimelineEventType.CAMERA_KEYFRAME, 68, 219, 90))
     }
+
+    private fun editorButton(
+        label: String,
+        left: Int,
+        top: Int,
+        width: Int,
+        action: () -> Boolean,
+    ): ButtonWidget<*> = ReplayButtonWidget()
+        .left(left).top(top).size(width, 18)
+        .background(ReplayUiStyle.buttonBackground())
+        .overlay(IKey.str(label))
+        .onMousePressed { it == 0 && action() }
+
+    private fun filterButton(
+        label: String,
+        type: ReplayTimelineEventType,
+        left: Int,
+        top: Int,
+        width: Int,
+    ): ButtonWidget<*> = ReplayButtonWidget()
+        .left(left).top(top).size(width, 18)
+        .background(ReplayUiStyle.buttonBackground())
+        .overlay(IKey.dynamic {
+            (if (ReplayPlayer.timelineFilterEnabled(type)) "\u00A7b" else "\u00A77") + label
+        })
+        .onMousePressed { it == 0 && ReplayPlayer.toggleTimelineFilter(type) }
 
     private fun cameraButton(
         label: String,

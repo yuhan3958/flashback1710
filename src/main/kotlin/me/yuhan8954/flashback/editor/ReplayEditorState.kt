@@ -63,6 +63,14 @@ class ReplayEditorState(
     private val cameraKeyframes =
         mutableListOf<ReplayCameraKeyframe>()
 
+    var selectedKeyframeTimeNanos: Long? = null
+        private set
+
+    var showPacketEvents = false
+    var showCheckpointEvents = false
+    var showMarkers = true
+    var showCameraKeyframes = true
+
     var inPointNanos:
         Long? =
         null
@@ -121,24 +129,55 @@ class ReplayEditorState(
     fun addCameraKeyframe(
         keyframe: ReplayCameraKeyframe,
     ) {
+        val timestamp = keyframe.timestampNanos.coerceAtLeast(0L)
         cameraKeyframes.removeAll {
             it.timestampNanos ==
-                keyframe.timestampNanos
+                timestamp
         }
 
         cameraKeyframes +=
             keyframe.copy(
                 timestampNanos =
-                keyframe.timestampNanos
-                    .coerceAtLeast(
-                        0L,
-                    ),
+                timestamp,
             )
 
         cameraKeyframes.sortBy {
             it.timestampNanos
         }
+        selectedKeyframeTimeNanos = timestamp
     }
+
+    fun selectCameraKeyframe(timestampNanos: Long): Boolean {
+        if (cameraKeyframes.none { it.timestampNanos == timestampNanos }) return false
+        selectedKeyframeTimeNanos = timestampNanos
+        return true
+    }
+
+    fun clearCameraKeyframeSelection() {
+        selectedKeyframeTimeNanos = null
+    }
+
+    fun selectedCameraKeyframe(): ReplayCameraKeyframe? = cameraKeyframes.firstOrNull {
+        it.timestampNanos == selectedKeyframeTimeNanos
+    }
+
+    fun deleteSelectedCameraKeyframe(): Boolean {
+        val timestamp = selectedKeyframeTimeNanos ?: return false
+        val removed = cameraKeyframes.removeAll { it.timestampNanos == timestamp }
+        selectedKeyframeTimeNanos = null
+        return removed
+    }
+
+    fun moveSelectedCameraKeyframe(timestampNanos: Long): Boolean {
+        val selected = selectedCameraKeyframe() ?: return false
+        cameraKeyframes.remove(selected)
+        addCameraKeyframe(selected.copy(timestampNanos = timestampNanos))
+        return true
+    }
+
+    fun cameraKeyframeTimes(): List<Long> = cameraKeyframes.map { it.timestampNanos }
+
+    fun cameraKeyframes(): List<ReplayCameraKeyframe> = cameraKeyframes.toList()
 
     fun cameraPoseAt(
         timestampNanos: Long,
@@ -215,31 +254,25 @@ class ReplayEditorState(
     }
 
     fun timelineEvents(): List<ReplayTimelineEvent> = buildList {
-        addAll(
-            packetEvents,
-        )
-        addAll(
-            checkpointEvents,
-        )
-        addAll(
-            markers.map {
+        if (showPacketEvents) addAll(packetEvents)
+        if (showCheckpointEvents) addAll(checkpointEvents)
+        if (showMarkers) addAll(markers.map {
                 ReplayTimelineEvent(
                     it.timestampNanos,
                     ReplayTimelineEventType.EVENT,
                 )
-            },
-        )
-        addAll(
-            cameraKeyframes.map {
+            })
+        if (showCameraKeyframes) addAll(cameraKeyframes.map {
                 ReplayTimelineEvent(
                     it.timestampNanos,
                     ReplayTimelineEventType.CAMERA_KEYFRAME,
                 )
-            },
-        )
+            })
     }
 
     fun markerCount(): Int = markers.size
+
+    fun markers(): List<ReplayMarker> = markers.toList()
 
     fun cameraKeyframeCount(): Int = cameraKeyframes.size
 
