@@ -1,6 +1,6 @@
 package me.yuhan8954.flashback.editor
 
-import kotlin.math.abs
+import me.yuhan8954.flashback.editor.track.ReplayKeyframe
 
 data class ReplayMarker(
     val timestampNanos: Long,
@@ -60,8 +60,7 @@ class ReplayEditorState(
     private val markers =
         mutableListOf<ReplayMarker>()
 
-    private val cameraKeyframes =
-        mutableListOf<ReplayCameraKeyframe>()
+    val project = ReplayEditProject()
 
     var selectedKeyframeTimeNanos: Long? = null
         private set
@@ -130,25 +129,12 @@ class ReplayEditorState(
         keyframe: ReplayCameraKeyframe,
     ) {
         val timestamp = keyframe.timestampNanos.coerceAtLeast(0L)
-        cameraKeyframes.removeAll {
-            it.timestampNanos ==
-                timestamp
-        }
-
-        cameraKeyframes +=
-            keyframe.copy(
-                timestampNanos =
-                timestamp,
-            )
-
-        cameraKeyframes.sortBy {
-            it.timestampNanos
-        }
+        project.cameraTrack.put(ReplayKeyframe(timestamp, keyframe.toPose()))
         selectedKeyframeTimeNanos = timestamp
     }
 
     fun selectCameraKeyframe(timestampNanos: Long): Boolean {
-        if (cameraKeyframes.none { it.timestampNanos == timestampNanos }) return false
+        if (project.cameraTrack.keyframeAt(timestampNanos) == null) return false
         selectedKeyframeTimeNanos = timestampNanos
         return true
     }
@@ -157,101 +143,31 @@ class ReplayEditorState(
         selectedKeyframeTimeNanos = null
     }
 
-    fun selectedCameraKeyframe(): ReplayCameraKeyframe? = cameraKeyframes.firstOrNull {
-        it.timestampNanos == selectedKeyframeTimeNanos
-    }
+    fun selectedCameraKeyframe(): ReplayCameraKeyframe? = selectedKeyframeTimeNanos
+        ?.let { project.cameraTrack.keyframeAt(it) }
+        ?.toCameraKeyframe()
 
     fun deleteSelectedCameraKeyframe(): Boolean {
         val timestamp = selectedKeyframeTimeNanos ?: return false
-        val removed = cameraKeyframes.removeAll { it.timestampNanos == timestamp }
+        val removed = project.cameraTrack.delete(timestamp)
         selectedKeyframeTimeNanos = null
         return removed
     }
 
     fun moveSelectedCameraKeyframe(timestampNanos: Long): Boolean {
-        val selected = selectedCameraKeyframe() ?: return false
-        cameraKeyframes.remove(selected)
-        addCameraKeyframe(selected.copy(timestampNanos = timestampNanos))
+        val selected = selectedKeyframeTimeNanos ?: return false
+        if (!project.cameraTrack.move(selected, timestampNanos)) return false
+        selectedKeyframeTimeNanos = timestampNanos.coerceAtLeast(0L)
         return true
     }
 
-    fun cameraKeyframeTimes(): List<Long> = cameraKeyframes.map { it.timestampNanos }
+    fun cameraKeyframeTimes(): List<Long> = project.cameraTrack.keyframes().map { it.timestampNanos }
 
-    fun cameraKeyframes(): List<ReplayCameraKeyframe> = cameraKeyframes.toList()
+    fun cameraKeyframes(): List<ReplayCameraKeyframe> = project.cameraTrack.keyframes().map { it.toCameraKeyframe() }
 
     fun cameraPoseAt(
         timestampNanos: Long,
-    ): ReplayCameraPose? {
-        if (cameraKeyframes.isEmpty()) {
-            return null
-        }
-
-        val before =
-            cameraKeyframes
-                .lastOrNull {
-                    it.timestampNanos <=
-                        timestampNanos
-                }
-                ?: cameraKeyframes.first()
-
-        val after =
-            cameraKeyframes
-                .firstOrNull {
-                    it.timestampNanos >=
-                        timestampNanos
-                }
-                ?: cameraKeyframes.last()
-
-        if (
-            before.timestampNanos ==
-            after.timestampNanos
-        ) {
-            return before.toPose()
-        }
-
-        val interpolation =
-            (
-                timestampNanos -
-                    before.timestampNanos
-                ).toDouble() /
-                (
-                    after.timestampNanos -
-                        before.timestampNanos
-                    ).toDouble()
-
-        return ReplayCameraPose(
-            x =
-            lerp(
-                before.x,
-                after.x,
-                interpolation,
-            ),
-            y =
-            lerp(
-                before.y,
-                after.y,
-                interpolation,
-            ),
-            z =
-            lerp(
-                before.z,
-                after.z,
-                interpolation,
-            ),
-            yaw =
-            lerpAngle(
-                before.yaw,
-                after.yaw,
-                interpolation,
-            ),
-            pitch =
-            lerp(
-                before.pitch.toDouble(),
-                after.pitch.toDouble(),
-                interpolation,
-            ).toFloat(),
-        )
-    }
+    ): ReplayCameraPose? = project.cameraTrack.evaluate(timestampNanos)
 
     fun timelineEvents(): List<ReplayTimelineEvent> = buildList {
         if (showPacketEvents) addAll(packetEvents)
@@ -268,7 +184,7 @@ class ReplayEditorState(
         }
         if (showCameraKeyframes) {
             addAll(
-                cameraKeyframes.map {
+                project.cameraTrack.keyframes().map {
                     ReplayTimelineEvent(
                         it.timestampNanos,
                         ReplayTimelineEventType.CAMERA_KEYFRAME,
@@ -282,7 +198,7 @@ class ReplayEditorState(
 
     fun markers(): List<ReplayMarker> = markers.toList()
 
-    fun cameraKeyframeCount(): Int = cameraKeyframes.size
+    fun cameraKeyframeCount(): Int = project.cameraTrack.size
 
     private fun normalizeRange() {
         val start =
@@ -304,74 +220,14 @@ class ReplayEditorState(
             start
     }
 
-    private fun ReplayCameraKeyframe.toPose(): ReplayCameraPose = ReplayCameraPose(
-        x,
-        y,
-        z,
-        yaw,
-        pitch,
+    private fun ReplayCameraKeyframe.toPose() = ReplayCameraPose(x, y, z, yaw, pitch)
+
+    private fun ReplayKeyframe<ReplayCameraPose>.toCameraKeyframe() = ReplayCameraKeyframe(
+        timestampNanos,
+        value.x,
+        value.y,
+        value.z,
+        value.yaw,
+        value.pitch,
     )
-
-    companion object {
-
-        private fun lerp(
-            older: Double,
-            newer: Double,
-            interpolation: Double,
-        ): Double = older +
-            (
-                newer -
-                    older
-                ) *
-            interpolation.coerceIn(
-                0.0,
-                1.0,
-            )
-
-        private fun lerpAngle(
-            older: Float,
-            newer: Float,
-            interpolation: Double,
-        ): Float {
-            var difference =
-                newer -
-                    older
-
-            while (
-                difference <
-                -180.0f
-            ) {
-                difference +=
-                    360.0f
-            }
-
-            while (
-                difference >=
-                180.0f
-            ) {
-                difference -=
-                    360.0f
-            }
-
-            val result =
-                older +
-                    difference *
-                    interpolation
-                        .coerceIn(
-                            0.0,
-                            1.0,
-                        )
-
-            if (
-                abs(
-                    result,
-                ) <
-                0.000001
-            ) {
-                return 0.0f
-            }
-
-            return result.toFloat()
-        }
-    }
 }
