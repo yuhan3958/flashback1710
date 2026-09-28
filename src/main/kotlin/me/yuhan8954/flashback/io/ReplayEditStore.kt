@@ -23,6 +23,7 @@ object ReplayEditStore {
         val edits = editFile(replayFile)
         if (!edits.isFile) return
         DataInputStream(edits.inputStream().buffered()).use { input ->
+            editor.clearPersistentEdits()
             when (input.readInt()) {
                 1 -> loadV1Tracks(input, editor)
                 VERSION -> loadV2Tracks(input, editor)

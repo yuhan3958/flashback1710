@@ -29,6 +29,7 @@ enum class ReplayTimelineEventType {
     CHECKPOINT,
     EVENT,
     CAMERA_KEYFRAME,
+    FOV_KEYFRAME,
 }
 
 data class ReplayTimelineEvent(
@@ -69,6 +70,7 @@ class ReplayEditorState(
     var showCheckpointEvents = false
     var showMarkers = true
     var showCameraKeyframes = true
+    var showFovKeyframes = true
 
     var inPointNanos:
         Long? =
@@ -79,6 +81,13 @@ class ReplayEditorState(
         Long? =
         null
         private set
+
+    fun clearPersistentEdits() {
+        project.clear()
+        markers.clear()
+        clearRange()
+        selectedKeyframeTimeNanos = null
+    }
 
     fun setInPoint(
         timestampNanos: Long,
@@ -169,6 +178,18 @@ class ReplayEditorState(
         timestampNanos: Long,
     ): ReplayCameraPose? = project.cameraTrack.evaluate(timestampNanos)
 
+    fun addFovKeyframe(timestampNanos: Long, fov: Float) {
+        project.fovTrack.put(ReplayKeyframe(timestampNanos, fov))
+    }
+
+    fun deleteFovKeyframe(timestampNanos: Long): Boolean = project.fovTrack.delete(timestampNanos)
+
+    fun fovAt(timestampNanos: Long): Float? = project.fovTrack.evaluate(timestampNanos)
+
+    fun fovKeyframes(): List<ReplayKeyframe<Float>> = project.fovTrack.keyframes()
+
+    fun fovKeyframeTimes(): List<Long> = fovKeyframes().map { it.timestampNanos }
+
     fun timelineEvents(): List<ReplayTimelineEvent> = buildList {
         if (showPacketEvents) addAll(packetEvents)
         if (showCheckpointEvents) addAll(checkpointEvents)
@@ -189,6 +210,13 @@ class ReplayEditorState(
                         it.timestampNanos,
                         ReplayTimelineEventType.CAMERA_KEYFRAME,
                     )
+                },
+            )
+        }
+        if (showFovKeyframes) {
+            addAll(
+                project.fovTrack.keyframes().map {
+                    ReplayTimelineEvent(it.timestampNanos, ReplayTimelineEventType.FOV_KEYFRAME)
                 },
             )
         }

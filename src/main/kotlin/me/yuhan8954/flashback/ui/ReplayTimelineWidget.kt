@@ -79,6 +79,8 @@ class ReplayTimelineWidget :
                 ReplayUiStyle.CAMERA_KEYFRAME_COLOR,
             )
 
+    private val fovKeyframeEvent = Rectangle().color(ReplayUiStyle.FOV_KEYFRAME_COLOR)
+
     private val selectedKeyframeEvent =
         Rectangle().color(ReplayUiStyle.PLAYHEAD_COLOR)
 
@@ -429,22 +431,40 @@ class ReplayTimelineWidget :
                             11,
                             widgetTheme.theme,
                         )
+
+                    ReplayTimelineEventType.FOV_KEYFRAME ->
+                        fovKeyframeEvent.draw(
+                            context,
+                            x,
+                            RULER_HEIGHT + 12,
+                            3,
+                            5,
+                            widgetTheme.theme,
+                        )
                 }
             }
     }
 
     private fun selectKeyframeAtMouse(): Boolean {
         val y = context.absMouseY - area.y
-        if (y !in RULER_HEIGHT..(RULER_HEIGHT + 13)) return false
+        val type = when (y) {
+            in RULER_HEIGHT..(RULER_HEIGHT + 11) -> ReplayTimelineEventType.CAMERA_KEYFRAME
+            in (RULER_HEIGHT + 12)..(RULER_HEIGHT + 17) -> ReplayTimelineEventType.FOV_KEYFRAME
+            else -> return false
+        }
         val mouseX = context.absMouseX - area.x
         val nearest = ReplayPlayer.timelineEvents
             .asSequence()
-            .filter { it.type == ReplayTimelineEventType.CAMERA_KEYFRAME }
+            .filter { it.type == type }
             .map { it.timestampNanos to kotlin.math.abs(timeToX(it.timestampNanos.toDouble()) - mouseX) }
             .filter { it.second <= KEYFRAME_HIT_RADIUS }
             .minByOrNull { it.second }
             ?: return false
-        return ReplayPlayer.selectCameraKeyframe(nearest.first)
+        return if (type == ReplayTimelineEventType.CAMERA_KEYFRAME) {
+            ReplayPlayer.selectCameraKeyframe(nearest.first)
+        } else {
+            ReplayPlayer.seek(nearest.first)
+        }
     }
 
     private fun drawRangeBoundary(

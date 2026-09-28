@@ -7,12 +7,16 @@ import com.cleanroommc.modularui.widget.scroll.VerticalScrollData
 import com.cleanroommc.modularui.widgets.ButtonWidget
 import me.yuhan8954.flashback.editor.ReplayTimelineEventType
 import me.yuhan8954.flashback.replay.ReplayPlayer
+import net.minecraft.client.Minecraft
+import kotlin.math.roundToInt
 
 class ReplayCameraPanel : ScrollWidget<ReplayCameraPanel>(VerticalScrollData(false, 4)) {
 
+    private var fovDegrees = Minecraft.getMinecraft().gameSettings.fovSetting.coerceIn(1.0f, 179.0f).roundToInt().toFloat()
+
     init {
         scrollArea.setScrollDataX(HorizontalScrollData(false, 4))
-        scrollArea.scrollY.scrollSize = 245
+        scrollArea.scrollY.scrollSize = 338
         scrollArea.scrollX.scrollSize = 214
 
         background(
@@ -225,6 +229,53 @@ class ReplayCameraPanel : ScrollWidget<ReplayCameraPanel>(VerticalScrollData(fal
         child(filterButton("Checkpoints", ReplayTimelineEventType.CHECKPOINT, 68, 199, 90))
         child(filterButton("Markers", ReplayTimelineEventType.EVENT, 8, 219, 56))
         child(filterButton("Keyframes", ReplayTimelineEventType.CAMERA_KEYFRAME, 68, 219, 90))
+        child(filterButton("FOV keys", ReplayTimelineEventType.FOV_KEYFRAME, 8, 239, 72))
+
+        child(
+            ReplayTextWidget("FOV")
+                .left(8).top(263).color(ReplayUiStyle.MUTED_TEXT_COLOR),
+        )
+        child(
+            ReplayTextWidget(
+                IKey.dynamic {
+                    "${fovDegrees.toInt()}°  (${ReplayPlayer.fovKeyframeCount} keys)"
+                },
+            ).left(8).right(8).top(280).height(10).color(ReplayUiStyle.TEXT_COLOR),
+        )
+        child(
+            editorButton("-5", 8, 296, 44) {
+                fovDegrees = (fovDegrees - 5.0f).coerceAtLeast(1.0f)
+                true
+            },
+        )
+        child(
+            editorButton("-1", 56, 296, 44) {
+                fovDegrees = (fovDegrees - 1.0f).coerceAtLeast(1.0f)
+                true
+            },
+        )
+        child(
+            editorButton("+1", 104, 296, 44) {
+                fovDegrees = (fovDegrees + 1.0f).coerceAtMost(179.0f)
+                true
+            },
+        )
+        child(
+            editorButton("+5", 152, 296, 44) {
+                fovDegrees = (fovDegrees + 5.0f).coerceAtMost(179.0f)
+                true
+            },
+        )
+        child(
+            editorButton("Add/Replace", 8, 318, 96) {
+                ReplayPlayer.addFovKeyframe(fovDegrees)
+            },
+        )
+        child(
+            editorButton("Delete here", 108, 318, 96) {
+                ReplayPlayer.deleteFovKeyframeAtPlayhead()
+            },
+        )
     }
 
     private fun editorButton(

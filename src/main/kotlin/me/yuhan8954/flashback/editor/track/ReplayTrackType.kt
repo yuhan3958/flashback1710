@@ -6,6 +6,8 @@ import java.io.DataOutput
 interface ReplayTrackType<T> {
     val id: String
 
+    fun validate(value: T) {}
+
     fun evaluate(keyframes: List<ReplayKeyframe<T>>, timestampNanos: Long): T?
 
     fun writeValue(output: DataOutput, value: T)

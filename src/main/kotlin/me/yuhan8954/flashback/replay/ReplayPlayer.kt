@@ -107,6 +107,16 @@ object ReplayPlayer {
             editorState?.cameraKeyframeCount()
                 ?: 0
 
+    val fovKeyframeCount: Int
+        get() = editorState?.fovKeyframes()?.size ?: 0
+
+    @JvmStatic
+    fun editorFov(): Float? = if (playing && session?.active == true) {
+        editorState?.fovAt(clock.currentTimeNanos)
+    } else {
+        null
+    }
+
     val selectedKeyframeTimeNanos: Long?
         get() = editorState?.selectedKeyframeTimeNanos
 
@@ -117,6 +127,7 @@ object ReplayPlayer {
             ReplayTimelineEventType.CHECKPOINT -> editor.showCheckpointEvents
             ReplayTimelineEventType.EVENT -> editor.showMarkers
             ReplayTimelineEventType.CAMERA_KEYFRAME -> editor.showCameraKeyframes
+            ReplayTimelineEventType.FOV_KEYFRAME -> editor.showFovKeyframes
         }
     }
 
@@ -127,6 +138,7 @@ object ReplayPlayer {
             ReplayTimelineEventType.CHECKPOINT -> editor.showCheckpointEvents = !editor.showCheckpointEvents
             ReplayTimelineEventType.EVENT -> editor.showMarkers = !editor.showMarkers
             ReplayTimelineEventType.CAMERA_KEYFRAME -> editor.showCameraKeyframes = !editor.showCameraKeyframes
+            ReplayTimelineEventType.FOV_KEYFRAME -> editor.showFovKeyframes = !editor.showFovKeyframes
         }
         return true
     }
@@ -587,6 +599,21 @@ object ReplayPlayer {
 
         saveEditorEdits(editor)
 
+        return true
+    }
+
+    fun addFovKeyframe(fov: Float): Boolean {
+        val editor = editorState ?: return false
+        if (!playing || !fov.isFinite() || fov !in 1.0f..179.0f) return false
+        editor.addFovKeyframe(currentTimeNanos, fov)
+        saveEditorEdits(editor)
+        return true
+    }
+
+    fun deleteFovKeyframeAtPlayhead(): Boolean {
+        val editor = editorState ?: return false
+        if (!editor.deleteFovKeyframe(currentTimeNanos)) return false
+        saveEditorEdits(editor)
         return true
     }
 

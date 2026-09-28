@@ -3,12 +3,35 @@ package me.yuhan8954.flashback.editor
 import me.yuhan8954.flashback.editor.track.ReplayKeyframe
 import me.yuhan8954.flashback.editor.track.ReplayTrack
 import me.yuhan8954.flashback.editor.track.type.CameraTrackType
+import me.yuhan8954.flashback.editor.track.type.FovTrackType
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class ReplayTrackTest {
+
+    @Test
+    fun `fov track interpolates clamps replaces and rejects invalid values`() {
+        val track = ReplayTrack(FovTrackType.id, FovTrackType)
+        assertNull(track.evaluate(50L))
+        track.put(ReplayKeyframe(10L, 70.0f))
+        assertEquals(70.0f, track.evaluate(0L))
+        assertEquals(70.0f, track.evaluate(10L))
+        assertEquals(70.0f, track.evaluate(100L))
+        track.put(ReplayKeyframe(110L, 30.0f))
+        assertEquals(50.0f, track.evaluate(60L))
+        assertEquals(30.0f, track.evaluate(200L))
+        track.put(ReplayKeyframe(110L, 50.0f))
+        assertEquals(60.0f, track.evaluate(60L))
+        assertEquals(2, track.size)
+        assertFailsWith<IllegalArgumentException> { track.put(ReplayKeyframe(0L, Float.NaN)) }
+        assertFailsWith<IllegalArgumentException> { track.put(ReplayKeyframe(0L, Float.POSITIVE_INFINITY)) }
+        assertFailsWith<IllegalArgumentException> { track.put(ReplayKeyframe(0L, 180.0f)) }
+        track.clear()
+        assertNull(track.evaluate(60L))
+    }
     private fun pose(x: Double, yaw: Float = 0.0f, pitch: Float = 0.0f) = ReplayCameraPose(x, x + 1.0, x + 2.0, yaw, pitch)
 
     @Test
