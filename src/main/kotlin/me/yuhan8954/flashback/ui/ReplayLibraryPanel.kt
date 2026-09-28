@@ -11,7 +11,6 @@ import me.yuhan8954.flashback.io.ReplayReadStatus
 class ReplayLibraryPanel(
     private val entries: List<ReplayLibraryEntry>,
     private val onPlay: (ReplayLibraryEntry) -> Unit,
-    private val onClose: () -> Unit,
 ) : CustomModularScreen(
     Flashback1710.MODID,
 ) {
@@ -188,7 +187,7 @@ class ReplayLibraryPanel(
                 .background(ReplayUiStyle.buttonBackground())
                 .overlay(IKey.str("Back"))
                 .onMousePressed {
-                    if (it == 0) onClose()
+                    if (it == 0) panel.closeIfOpen()
                     it == 0
                 },
         )

@@ -6,7 +6,6 @@ import me.yuhan8954.flashback.io.ReplayLibrary
 import me.yuhan8954.flashback.io.ReplayLibraryEntry
 import me.yuhan8954.flashback.replay.ReplayPlayer
 import net.minecraft.client.Minecraft
-import net.minecraft.client.gui.GuiMainMenu
 import java.io.File
 
 object ReplayLibraryController {
@@ -31,9 +30,10 @@ object ReplayLibraryController {
                     replayDirectory,
                 ),
                 ::play,
-                ::close,
             )
 
+        panel.context.setParentScreen(minecraft.currentScreen)
+        panel.openParentOnClose(true)
         panel.context.setSettings(
             UISettings(),
         )
@@ -64,11 +64,5 @@ object ReplayLibraryController {
                 )
                 open()
             }
-    }
-
-    private fun close() {
-        minecraft.displayGuiScreen(
-            if (minecraft.theWorld == null) GuiMainMenu() else null,
-        )
     }
 }

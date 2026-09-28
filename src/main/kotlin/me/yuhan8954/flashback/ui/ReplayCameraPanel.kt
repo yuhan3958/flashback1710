@@ -1,14 +1,20 @@
 package me.yuhan8954.flashback.ui
 
 import com.cleanroommc.modularui.api.drawable.IKey
-import com.cleanroommc.modularui.widget.ParentWidget
+import com.cleanroommc.modularui.widget.ScrollWidget
+import com.cleanroommc.modularui.widget.scroll.HorizontalScrollData
+import com.cleanroommc.modularui.widget.scroll.VerticalScrollData
 import com.cleanroommc.modularui.widgets.ButtonWidget
 import me.yuhan8954.flashback.editor.ReplayTimelineEventType
 import me.yuhan8954.flashback.replay.ReplayPlayer
 
-class ReplayCameraPanel : ParentWidget<ReplayCameraPanel>() {
+class ReplayCameraPanel : ScrollWidget<ReplayCameraPanel>(VerticalScrollData(false, 4)) {
 
     init {
+        scrollArea.setScrollDataX(HorizontalScrollData(false, 4))
+        scrollArea.scrollY.scrollSize = 245
+        scrollArea.scrollX.scrollSize = 214
+
         background(
             ReplayUiStyle.panelBackground(),
             ReplayUiStyle.panelBorder(),
