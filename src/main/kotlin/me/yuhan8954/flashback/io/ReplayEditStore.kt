@@ -73,13 +73,15 @@ object ReplayEditStore {
         }
         try {
             Files.move(
-                temporary.toPath(), edits.toPath(),
+                temporary.toPath(),
+                edits.toPath(),
                 StandardCopyOption.REPLACE_EXISTING,
                 StandardCopyOption.ATOMIC_MOVE,
             )
         } catch (_: java.nio.file.AtomicMoveNotSupportedException) {
             Files.move(
-                temporary.toPath(), edits.toPath(),
+                temporary.toPath(),
+                edits.toPath(),
                 StandardCopyOption.REPLACE_EXISTING,
             )
         }

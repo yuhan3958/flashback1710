@@ -256,18 +256,26 @@ class ReplayEditorState(
     fun timelineEvents(): List<ReplayTimelineEvent> = buildList {
         if (showPacketEvents) addAll(packetEvents)
         if (showCheckpointEvents) addAll(checkpointEvents)
-        if (showMarkers) addAll(markers.map {
-                ReplayTimelineEvent(
-                    it.timestampNanos,
-                    ReplayTimelineEventType.EVENT,
-                )
-            })
-        if (showCameraKeyframes) addAll(cameraKeyframes.map {
-                ReplayTimelineEvent(
-                    it.timestampNanos,
-                    ReplayTimelineEventType.CAMERA_KEYFRAME,
-                )
-            })
+        if (showMarkers) {
+            addAll(
+                markers.map {
+                    ReplayTimelineEvent(
+                        it.timestampNanos,
+                        ReplayTimelineEventType.EVENT,
+                    )
+                },
+            )
+        }
+        if (showCameraKeyframes) {
+            addAll(
+                cameraKeyframes.map {
+                    ReplayTimelineEvent(
+                        it.timestampNanos,
+                        ReplayTimelineEventType.CAMERA_KEYFRAME,
+                    )
+                },
+            )
+        }
     }
 
     fun markerCount(): Int = markers.size

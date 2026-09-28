@@ -376,6 +376,24 @@ class ReplaySession(
         }
     }
 
+    fun syncSoundListener() {
+        val view = minecraft.renderViewEntity ?: return
+        if (view === player) return
+
+        player.setPositionAndRotation(
+            view.posX,
+            view.posY + view.eyeHeight - player.eyeHeight,
+            view.posZ,
+            view.rotationYaw,
+            view.rotationPitch,
+        )
+        player.prevPosX = view.prevPosX
+        player.prevPosY = view.prevPosY + view.eyeHeight - player.eyeHeight
+        player.prevPosZ = view.prevPosZ
+        player.prevRotationYaw = view.prevRotationYaw
+        player.prevRotationPitch = view.prevRotationPitch
+    }
+
     private fun restoreLiveWorld() {
         minecraft.playerController = livePlayerController
 

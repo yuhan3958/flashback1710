@@ -11,8 +11,7 @@ class ReplayNetworkManager : NetworkManager(false) {
 
     override fun processReceivedPackets() {}
 
-    override fun getSocketAddress(): SocketAddress =
-        InetSocketAddress.createUnresolved("replay", 0)
+    override fun getSocketAddress(): SocketAddress = InetSocketAddress.createUnresolved("replay", 0)
 
     override fun scheduleOutboundPacket(
         packet: Packet,

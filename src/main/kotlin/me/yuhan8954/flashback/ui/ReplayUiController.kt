@@ -102,10 +102,7 @@ object ReplayUiController {
             return
         }
 
-        if (
-            (hiddenByHud || openRequested) &&
-            minecraft.currentScreen == null
-        ) {
+        if (minecraft.currentScreen == null) {
             hiddenByHud = false
             open()
         }

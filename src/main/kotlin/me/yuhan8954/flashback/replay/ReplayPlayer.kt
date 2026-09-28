@@ -3,13 +3,13 @@ package me.yuhan8954.flashback.replay
 import cpw.mods.fml.common.network.internal.FMLProxyPacket
 import cpw.mods.fml.relauncher.Side
 import io.netty.buffer.Unpooled
+import me.yuhan8954.flashback.Flashback1710
 import me.yuhan8954.flashback.editor.ReplayCameraKeyframe
 import me.yuhan8954.flashback.editor.ReplayEditorState
 import me.yuhan8954.flashback.editor.ReplayTimelineEvent
 import me.yuhan8954.flashback.editor.ReplayTimelineEventType
-import me.yuhan8954.flashback.io.ReplayReader
 import me.yuhan8954.flashback.io.ReplayEditStore
-import me.yuhan8954.flashback.Flashback1710
+import me.yuhan8954.flashback.io.ReplayReader
 import me.yuhan8954.flashback.ui.ReplayUiController
 import net.minecraft.client.Minecraft
 import net.minecraft.network.Packet
@@ -131,8 +131,7 @@ object ReplayPlayer {
         return true
     }
 
-    fun selectCameraKeyframe(timestampNanos: Long): Boolean =
-        editorState?.selectCameraKeyframe(timestampNanos) == true
+    fun selectCameraKeyframe(timestampNanos: Long): Boolean = editorState?.selectCameraKeyframe(timestampNanos) == true
 
     fun deleteSelectedCameraKeyframe(): Boolean {
         val editor = editorState ?: return false
@@ -149,8 +148,7 @@ object ReplayPlayer {
         return true
     }
 
-    fun seekToSelectedCameraKeyframe(): Boolean =
-        selectedKeyframeTimeNanos?.let(::seek) == true
+    fun seekToSelectedCameraKeyframe(): Boolean = selectedKeyframeTimeNanos?.let(::seek) == true
 
     val freeCameraActive: Boolean
         get() =
@@ -260,6 +258,8 @@ object ReplayPlayer {
                 currentSession,
             )
         }
+
+        currentSession.syncSoundListener()
 
         if (
             speed >= 0.0 &&

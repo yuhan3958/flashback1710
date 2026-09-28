@@ -415,11 +415,13 @@ class ReplayTimelineWidget :
                         )
 
                     ReplayTimelineEventType.CAMERA_KEYFRAME ->
-                        (if (event.timestampNanos == ReplayPlayer.selectedKeyframeTimeNanos) {
-                            selectedKeyframeEvent
-                        } else {
-                            cameraKeyframeEvent
-                        }).draw(
+                        (
+                            if (event.timestampNanos == ReplayPlayer.selectedKeyframeTimeNanos) {
+                                selectedKeyframeEvent
+                            } else {
+                                cameraKeyframeEvent
+                            }
+                            ).draw(
                             context,
                             x,
                             RULER_HEIGHT,

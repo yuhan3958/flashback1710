@@ -60,7 +60,9 @@ object ReplayLibraryController {
             .onFailure {
                 ReplayPlayer.stop()
                 me.yuhan8954.flashback.Flashback1710.LOG.error(
-                    "Could not open replay {}", entry.file.name, it,
+                    "Could not open replay {}",
+                    entry.file.name,
+                    it,
                 )
                 open()
             }
