@@ -15,6 +15,42 @@ import kotlin.test.assertEquals
 class ReplayEditStoreTest {
 
     @Test
+    fun `editing across tracks keeps selections and values through reopen`() {
+        val directory = Files.createTempDirectory("flashback-editor-workflow").toFile()
+        try {
+            val replay = directory.resolve("session.fbr")
+            val edits = ReplayEditorState(emptyList(), emptyList())
+            edits.addCameraKeyframe(ReplayCameraKeyframe(10L, 1.0, 2.0, 3.0, 0.0f, 0.0f))
+            edits.addCameraKeyframe(ReplayCameraKeyframe(20L, 4.0, 5.0, 6.0, 90.0f, 0.0f))
+            edits.addFovKeyframe(10L, 70.0f)
+            edits.addSpeedKeyframe(10L, 1.0f)
+            edits.addSpeedKeyframe(20L, 0.0f)
+            assertEquals(true, edits.selectKeyframe("camera", 10L))
+            assertEquals(true, edits.moveSelectedKeyframe(12L))
+            assertEquals(true, edits.selectKeyframe("fov", 10L))
+            assertEquals(true, edits.setSelectedFloatValue(80.0f))
+            assertEquals(true, edits.selectKeyframe("speed", 10L))
+            assertEquals(true, edits.setSelectedFloatValue(-0.5f))
+            edits.addMarker(15L, "Cut")
+            edits.setInPoint(5L)
+            edits.setOutPoint(25L)
+            ReplayEditStore.save(replay, edits)
+
+            val reopened = ReplayEditorState(emptyList(), emptyList())
+            ReplayEditStore.load(replay, reopened)
+            assertEquals(listOf(12L, 20L), reopened.cameraKeyframeTimes())
+            assertEquals(80.0f, reopened.fovAt(10L))
+            assertEquals(-0.5f, reopened.speedAt(10L))
+            assertEquals(0.0f, reopened.speedAt(20L))
+            assertEquals("Cut", reopened.markers().single().label)
+            assertEquals(5L, reopened.inPointNanos)
+            assertEquals(25L, reopened.outPointNanos)
+        } finally {
+            directory.deleteRecursively()
+        }
+    }
+
+    @Test
     fun `camera fov and speed survive a save and load`() {
         val directory = Files.createTempDirectory("flashback-all-tracks").toFile()
         try {
