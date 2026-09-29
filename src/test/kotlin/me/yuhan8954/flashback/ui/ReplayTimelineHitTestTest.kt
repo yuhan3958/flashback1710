@@ -3,9 +3,30 @@ package me.yuhan8954.flashback.ui
 import me.yuhan8954.flashback.editor.ReplayKeyframeSelection
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class ReplayTimelineHitTestTest {
+    @Test
+    fun `drag target and pan state reset on release`() {
+        val interaction = ReplayTimelineInteraction()
+        interaction.pressKeyframe(true)
+        assertTrue(interaction.draggingKeyframe())
+        assertTrue(interaction.release(0))
+        assertFalse(interaction.draggingKeyframe())
+        interaction.pressKeyframe(false)
+        assertFalse(interaction.draggingKeyframe())
+
+        interaction.beginPan(20)
+        assertTrue(interaction.panning)
+        assertEquals(5, interaction.panDelta(25))
+        assertEquals(-3, interaction.panDelta(22))
+        assertTrue(interaction.release(2))
+        assertFalse(interaction.panning)
+        assertFalse(interaction.release(1))
+    }
+
     @Test
     fun `row hit testing excludes ruler and marker row`() {
         assertNull(ReplayTimelineHitTest.keyframeTrackAt(17, 18, 14))

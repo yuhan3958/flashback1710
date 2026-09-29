@@ -110,16 +110,7 @@ class ReplayTimelineWidget :
 
     private var lastWidth = -1
 
-    private var panning =
-        false
-
-    private var keyframePressed =
-        false
-
-    private var keyframeDragged = false
-
-    private var lastPanMouseX =
-        0
+    private val interaction = ReplayTimelineInteraction()
 
     override fun draw(
         context: ModularGuiContext,
@@ -144,7 +135,7 @@ class ReplayTimelineWidget :
 
         if (
             !ReplayPlayer.paused &&
-            !panning
+            !interaction.panning
         ) {
             followPlayhead(
                 width,
@@ -267,9 +258,9 @@ class ReplayTimelineWidget :
         mouseButton: Int,
     ): Interactable.Result = when (mouseButton) {
         0 -> {
-            keyframePressed = selectKeyframeAtMouse()
-            keyframeDragged = false
-            if (!keyframePressed) {
+            val keyframeHit = selectKeyframeAtMouse()
+            interaction.pressKeyframe(keyframeHit)
+            if (!keyframeHit) {
                 ReplayEditorController.clearKeyframeSelection()
                 seekToMouse()
             }
@@ -277,11 +268,7 @@ class ReplayTimelineWidget :
         }
 
         2 -> {
-            panning =
-                true
-
-            lastPanMouseX =
-                context.absMouseX
+            interaction.beginPan(context.absMouseX)
 
             Interactable.Result.SUCCESS
         }
@@ -295,8 +282,7 @@ class ReplayTimelineWidget :
         timeSinceClick: Long,
     ) {
         when (mouseButton) {
-            0 -> if (keyframePressed) {
-                keyframeDragged = true
+            0 -> if (interaction.draggingKeyframe()) {
                 ReplayEditorController.moveSelectedKeyframe(mouseTime())
             } else {
                 seekToMouse()
@@ -309,21 +295,7 @@ class ReplayTimelineWidget :
 
     override fun onMouseRelease(
         mouseButton: Int,
-    ): Boolean {
-        if (mouseButton == 0) {
-            keyframePressed = false
-            keyframeDragged = false
-        }
-        if (mouseButton == 2) {
-            panning =
-                false
-        }
-
-        return mouseButton ==
-            0 ||
-            mouseButton ==
-            2
-    }
+    ): Boolean = interaction.release(mouseButton)
 
     override fun onMouseScroll(
         scrollDirection: UpOrDown,
@@ -536,17 +508,7 @@ class ReplayTimelineWidget :
     }
 
     private fun panToMouse() {
-        val mouseX =
-            context.absMouseX
-
-        val deltaX =
-            mouseX -
-                lastPanMouseX
-
-        lastPanMouseX =
-            mouseX
-
-        viewport.pan(deltaX)
+        viewport.pan(interaction.panDelta(context.absMouseX))
     }
 
     private fun panByWheel(
