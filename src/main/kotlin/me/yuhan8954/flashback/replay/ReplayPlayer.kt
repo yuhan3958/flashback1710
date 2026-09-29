@@ -199,6 +199,25 @@ object ReplayPlayer {
         return true
     }
 
+    fun setSelectedCameraField(field: String, value: Double): Boolean {
+        val editor = editorState ?: return false
+        val keyframe = editor.selectedCameraKeyframe() ?: return false
+        if (!value.isFinite()) return false
+        val updated = when (field) {
+            "X" -> keyframe.copy(x = value)
+            "Y" -> keyframe.copy(y = value)
+            "Z" -> keyframe.copy(z = value)
+            "Yaw" -> keyframe.copy(yaw = value.toFloat())
+            "Pitch" -> keyframe.copy(pitch = value.toFloat())
+            else -> return false
+        }
+        if (!updated.yaw.isFinite() || !updated.pitch.isFinite()) return false
+        editor.addCameraKeyframe(updated)
+        saveEditorEdits(editor)
+        session?.let(::applyCameraTrack)
+        return true
+    }
+
     fun addSpeedKeyframe(value: Float): Boolean {
         val editor = editorState ?: return false
         if (!playing || !runCatching { editor.addSpeedKeyframe(currentTimeNanos, value) }.isSuccess) return false

@@ -10,7 +10,7 @@ import java.util.Locale
 
 class ReplayInspectorPanel : ScrollWidget<ReplayInspectorPanel>(VerticalScrollData(false, 4)) {
     init {
-        scrollArea.scrollY.scrollSize = 250
+        scrollArea.scrollY.scrollSize = 270
         background(ReplayUiStyle.panelBackground(), ReplayUiStyle.panelBorder())
         child(ReplayTextWidget("INSPECTOR").left(8).top(7).color(ReplayUiStyle.TEXT_COLOR))
         child(ReplayTextWidget(IKey.dynamic { title() }).left(8).top(26).color(ReplayUiStyle.TEXT_COLOR))
@@ -29,11 +29,18 @@ class ReplayInspectorPanel : ScrollWidget<ReplayInspectorPanel>(VerticalScrollDa
         )
         listOf("X", "Y", "Z", "Yaw", "Pitch").forEachIndexed { index, field ->
             child(
-                ReplayTextWidget(IKey.dynamic { cameraField(field) })
-                    .left(8).top(134 + index * 17).color(ReplayUiStyle.TEXT_COLOR)
+                ReplayButtonWidget().left(8).top(134 + index * 17).size(100, 16)
+                    .background(ReplayUiStyle.buttonBackground())
+                    .overlay(IKey.dynamic { cameraField(field) })
+                    .onMousePressed { it == 0 && ReplayValueInput.beginCamera(field) }
                     .setEnabledIf { ReplayPlayer.selectedKeyframe?.trackId == "camera" },
             )
         }
+        child(
+            ReplayTextWidget(IKey.dynamic { ReplayValueInput.text?.let { "Value: $it|" } ?: "Click a field to edit" })
+                .left(8).top(224).color(ReplayUiStyle.TEXT_COLOR)
+                .setEnabledIf { ReplayPlayer.selectedKeyframe?.trackId == "camera" },
+        )
         child(
             ReplayTextWidget("Value (FOV / Speed)").left(8).top(134).color(ReplayUiStyle.MUTED_TEXT_COLOR)
                 .setEnabledIf { ReplayPlayer.selectedFloatValue != null },
