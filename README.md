@@ -15,25 +15,25 @@ Recordings are stored in the Minecraft instance's `replays/` directory as `.fbr`
 
 ## Replay editor
 
-The editor has a world view, a settings panel, and a timeline. Playback opens paused. The free camera is enabled initially; **Player** follows the recorded player. While the editor is open, hold the right mouse button to look around with the free camera.
+The editor has a game view, toolbar, inspector, transport strip, track list, and four timeline rows: Camera, FOV, Speed, and Markers. Playback opens paused. The free camera is enabled initially; **Player** follows the recorded player. While the editor is open, hold the right mouse button to look around with the free camera.
 
 | Action | Control |
 | --- | --- |
-| Play or pause | Timeline transport button |
+| Play or pause | Transport button or Space |
 | Seek | Left click or drag on the timeline |
 | Zoom around cursor | Mouse wheel over the timeline |
 | Pan the visible timeline | Shift + mouse wheel or middle mouse drag |
-| Add or replace a camera keyframe | Position the free camera, seek to the desired time, then press **Add Keyframe** |
-| Select a keyframe | Click its cyan mark on the timeline |
-| Jump to a selected keyframe | **Go to** in Settings |
-| Move a selected keyframe | Seek to the new time, then press **Move here** |
-| Update a selected keyframe's camera pose | Move the free camera, then press **Update pose** |
-| Delete a selected keyframe | **Delete** in Settings |
-| Filter timeline marks | Toggle **Packets**, **Checkpoints**, **Markers**, or **Keyframes** in Settings |
-| Set or clear a playback range | **Set In** and **Set Out** at the desired times; **Clear** removes the range |
+| Add a keyframe | Select Camera, FOV, or Speed in the track list, seek, then press **Add** or K |
+| Select or move a keyframe | Click or drag its mark in its timeline row |
+| Change a FOV or Speed value | Select its key, click **Edit value** in the inspector, type a number, and press Enter |
+| Update a camera keyframe's pose | Move the free camera, then press **Use camera pose** in the inspector |
+| Delete a selected keyframe | **Delete key** in the inspector or Delete |
+| Set or clear a playback range | Toolbar **In**, **Out**, and **Clear**, or I and O |
+| Add a marker | Toolbar **Marker** or M |
+| Seek by one tick or one second | Left/Right or Shift+Left/Right |
 | Leave replay | **Stop** in the timeline transport |
 
-Camera keyframes interpolate position, pitch, and yaw. Moving a keyframe changes its time while keeping its camera pose. Adding another keyframe at the same time replaces the previous one. Timeline filters only change which marks are shown; they do not remove recorded data. Packet and checkpoint marks start hidden so camera editing stays readable.
+Camera and FOV keyframes interpolate their values. Speed automation interpolates between multipliers from -8 to 8. The effective playback speed is the manual transport multiplier times the Speed track value; an empty Speed track means 1.0. A zero value freezes replay time while the editor stays interactive. Seeking always targets the requested replay time directly. Moving a keyframe changes its time while keeping its value. Adding another keyframe on the same track and time replaces the previous one.
 
 ## Commands
 

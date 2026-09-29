@@ -6,6 +6,7 @@ import io.netty.buffer.Unpooled
 import me.yuhan8954.flashback.Flashback1710
 import me.yuhan8954.flashback.editor.ReplayCameraKeyframe
 import me.yuhan8954.flashback.editor.ReplayEditorState
+import me.yuhan8954.flashback.editor.ReplayKeyframeSelection
 import me.yuhan8954.flashback.editor.ReplayTimelineEvent
 import me.yuhan8954.flashback.editor.ReplayTimelineEventType
 import me.yuhan8954.flashback.io.ReplayEditStore
@@ -72,6 +73,12 @@ object ReplayPlayer {
     val speed: Double
         get() = clock.speed
 
+    val automationSpeed: Double
+        get() = clock.automationSpeed
+
+    val effectiveSpeed: Double
+        get() = clock.effectiveSpeed
+
     val currentTimeNanos: Long
         get() = clock.currentTimeNanos
 
@@ -119,6 +126,79 @@ object ReplayPlayer {
 
     val selectedKeyframeTimeNanos: Long?
         get() = editorState?.selectedKeyframeTimeNanos
+
+    val selectedKeyframe: ReplayKeyframeSelection?
+        get() = editorState?.selectedKeyframe
+
+    val selectedFloatValue: Float?
+        get() = editorState?.selectedFloatValue()
+
+    val speedKeyframeCount: Int
+        get() = editorState?.project?.speedTrack?.size ?: 0
+
+    var activeTrackId = "camera"
+        private set
+
+    fun selectTrack(trackId: String): Boolean {
+        if (trackId !in listOf("camera", "fov", "speed")) return false
+        activeTrackId = trackId
+        return true
+    }
+
+    fun addKeyframeToActiveTrack(): Boolean = when (activeTrackId) {
+        "camera" -> addCameraKeyframe()
+        "fov" -> addFovKeyframe(editorFov() ?: Minecraft.getMinecraft().gameSettings.fovSetting)
+        "speed" -> addSpeedKeyframe(automationSpeed.toFloat())
+        else -> false
+    }
+
+    fun keyframeTimes(trackId: String): List<Long> = when (trackId) {
+        "camera" -> editorState?.cameraKeyframeTimes()
+        "fov" -> editorState?.fovKeyframeTimes()
+        "speed" -> editorState?.project?.speedTrack?.keyframes()?.map { it.timestampNanos }
+        else -> null
+    } ?: emptyList()
+
+    fun markers() = editorState?.markers() ?: emptyList()
+
+    fun selectKeyframe(trackId: String, timestampNanos: Long): Boolean {
+        if (editorState?.selectKeyframe(trackId, timestampNanos) != true) return false
+        activeTrackId = trackId
+        return true
+    }
+
+    val selectedCameraKeyframe: ReplayCameraKeyframe?
+        get() = editorState?.selectedCameraKeyframe()
+
+    fun moveSelectedKeyframe(timestampNanos: Long): Boolean {
+        val editor = editorState ?: return false
+        if (!editor.moveSelectedKeyframe(timestampNanos.coerceIn(0L, durationNanos))) return false
+        saveEditorEdits(editor)
+        return true
+    }
+
+    fun deleteSelectedKeyframe(): Boolean {
+        val editor = editorState ?: return false
+        if (!editor.deleteSelectedKeyframe()) return false
+        saveEditorEdits(editor)
+        session?.let(::applyCameraTrack)
+        return true
+    }
+
+    fun setSelectedFloatValue(value: Float): Boolean {
+        val editor = editorState ?: return false
+        if (!value.isFinite()) return false
+        if (!runCatching { editor.setSelectedFloatValue(value) }.getOrDefault(false)) return false
+        saveEditorEdits(editor)
+        return true
+    }
+
+    fun addSpeedKeyframe(value: Float): Boolean {
+        val editor = editorState ?: return false
+        if (!playing || !runCatching { editor.addSpeedKeyframe(currentTimeNanos, value) }.isSuccess) return false
+        saveEditorEdits(editor)
+        return true
+    }
 
     fun timelineFilterEnabled(type: ReplayTimelineEventType): Boolean {
         val editor = editorState ?: return false
@@ -217,6 +297,8 @@ object ReplayPlayer {
         }
 
         clock.reset()
+        activeTrackId = "camera"
+        clock.setSpeedAutomation { editorState?.speedAt(it)?.toDouble() ?: 1.0 }
 
         session =
             ReplaySession(
@@ -274,7 +356,7 @@ object ReplayPlayer {
         currentSession.syncSoundListener()
 
         if (
-            speed >= 0.0 &&
+            effectiveSpeed >= 0.0 &&
             (
                 lastReverseCaptureNanos ==
                     Long.MIN_VALUE ||
@@ -361,10 +443,10 @@ object ReplayPlayer {
             reachedRangeBoundary ||
             !clock.paused &&
             (
-                speed > 0.0 &&
+                effectiveSpeed > 0.0 &&
                     clock.currentTimeNanos >=
                     upperBound ||
-                    speed < 0.0 &&
+                    effectiveSpeed < 0.0 &&
                     clock.currentTimeNanos <=
                     lowerBound
                 )

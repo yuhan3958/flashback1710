@@ -80,6 +80,8 @@ class ReplayTimelineWidget :
             )
 
     private val fovKeyframeEvent = Rectangle().color(ReplayUiStyle.FOV_KEYFRAME_COLOR)
+    private val speedKeyframeEvent = Rectangle().color(ReplayUiStyle.SPEED_KEYFRAME_COLOR)
+    private val rangeShade = Rectangle().color(0x88000000.toInt())
 
     private val selectedKeyframeEvent =
         Rectangle().color(ReplayUiStyle.PLAYHEAD_COLOR)
@@ -104,6 +106,8 @@ class ReplayTimelineWidget :
 
     private var keyframePressed =
         false
+
+    private var keyframeDragged = false
 
     private var lastPanMouseX =
         0
@@ -173,6 +177,12 @@ class ReplayTimelineWidget :
             trackHeight,
             widgetTheme.theme,
         )
+
+        for (row in 0 until 4) {
+            if (row % 2 == 1) {
+                track.draw(context, 0, RULER_HEIGHT + row * ROW_HEIGHT, width, ROW_HEIGHT, widgetTheme.theme)
+            }
+        }
 
         val currentTime =
             ReplayPlayer.currentTimeNanos
@@ -250,6 +260,7 @@ class ReplayTimelineWidget :
     ): Interactable.Result = when (mouseButton) {
         0 -> {
             keyframePressed = selectKeyframeAtMouse()
+            keyframeDragged = false
             if (!keyframePressed) seekToMouse()
             Interactable.Result.SUCCESS
         }
@@ -273,8 +284,12 @@ class ReplayTimelineWidget :
         timeSinceClick: Long,
     ) {
         when (mouseButton) {
-            0 ->
-                if (!keyframePressed) seekToMouse()
+            0 -> if (keyframePressed) {
+                keyframeDragged = true
+                ReplayPlayer.moveSelectedKeyframe(mouseTime())
+            } else {
+                seekToMouse()
+            }
 
             2 ->
                 panToMouse()
@@ -284,7 +299,10 @@ class ReplayTimelineWidget :
     override fun onMouseRelease(
         mouseButton: Int,
     ): Boolean {
-        if (mouseButton == 0) keyframePressed = false
+        if (mouseButton == 0) {
+            keyframePressed = false
+            keyframeDragged = false
+        }
         if (mouseButton == 2) {
             panning =
                 false
@@ -341,6 +359,12 @@ class ReplayTimelineWidget :
         width: Int,
         height: Int,
     ) {
+        val inTime = ReplayPlayer.inPointNanos ?: 0L
+        val outTime = ReplayPlayer.outPointNanos ?: ReplayPlayer.totalDurationNanos
+        val inX = timeToX(inTime.toDouble()).coerceIn(0, width)
+        val outX = timeToX(outTime.toDouble()).coerceIn(0, width)
+        if (inX > 0) rangeShade.draw(context, 0, RULER_HEIGHT, inX, height - RULER_HEIGHT, widgetTheme.theme)
+        if (outX < width) rangeShade.draw(context, outX, RULER_HEIGHT, width - outX, height - RULER_HEIGHT, widgetTheme.theme)
         drawRangeBoundary(
             context,
             widgetTheme,
@@ -408,17 +432,17 @@ class ReplayTimelineWidget :
                         markerEvent.draw(
                             context,
                             x,
-                            RULER_HEIGHT - 2,
+                            RULER_HEIGHT + 3 * ROW_HEIGHT,
                             2,
-                            height -
-                                RULER_HEIGHT +
-                                2,
+                            ROW_HEIGHT,
                             widgetTheme.theme,
                         )
 
                     ReplayTimelineEventType.CAMERA_KEYFRAME ->
                         (
-                            if (event.timestampNanos == ReplayPlayer.selectedKeyframeTimeNanos) {
+                            if (ReplayPlayer.selectedKeyframe?.trackId == "camera" &&
+                                event.timestampNanos == ReplayPlayer.selectedKeyframe?.timestampNanos
+                            ) {
                                 selectedKeyframeEvent
                             } else {
                                 cameraKeyframeEvent
@@ -426,45 +450,75 @@ class ReplayTimelineWidget :
                             ).draw(
                             context,
                             x,
-                            RULER_HEIGHT,
-                            2,
-                            11,
+                            RULER_HEIGHT + 4,
+                            6,
+                            6,
                             widgetTheme.theme,
                         )
 
                     ReplayTimelineEventType.FOV_KEYFRAME ->
-                        fovKeyframeEvent.draw(
+                        (
+                            if (ReplayPlayer.selectedKeyframe?.trackId == "fov" &&
+                                event.timestampNanos == ReplayPlayer.selectedKeyframe?.timestampNanos
+                            ) {
+                                selectedKeyframeEvent
+                            } else {
+                                fovKeyframeEvent
+                            }
+                            ).draw(
                             context,
                             x,
-                            RULER_HEIGHT + 12,
-                            3,
-                            5,
+                            RULER_HEIGHT + ROW_HEIGHT + 4,
+                            6,
+                            6,
                             widgetTheme.theme,
                         )
                 }
             }
+        ReplayPlayer.keyframeTimes("speed").forEach { time ->
+            val x = timeToX(time.toDouble())
+            if (x in 0 until width) {
+                (
+                    if (ReplayPlayer.selectedKeyframe?.trackId == "speed" &&
+                        ReplayPlayer.selectedKeyframe?.timestampNanos == time
+                    ) {
+                        selectedKeyframeEvent
+                    } else {
+                        speedKeyframeEvent
+                    }
+                    ).draw(context, x, RULER_HEIGHT + 2 * ROW_HEIGHT + 4, 6, 6, widgetTheme.theme)
+            }
+        }
+        ReplayPlayer.markers().forEach { marker ->
+            val x = timeToX(marker.timestampNanos.toDouble())
+            if (x in 0 until width - 20) {
+                Minecraft.getMinecraft().fontRenderer.drawString(
+                    marker.label,
+                    x + 3,
+                    RULER_HEIGHT + 3 * ROW_HEIGHT + 2,
+                    ReplayUiStyle.MARKER_EVENT_COLOR,
+                )
+            }
+        }
     }
 
     private fun selectKeyframeAtMouse(): Boolean {
         val y = context.absMouseY - area.y
-        val type = when (y) {
-            in RULER_HEIGHT..(RULER_HEIGHT + 11) -> ReplayTimelineEventType.CAMERA_KEYFRAME
-            in (RULER_HEIGHT + 12)..(RULER_HEIGHT + 17) -> ReplayTimelineEventType.FOV_KEYFRAME
+        if (y < RULER_HEIGHT) return false
+        val trackId = when ((y - RULER_HEIGHT) / ROW_HEIGHT) {
+            0 -> "camera"
+            1 -> "fov"
+            2 -> "speed"
             else -> return false
         }
         val mouseX = context.absMouseX - area.x
-        val nearest = ReplayPlayer.timelineEvents
+        val nearest = ReplayPlayer.keyframeTimes(trackId)
             .asSequence()
-            .filter { it.type == type }
-            .map { it.timestampNanos to kotlin.math.abs(timeToX(it.timestampNanos.toDouble()) - mouseX) }
+            .map { it to kotlin.math.abs(timeToX(it.toDouble()) - mouseX) }
             .filter { it.second <= KEYFRAME_HIT_RADIUS }
             .minByOrNull { it.second }
             ?: return false
-        return if (type == ReplayTimelineEventType.CAMERA_KEYFRAME) {
-            ReplayPlayer.selectCameraKeyframe(nearest.first)
-        } else {
-            ReplayPlayer.seek(nearest.first)
-        }
+        return ReplayPlayer.selectKeyframe(trackId, nearest.first)
     }
 
     private fun drawRangeBoundary(
@@ -782,10 +836,14 @@ class ReplayTimelineWidget :
                         .totalDurationNanos,
                 )
 
-        ReplayPlayer.seek(
-            targetTimeNanos,
-        )
+        ReplayPlayer.seek(targetTimeNanos)
     }
+
+    private fun mouseTime(): Long = (
+        visibleStartNanos +
+            (context.absMouseX - area.x).coerceIn(0, area.width) * nanosPerPixel
+        ).toLong()
+        .coerceIn(0L, ReplayPlayer.totalDurationNanos)
 
     private fun ensureViewport(
         width: Int,
@@ -939,6 +997,8 @@ class ReplayTimelineWidget :
 
         private const val RULER_HEIGHT =
             18
+
+        private const val ROW_HEIGHT = 14
 
         private const val KEYFRAME_HIT_RADIUS = 5
 

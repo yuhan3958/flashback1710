@@ -4,6 +4,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.function.LongSupplier;
+import java.util.function.LongToDoubleFunction;
 
 public final class ReplayClock {
 
@@ -17,6 +18,7 @@ public final class ReplayClock {
 
     private long currentTimeNanos;
     private double speedMultiplier = DEFAULT_SPEED;
+    private LongToDoubleFunction speedAutomation = time -> DEFAULT_SPEED;
     private boolean paused = true;
     private long lastUpdateNanos;
 
@@ -37,6 +39,19 @@ public final class ReplayClock {
         return speedMultiplier;
     }
 
+    public double getAutomationSpeed() {
+        return speedAutomation.applyAsDouble(currentTimeNanos);
+    }
+
+    public double getEffectiveSpeed() {
+        return speedMultiplier * getAutomationSpeed();
+    }
+
+    public void setSpeedAutomation(LongToDoubleFunction automation) {
+        update();
+        speedAutomation = java.util.Objects.requireNonNull(automation);
+    }
+
     public boolean isPaused() {
         return paused;
     }
@@ -48,6 +63,7 @@ public final class ReplayClock {
     public void reset() {
         currentTimeNanos = 0L;
         speedMultiplier = DEFAULT_SPEED;
+        speedAutomation = time -> DEFAULT_SPEED;
         paused = true;
         lastUpdateNanos = timeSource.getAsLong();
     }
@@ -57,7 +73,7 @@ public final class ReplayClock {
         long wallTimeDelta = Math.max(now - lastUpdateNanos, 0L);
 
         if (!paused) {
-            currentTimeNanos = Math.max(currentTimeNanos + (long) (wallTimeDelta * speedMultiplier), 0L);
+            currentTimeNanos = Math.max(currentTimeNanos + (long) (wallTimeDelta * getEffectiveSpeed()), 0L);
         }
 
         lastUpdateNanos = now;
@@ -115,6 +131,7 @@ public final class ReplayClock {
     public void stop() {
         currentTimeNanos = 0L;
         speedMultiplier = DEFAULT_SPEED;
+        speedAutomation = time -> DEFAULT_SPEED;
         paused = true;
         lastUpdateNanos = timeSource.getAsLong();
     }

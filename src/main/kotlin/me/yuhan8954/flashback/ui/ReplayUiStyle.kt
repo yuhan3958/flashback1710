@@ -49,6 +49,8 @@ object ReplayUiStyle {
     const val FOV_KEYFRAME_COLOR =
         0xFFCC9DFF.toInt()
 
+    const val SPEED_KEYFRAME_COLOR = 0xFFFFB86C.toInt()
+
     const val RANGE_BOUNDARY_COLOR =
         0xFFFF8A65.toInt()
 

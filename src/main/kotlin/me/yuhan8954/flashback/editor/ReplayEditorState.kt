@@ -37,6 +37,8 @@ data class ReplayTimelineEvent(
     val type: ReplayTimelineEventType,
 )
 
+data class ReplayKeyframeSelection(val trackId: String, val timestampNanos: Long)
+
 class ReplayEditorState(
     packetTimes: List<Long>,
     checkpointTimes: List<Long>,
@@ -63,8 +65,11 @@ class ReplayEditorState(
 
     val project = ReplayEditProject()
 
-    var selectedKeyframeTimeNanos: Long? = null
+    var selectedKeyframe: ReplayKeyframeSelection? = null
         private set
+
+    val selectedKeyframeTimeNanos: Long?
+        get() = selectedKeyframe?.takeIf { it.trackId == "camera" }?.timestampNanos
 
     var showPacketEvents = false
     var showCheckpointEvents = false
@@ -86,7 +91,7 @@ class ReplayEditorState(
         project.clear()
         markers.clear()
         clearRange()
-        selectedKeyframeTimeNanos = null
+        selectedKeyframe = null
     }
 
     fun setInPoint(
@@ -139,17 +144,17 @@ class ReplayEditorState(
     ) {
         val timestamp = keyframe.timestampNanos.coerceAtLeast(0L)
         project.cameraTrack.put(ReplayKeyframe(timestamp, keyframe.toPose()))
-        selectedKeyframeTimeNanos = timestamp
+        selectedKeyframe = ReplayKeyframeSelection("camera", timestamp)
     }
 
     fun selectCameraKeyframe(timestampNanos: Long): Boolean {
         if (project.cameraTrack.keyframeAt(timestampNanos) == null) return false
-        selectedKeyframeTimeNanos = timestampNanos
+        selectedKeyframe = ReplayKeyframeSelection("camera", timestampNanos)
         return true
     }
 
     fun clearCameraKeyframeSelection() {
-        selectedKeyframeTimeNanos = null
+        selectedKeyframe = null
     }
 
     fun selectedCameraKeyframe(): ReplayCameraKeyframe? = selectedKeyframeTimeNanos
@@ -159,14 +164,14 @@ class ReplayEditorState(
     fun deleteSelectedCameraKeyframe(): Boolean {
         val timestamp = selectedKeyframeTimeNanos ?: return false
         val removed = project.cameraTrack.delete(timestamp)
-        selectedKeyframeTimeNanos = null
+        selectedKeyframe = null
         return removed
     }
 
     fun moveSelectedCameraKeyframe(timestampNanos: Long): Boolean {
         val selected = selectedKeyframeTimeNanos ?: return false
         if (!project.cameraTrack.move(selected, timestampNanos)) return false
-        selectedKeyframeTimeNanos = timestampNanos.coerceAtLeast(0L)
+        selectedKeyframe = ReplayKeyframeSelection("camera", timestampNanos.coerceAtLeast(0L))
         return true
     }
 
@@ -180,6 +185,68 @@ class ReplayEditorState(
 
     fun addFovKeyframe(timestampNanos: Long, fov: Float) {
         project.fovTrack.put(ReplayKeyframe(timestampNanos, fov))
+        selectedKeyframe = ReplayKeyframeSelection("fov", timestampNanos.coerceAtLeast(0L))
+    }
+
+    fun addSpeedKeyframe(timestampNanos: Long, speed: Float) {
+        project.speedTrack.put(ReplayKeyframe(timestampNanos, speed))
+        selectedKeyframe = ReplayKeyframeSelection("speed", timestampNanos.coerceAtLeast(0L))
+    }
+
+    fun speedAt(timestampNanos: Long): Float = project.speedTrack.evaluate(timestampNanos) ?: 1.0f
+
+    fun selectKeyframe(trackId: String, timestampNanos: Long): Boolean {
+        val exists = when (trackId) {
+            "camera" -> project.cameraTrack.keyframeAt(timestampNanos) != null
+            "fov" -> project.fovTrack.keyframeAt(timestampNanos) != null
+            "speed" -> project.speedTrack.keyframeAt(timestampNanos) != null
+            else -> false
+        }
+        if (exists) selectedKeyframe = ReplayKeyframeSelection(trackId, timestampNanos)
+        return exists
+    }
+
+    fun deleteSelectedKeyframe(): Boolean {
+        val selection = selectedKeyframe ?: return false
+        val removed = when (selection.trackId) {
+            "camera" -> project.cameraTrack.delete(selection.timestampNanos)
+            "fov" -> project.fovTrack.delete(selection.timestampNanos)
+            "speed" -> project.speedTrack.delete(selection.timestampNanos)
+            else -> false
+        }
+        if (removed) selectedKeyframe = null
+        return removed
+    }
+
+    fun moveSelectedKeyframe(timestampNanos: Long): Boolean {
+        val selection = selectedKeyframe ?: return false
+        val target = timestampNanos.coerceAtLeast(0L)
+        val moved = when (selection.trackId) {
+            "camera" -> project.cameraTrack.move(selection.timestampNanos, target)
+            "fov" -> project.fovTrack.move(selection.timestampNanos, target)
+            "speed" -> project.speedTrack.move(selection.timestampNanos, target)
+            else -> false
+        }
+        if (moved) selectedKeyframe = selection.copy(timestampNanos = target)
+        return moved
+    }
+
+    fun selectedFloatValue(): Float? = selectedKeyframe?.let { selection ->
+        when (selection.trackId) {
+            "fov" -> project.fovTrack.keyframeAt(selection.timestampNanos)?.value
+            "speed" -> project.speedTrack.keyframeAt(selection.timestampNanos)?.value
+            else -> null
+        }
+    }
+
+    fun setSelectedFloatValue(value: Float): Boolean {
+        val selection = selectedKeyframe ?: return false
+        when (selection.trackId) {
+            "fov" -> project.fovTrack.put(ReplayKeyframe(selection.timestampNanos, value))
+            "speed" -> project.speedTrack.put(ReplayKeyframe(selection.timestampNanos, value))
+            else -> return false
+        }
+        return true
     }
 
     fun deleteFovKeyframe(timestampNanos: Long): Boolean = project.fovTrack.delete(timestampNanos)

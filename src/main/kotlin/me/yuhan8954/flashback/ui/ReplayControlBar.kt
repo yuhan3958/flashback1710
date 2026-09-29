@@ -16,7 +16,7 @@ class ReplayControlBar : ParentWidget<ReplayControlBar>() {
 
         child(
             ReplayTextWidget(
-                "TIMELINE",
+                "TRANSPORT",
             ).left(8)
                 .top(7)
                 .color(
@@ -84,6 +84,12 @@ class ReplayControlBar : ParentWidget<ReplayControlBar>() {
                 ReplayUiController.skipForward()
             },
         )
+        child(
+            ReplayButtonWidget().left(210).top(4).size(64, 18)
+                .background(ReplayUiStyle.buttonBackground())
+                .overlay(IKey.dynamic { "Add ${ReplayPlayer.activeTrackId}" })
+                .onMousePressed { it == 0 && ReplayPlayer.addKeyframeToActiveTrack() },
+        )
 
         child(
             ReplayTextWidget(
@@ -108,14 +114,13 @@ class ReplayControlBar : ParentWidget<ReplayControlBar>() {
         child(
             ReplayTextWidget(
                 IKey.dynamic {
-                    speedPrefix() +
-                        ReplayTimeFormatter.formatSpeed(
-                            ReplayPlayer.speed,
-                        )
+                    "${ReplayTimeFormatter.formatSpeed(ReplayPlayer.speed)} x " +
+                        "${ReplayTimeFormatter.formatSpeed(ReplayPlayer.automationSpeed)} = " +
+                        ReplayTimeFormatter.formatSpeed(ReplayPlayer.effectiveSpeed)
                 },
             ).right(8)
                 .top(27)
-                .width(48)
+                .width(130)
                 .height(10)
                 .textAlign(
                     Alignment.CenterRight,
@@ -125,13 +130,8 @@ class ReplayControlBar : ParentWidget<ReplayControlBar>() {
                 ),
         )
 
-        child(
-            ReplayTimelineWidget()
-                .left(8)
-                .right(8)
-                .top(42)
-                .bottom(8),
-        )
+        child(ReplayTrackList().left(8).top(42).bottom(8).width(82))
+        child(ReplayTimelineWidget().left(90).right(8).top(42).bottom(8))
     }
 
     private fun transportButton(

@@ -24,6 +24,15 @@ class ReplayUiScreen(
         character: Char,
         keyCode: Int,
     ) {
+        if (ReplayValueInput.text != null) {
+            when (keyCode) {
+                Keyboard.KEY_RETURN, Keyboard.KEY_NUMPADENTER -> ReplayValueInput.commit()
+                Keyboard.KEY_ESCAPE -> ReplayValueInput.cancel()
+                Keyboard.KEY_BACK -> ReplayValueInput.backspace()
+                else -> ReplayValueInput.type(character)
+            }
+            return
+        }
         when (keyCode) {
             Keyboard.KEY_ESCAPE ->
                 return
@@ -32,12 +41,53 @@ class ReplayUiScreen(
                 ReplayUiController.toggleHudVisibility()
                 return
             }
+
+            Keyboard.KEY_SPACE -> {
+                ReplayPlayer.togglePause()
+                return
+            }
+            Keyboard.KEY_DELETE -> {
+                ReplayPlayer.deleteSelectedKeyframe()
+                return
+            }
+            Keyboard.KEY_LEFT -> {
+                ReplayPlayer.seek(ReplayPlayer.currentTimeNanos - seekStep())
+                return
+            }
+            Keyboard.KEY_RIGHT -> {
+                ReplayPlayer.seek(ReplayPlayer.currentTimeNanos + seekStep())
+                return
+            }
+            Keyboard.KEY_I -> {
+                ReplayPlayer.setInPoint()
+                return
+            }
+            Keyboard.KEY_O -> {
+                ReplayPlayer.setOutPoint()
+                return
+            }
+            Keyboard.KEY_M -> {
+                ReplayPlayer.addMarker()
+                return
+            }
+            Keyboard.KEY_K -> {
+                ReplayPlayer.addKeyframeToActiveTrack()
+                return
+            }
         }
 
         super.keyTyped(
             character,
             keyCode,
         )
+    }
+
+    private fun seekStep(): Long = if (Keyboard.isKeyDown(Keyboard.KEY_LSHIFT) ||
+        Keyboard.isKeyDown(Keyboard.KEY_RSHIFT)
+    ) {
+        1_000_000_000L
+    } else {
+        50_000_000L
     }
 
     override fun handleMouseInput() {

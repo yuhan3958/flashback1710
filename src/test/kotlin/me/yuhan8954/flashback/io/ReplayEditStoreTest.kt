@@ -15,6 +15,26 @@ import kotlin.test.assertEquals
 class ReplayEditStoreTest {
 
     @Test
+    fun `camera fov and speed survive a save and load`() {
+        val directory = Files.createTempDirectory("flashback-all-tracks").toFile()
+        try {
+            val replay = directory.resolve("session.fbr")
+            val source = ReplayEditorState(emptyList(), emptyList())
+            source.addCameraKeyframe(ReplayCameraKeyframe(10L, 1.0, 2.0, 3.0, 4.0f, 5.0f))
+            source.addFovKeyframe(10L, 75.0f)
+            source.addSpeedKeyframe(10L, -0.5f)
+            ReplayEditStore.save(replay, source)
+            val loaded = ReplayEditorState(emptyList(), emptyList())
+            ReplayEditStore.load(replay, loaded)
+            assertEquals(1.0, loaded.cameraPoseAt(10L)?.x)
+            assertEquals(75.0f, loaded.fovAt(10L))
+            assertEquals(-0.5f, loaded.speedAt(10L))
+        } finally {
+            directory.deleteRecursively()
+        }
+    }
+
+    @Test
     fun `loading replaces persistent edits while keeping replay metadata and filters`() {
         val directory = Files.createTempDirectory("flashback-replace-edits").toFile()
         try {
@@ -90,7 +110,7 @@ class ReplayEditStoreTest {
             ReplayEditStore.save(replay, editor)
             DataInputStream(directory.resolve("session.fbr.fbe").inputStream()).use { input ->
                 assertEquals(2, input.readInt())
-                assertEquals(2, input.readInt())
+                assertEquals(3, input.readInt())
                 input.readUTF()
                 val cameraBytes = ByteArray(input.readInt())
                 input.readFully(cameraBytes)

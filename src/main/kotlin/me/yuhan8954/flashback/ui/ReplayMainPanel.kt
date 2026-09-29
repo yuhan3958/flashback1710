@@ -23,17 +23,20 @@ class ReplayMainPanel :
         PANEL_NAME,
     ).fullScreenInvisible()
         .child(
+            ReplayEditorToolbar().left(0).right(0).top(0).height(24),
+        )
+        .child(
             ReplayContainerWidget()
                 .left(0)
-                .top(0)
-                .widthRel(VIEW_WIDTH)
-                .heightRel(WORKSPACE_HEIGHT)
+                .top(24)
+                .widthRel(0.70f)
+                .heightRel(0.35f)
                 .background(
                     ReplayUiStyle.panelBorder(),
                 ).child(
                     ReplayTextWidget(
                         IKey.str(
-                            "VIEW",
+                            "GAME VIEW",
                         ),
                     ).left(8)
                         .top(7)
@@ -42,34 +45,22 @@ class ReplayMainPanel :
                         ),
                 ),
         ).child(
-            ReplayCameraPanel()
+            ReplayInspectorPanel()
                 .right(0)
-                .top(0)
-                .widthRel(SETTINGS_WIDTH)
-                .heightRel(WORKSPACE_HEIGHT),
+                .top(24)
+                .widthRel(0.30f)
+                .heightRel(0.35f),
         ).child(
             ReplayControlBar()
                 .left(0)
                 .right(0)
                 .bottom(0)
-                .heightRel(TIMELINE_HEIGHT),
+                .heightRel(0.55f),
         )
 
     companion object {
 
         const val PANEL_NAME =
             "replay_main"
-
-        private const val VIEW_WIDTH =
-            0.667f
-
-        private const val SETTINGS_WIDTH =
-            0.333f
-
-        private const val WORKSPACE_HEIGHT =
-            0.667f
-
-        private const val TIMELINE_HEIGHT =
-            0.333f
     }
 }
