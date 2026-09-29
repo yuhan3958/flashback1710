@@ -38,7 +38,7 @@ object ReplayEditStore {
             repeat(markerCount) {
                 editor.addMarker(input.readLong(), input.readUTF())
             }
-            editor.clearCameraKeyframeSelection()
+            editor.clearKeyframeSelection()
         }
     }
 

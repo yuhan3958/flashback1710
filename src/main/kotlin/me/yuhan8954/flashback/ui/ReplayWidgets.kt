@@ -9,6 +9,17 @@ internal class ReplayButtonWidget : ButtonWidget<ReplayButtonWidget>()
 
 internal class ReplayContainerWidget : ParentWidget<ReplayContainerWidget>()
 
+internal object ReplayEditorMetrics {
+    const val TIMELINE_RULER_HEIGHT = 18
+    const val TRACK_ROW_HEIGHT = 14
+    const val BUTTON_HEIGHT = 18
+}
+
+internal fun editorButton(label: String, left: Int, top: Int, width: Int, action: () -> Boolean): ButtonWidget<*> = ReplayButtonWidget()
+    .left(left).top(top).size(width, ReplayEditorMetrics.BUTTON_HEIGHT)
+    .background(ReplayUiStyle.buttonBackground()).overlay(IKey.str(label))
+    .onMousePressed { it == 0 && action() }
+
 internal class ReplayTextWidget : TextWidget<ReplayTextWidget> {
 
     constructor(key: IKey) :

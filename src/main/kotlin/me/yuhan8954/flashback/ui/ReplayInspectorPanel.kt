@@ -3,7 +3,7 @@ package me.yuhan8954.flashback.ui
 import com.cleanroommc.modularui.api.drawable.IKey
 import com.cleanroommc.modularui.widget.ScrollWidget
 import com.cleanroommc.modularui.widget.scroll.VerticalScrollData
-import com.cleanroommc.modularui.widgets.ButtonWidget
+import me.yuhan8954.flashback.editor.ReplayEditorController
 import me.yuhan8954.flashback.editor.ReplayTimelineEventType
 import me.yuhan8954.flashback.replay.ReplayPlayer
 import java.util.Locale
@@ -16,15 +16,15 @@ class ReplayInspectorPanel : ScrollWidget<ReplayInspectorPanel>(VerticalScrollDa
         child(ReplayTextWidget(IKey.dynamic { title() }).left(8).top(26).color(ReplayUiStyle.TEXT_COLOR))
         child(ReplayTextWidget(IKey.dynamic { detail() }).left(8).top(44).color(ReplayUiStyle.MUTED_TEXT_COLOR))
         child(
-            button("Use pose", 8, 64, 100) { ReplayPlayer.updateSelectedCameraKeyframePose() }
+            editorButton("Use pose", 8, 64, 100) { ReplayEditorController.updateSelectedCameraKeyframePose() }
                 .setEnabledIf { ReplayPlayer.selectedKeyframe?.trackId == "camera" },
         )
         child(
-            button("Move here", 8, 86, 100) { ReplayPlayer.moveSelectedKeyframe(ReplayPlayer.currentTimeNanos) }
+            editorButton("Move here", 8, 86, 100) { ReplayEditorController.moveSelectedKeyframe(ReplayPlayer.currentTimeNanos) }
                 .setEnabledIf { ReplayPlayer.selectedKeyframe != null },
         )
         child(
-            button("Delete key", 8, 108, 100) { ReplayPlayer.deleteSelectedKeyframe() }
+            editorButton("Delete key", 8, 108, 100) { ReplayEditorController.deleteSelectedKeyframe() }
                 .setEnabledIf { ReplayPlayer.selectedKeyframe != null },
         )
         listOf("X", "Y", "Z", "Yaw", "Pitch").forEachIndexed { index, field ->
@@ -51,23 +51,23 @@ class ReplayInspectorPanel : ScrollWidget<ReplayInspectorPanel>(VerticalScrollDa
                 .setEnabledIf { ReplayPlayer.selectedFloatValue != null },
         )
         child(
-            button("Edit value", 8, 214, 82) { ReplayValueInput.begin() }
+            editorButton("Edit value", 8, 214, 82) { ReplayValueInput.begin() }
                 .setEnabledIf { ReplayPlayer.selectedFloatValue != null },
         )
         child(
-            button("-1", 8, 150, 44) { adjust(-1.0f) }
+            editorButton("-1", 8, 150, 44) { adjust(-1.0f) }
                 .setEnabledIf { ReplayPlayer.selectedFloatValue != null },
         )
         child(
-            button("-0.1", 56, 150, 48) { adjust(-0.1f) }
+            editorButton("-0.1", 56, 150, 48) { adjust(-0.1f) }
                 .setEnabledIf { ReplayPlayer.selectedFloatValue != null },
         )
         child(
-            button("+0.1", 8, 172, 44) { adjust(0.1f) }
+            editorButton("+0.1", 8, 172, 44) { adjust(0.1f) }
                 .setEnabledIf { ReplayPlayer.selectedFloatValue != null },
         )
         child(
-            button("+1", 56, 172, 48) { adjust(1.0f) }
+            editorButton("+1", 56, 172, 48) { adjust(1.0f) }
                 .setEnabledIf { ReplayPlayer.selectedFloatValue != null },
         )
         child(
@@ -81,27 +81,27 @@ class ReplayInspectorPanel : ScrollWidget<ReplayInspectorPanel>(VerticalScrollDa
                 .setEnabledIf { ReplayPlayer.selectedKeyframe == null },
         )
         child(
-            button("Cam -", 8, 82, 48) { changeCameraSpeed(0.8) }
+            editorButton("Cam -", 8, 82, 48) { changeCameraSpeed(0.8) }
                 .setEnabledIf { ReplayPlayer.selectedKeyframe == null },
         )
         child(
-            button("Cam +", 60, 82, 48) { changeCameraSpeed(1.25) }
+            editorButton("Cam +", 60, 82, 48) { changeCameraSpeed(1.25) }
                 .setEnabledIf { ReplayPlayer.selectedKeyframe == null },
         )
         child(
-            button("Set In", 8, 130, 48) { ReplayPlayer.setInPoint() }
+            editorButton("Set In", 8, 130, 48) { ReplayEditorController.setInPoint() }
                 .setEnabledIf { ReplayPlayer.selectedKeyframe == null },
         )
         child(
-            button("Set Out", 60, 130, 52) { ReplayPlayer.setOutPoint() }
+            editorButton("Set Out", 60, 130, 52) { ReplayEditorController.setOutPoint() }
                 .setEnabledIf { ReplayPlayer.selectedKeyframe == null },
         )
         child(
-            button("Clear", 8, 152, 48) { ReplayPlayer.clearInOutRange() }
+            editorButton("Clear", 8, 152, 48) { ReplayEditorController.clearInOutRange() }
                 .setEnabledIf { ReplayPlayer.selectedKeyframe == null },
         )
         child(
-            button("HUD", 60, 152, 48) {
+            editorButton("HUD", 60, 152, 48) {
                 ReplayUiController.toggleHudVisibility()
                 true
             }.setEnabledIf { ReplayPlayer.selectedKeyframe == null },
@@ -111,11 +111,11 @@ class ReplayInspectorPanel : ScrollWidget<ReplayInspectorPanel>(VerticalScrollDa
                 .setEnabledIf { ReplayPlayer.selectedKeyframe == null },
         )
         child(
-            button("Pkt", 8, 200, 48) { ReplayPlayer.toggleTimelineFilter(ReplayTimelineEventType.PACKET) }
+            editorButton("Pkt", 8, 200, 48) { ReplayEditorController.toggleTimelineFilter(ReplayTimelineEventType.PACKET) }
                 .setEnabledIf { ReplayPlayer.selectedKeyframe == null },
         )
         child(
-            button("Check", 60, 200, 48) { ReplayPlayer.toggleTimelineFilter(ReplayTimelineEventType.CHECKPOINT) }
+            editorButton("Check", 60, 200, 48) { ReplayEditorController.toggleTimelineFilter(ReplayTimelineEventType.CHECKPOINT) }
                 .setEnabledIf { ReplayPlayer.selectedKeyframe == null },
         )
     }
@@ -147,15 +147,11 @@ class ReplayInspectorPanel : ScrollWidget<ReplayInspectorPanel>(VerticalScrollDa
 
     private fun adjust(delta: Float): Boolean {
         val value = ReplayPlayer.selectedFloatValue ?: return false
-        return ReplayPlayer.setSelectedFloatValue(value + delta)
+        return ReplayEditorController.setSelectedFloatValue(value + delta)
     }
 
     private fun changeCameraSpeed(multiplier: Double): Boolean {
         val speed = ReplayPlayer.cameraSpeed ?: return false
         return ReplayPlayer.setCameraSpeed(speed * multiplier)
     }
-
-    private fun button(label: String, left: Int, top: Int, width: Int, action: () -> Boolean): ButtonWidget<*> = ReplayButtonWidget().left(left).top(top).size(width, 18)
-        .background(ReplayUiStyle.buttonBackground()).overlay(IKey.str(label))
-        .onMousePressed { it == 0 && action() }
 }

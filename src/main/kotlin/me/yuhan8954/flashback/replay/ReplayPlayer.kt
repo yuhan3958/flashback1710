@@ -5,10 +5,10 @@ import cpw.mods.fml.relauncher.Side
 import io.netty.buffer.Unpooled
 import me.yuhan8954.flashback.Flashback1710
 import me.yuhan8954.flashback.editor.ReplayCameraKeyframe
+import me.yuhan8954.flashback.editor.ReplayCameraPose
 import me.yuhan8954.flashback.editor.ReplayEditorState
 import me.yuhan8954.flashback.editor.ReplayKeyframeSelection
 import me.yuhan8954.flashback.editor.ReplayTimelineEvent
-import me.yuhan8954.flashback.editor.ReplayTimelineEventType
 import me.yuhan8954.flashback.io.ReplayEditStore
 import me.yuhan8954.flashback.io.ReplayReader
 import me.yuhan8954.flashback.ui.ReplayUiController
@@ -109,14 +109,6 @@ object ReplayPlayer {
             editorState?.markerCount()
                 ?: 0
 
-    val cameraKeyframeCount: Int
-        get() =
-            editorState?.cameraKeyframeCount()
-                ?: 0
-
-    val fovKeyframeCount: Int
-        get() = editorState?.fovKeyframes()?.size ?: 0
-
     @JvmStatic
     fun editorFov(): Float? = if (playing && session?.active == true) {
         editorState?.fovAt(clock.currentTimeNanos)
@@ -124,148 +116,18 @@ object ReplayPlayer {
         null
     }
 
-    val selectedKeyframeTimeNanos: Long?
-        get() = editorState?.selectedKeyframeTimeNanos
-
     val selectedKeyframe: ReplayKeyframeSelection?
         get() = editorState?.selectedKeyframe
 
     val selectedFloatValue: Float?
         get() = editorState?.selectedFloatValue()
 
-    val speedKeyframeCount: Int
-        get() = editorState?.project?.speedTrack?.size ?: 0
-
-    var activeTrackId = "camera"
-        private set
-
-    fun selectTrack(trackId: String): Boolean {
-        if (trackId !in listOf("camera", "fov", "speed", "markers")) return false
-        activeTrackId = trackId
-        editorState?.clearKeyframeSelection()
-        return true
-    }
-
-    fun clearKeyframeSelection() {
-        editorState?.clearKeyframeSelection()
-    }
-
-    fun addKeyframeToActiveTrack(): Boolean = when (activeTrackId) {
-        "camera" -> addCameraKeyframe()
-        "fov" -> addFovKeyframe(editorFov() ?: Minecraft.getMinecraft().gameSettings.fovSetting)
-        "speed" -> addSpeedKeyframe(automationSpeed.toFloat())
-        "markers" -> addMarker()
-        else -> false
-    }
-
-    fun keyframeTimes(trackId: String): List<Long> = when (trackId) {
-        "camera" -> editorState?.cameraKeyframeTimes()
-        "fov" -> editorState?.fovKeyframeTimes()
-        "speed" -> editorState?.project?.speedTrack?.keyframes()?.map { it.timestampNanos }
-        else -> null
-    } ?: emptyList()
+    fun keyframeTimes(trackId: String): List<Long> = editorState?.project?.keyframeTimes(trackId) ?: emptyList()
 
     fun markers() = editorState?.markers() ?: emptyList()
 
-    fun selectKeyframe(trackId: String, timestampNanos: Long): Boolean {
-        if (editorState?.selectKeyframe(trackId, timestampNanos) != true) return false
-        activeTrackId = trackId
-        return true
-    }
-
     val selectedCameraKeyframe: ReplayCameraKeyframe?
         get() = editorState?.selectedCameraKeyframe()
-
-    fun moveSelectedKeyframe(timestampNanos: Long): Boolean {
-        val editor = editorState ?: return false
-        if (!editor.moveSelectedKeyframe(timestampNanos.coerceIn(0L, durationNanos))) return false
-        saveEditorEdits(editor)
-        return true
-    }
-
-    fun deleteSelectedKeyframe(): Boolean {
-        val editor = editorState ?: return false
-        if (!editor.deleteSelectedKeyframe()) return false
-        saveEditorEdits(editor)
-        session?.let(::applyCameraTrack)
-        return true
-    }
-
-    fun setSelectedFloatValue(value: Float): Boolean {
-        val editor = editorState ?: return false
-        if (!value.isFinite()) return false
-        if (!runCatching { editor.setSelectedFloatValue(value) }.getOrDefault(false)) return false
-        saveEditorEdits(editor)
-        return true
-    }
-
-    fun setSelectedCameraField(field: String, value: Double): Boolean {
-        val editor = editorState ?: return false
-        val keyframe = editor.selectedCameraKeyframe() ?: return false
-        if (!value.isFinite()) return false
-        val updated = when (field) {
-            "X" -> keyframe.copy(x = value)
-            "Y" -> keyframe.copy(y = value)
-            "Z" -> keyframe.copy(z = value)
-            "Yaw" -> keyframe.copy(yaw = value.toFloat())
-            "Pitch" -> keyframe.copy(pitch = value.toFloat())
-            else -> return false
-        }
-        if (!updated.yaw.isFinite() || !updated.pitch.isFinite()) return false
-        editor.addCameraKeyframe(updated)
-        saveEditorEdits(editor)
-        session?.let(::applyCameraTrack)
-        return true
-    }
-
-    fun addSpeedKeyframe(value: Float): Boolean {
-        val editor = editorState ?: return false
-        if (!playing || !runCatching { editor.addSpeedKeyframe(currentTimeNanos, value) }.isSuccess) return false
-        saveEditorEdits(editor)
-        return true
-    }
-
-    fun timelineFilterEnabled(type: ReplayTimelineEventType): Boolean {
-        val editor = editorState ?: return false
-        return when (type) {
-            ReplayTimelineEventType.PACKET -> editor.showPacketEvents
-            ReplayTimelineEventType.CHECKPOINT -> editor.showCheckpointEvents
-            ReplayTimelineEventType.EVENT -> editor.showMarkers
-            ReplayTimelineEventType.CAMERA_KEYFRAME -> editor.showCameraKeyframes
-            ReplayTimelineEventType.FOV_KEYFRAME -> editor.showFovKeyframes
-        }
-    }
-
-    fun toggleTimelineFilter(type: ReplayTimelineEventType): Boolean {
-        val editor = editorState ?: return false
-        when (type) {
-            ReplayTimelineEventType.PACKET -> editor.showPacketEvents = !editor.showPacketEvents
-            ReplayTimelineEventType.CHECKPOINT -> editor.showCheckpointEvents = !editor.showCheckpointEvents
-            ReplayTimelineEventType.EVENT -> editor.showMarkers = !editor.showMarkers
-            ReplayTimelineEventType.CAMERA_KEYFRAME -> editor.showCameraKeyframes = !editor.showCameraKeyframes
-            ReplayTimelineEventType.FOV_KEYFRAME -> editor.showFovKeyframes = !editor.showFovKeyframes
-        }
-        return true
-    }
-
-    fun selectCameraKeyframe(timestampNanos: Long): Boolean = editorState?.selectCameraKeyframe(timestampNanos) == true
-
-    fun deleteSelectedCameraKeyframe(): Boolean {
-        val editor = editorState ?: return false
-        if (!editor.deleteSelectedCameraKeyframe()) return false
-        saveEditorEdits(editor)
-        applyCameraTrack(session ?: return true)
-        return true
-    }
-
-    fun moveSelectedCameraKeyframeToPlayhead(): Boolean {
-        val editor = editorState ?: return false
-        if (!editor.moveSelectedCameraKeyframe(currentTimeNanos)) return false
-        saveEditorEdits(editor)
-        return true
-    }
-
-    fun seekToSelectedCameraKeyframe(): Boolean = selectedKeyframeTimeNanos?.let(::seek) == true
 
     val freeCameraActive: Boolean
         get() =
@@ -322,7 +184,6 @@ object ReplayPlayer {
         }
 
         clock.reset()
-        activeTrackId = "camera"
         clock.setSpeedAutomation { editorState?.speedAt(it)?.toDouble() ?: 1.0 }
 
         session =
@@ -622,120 +483,16 @@ object ReplayPlayer {
         return true
     }
 
-    fun addMarker(): Boolean {
-        val editor =
-            editorState ?: return false
+    internal val currentEditorState: ReplayEditorState?
+        get() = editorState
 
-        editor.addMarker(
-            currentTimeNanos,
-            "Marker " +
-                (
-                    editor.markerCount() +
-                        1
-                    ),
-        )
+    internal fun currentCameraPose(): ReplayCameraPose? = session?.cameraController?.currentPose()
 
-        saveEditorEdits(editor)
-
-        return true
+    internal fun refreshCameraTrack() {
+        session?.let(::applyCameraTrack)
     }
 
-    fun setInPoint(): Boolean {
-        val editor =
-            editorState ?: return false
-
-        editor.setInPoint(
-            currentTimeNanos,
-        )
-
-        saveEditorEdits(editor)
-
-        return true
-    }
-
-    fun setOutPoint(): Boolean {
-        val editor =
-            editorState ?: return false
-
-        editor.setOutPoint(
-            currentTimeNanos,
-        )
-
-        saveEditorEdits(editor)
-
-        return true
-    }
-
-    fun clearInOutRange(): Boolean {
-        val editor =
-            editorState ?: return false
-
-        editor.clearRange()
-        saveEditorEdits(editor)
-        return true
-    }
-
-    fun addCameraKeyframe(): Boolean {
-        val currentSession =
-            session ?: return false
-
-        val pose =
-            currentSession.cameraController
-                .currentPose()
-                ?: return false
-
-        val editor =
-            editorState ?: return false
-
-        editor.addCameraKeyframe(
-            ReplayCameraKeyframe(
-                timestampNanos =
-                currentTimeNanos,
-                x =
-                pose.x,
-                y =
-                pose.y,
-                z =
-                pose.z,
-                yaw =
-                pose.yaw,
-                pitch =
-                pose.pitch,
-            ),
-        )
-
-        saveEditorEdits(editor)
-
-        return true
-    }
-
-    fun addFovKeyframe(fov: Float): Boolean {
-        val editor = editorState ?: return false
-        if (!playing || !fov.isFinite() || fov !in 1.0f..179.0f) return false
-        editor.addFovKeyframe(currentTimeNanos, fov)
-        saveEditorEdits(editor)
-        return true
-    }
-
-    fun deleteFovKeyframeAtPlayhead(): Boolean {
-        val editor = editorState ?: return false
-        if (!editor.deleteFovKeyframe(currentTimeNanos)) return false
-        saveEditorEdits(editor)
-        return true
-    }
-
-    fun updateSelectedCameraKeyframePose(): Boolean {
-        val editor = editorState ?: return false
-        val timestamp = editor.selectedKeyframeTimeNanos ?: return false
-        val pose = session?.cameraController?.currentPose() ?: return false
-        editor.addCameraKeyframe(
-            ReplayCameraKeyframe(timestamp, pose.x, pose.y, pose.z, pose.yaw, pose.pitch),
-        )
-        saveEditorEdits(editor)
-        return true
-    }
-
-    private fun saveEditorEdits(editor: ReplayEditorState) {
+    internal fun saveEditorEdits(editor: ReplayEditorState) {
         val file = replayFile ?: return
         runCatching { ReplayEditStore.save(file, editor) }
             .onFailure { Flashback1710.LOG.error("Could not save camera edits for {}", file.name, it) }

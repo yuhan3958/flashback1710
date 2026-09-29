@@ -1,6 +1,7 @@
 package me.yuhan8954.flashback.ui
 
 import com.cleanroommc.modularui.screen.GuiScreenWrapper
+import me.yuhan8954.flashback.editor.ReplayEditorController
 import me.yuhan8954.flashback.replay.ReplayPlayer
 import org.lwjgl.input.Keyboard
 import org.lwjgl.input.Mouse
@@ -47,7 +48,7 @@ class ReplayUiScreen(
                 return
             }
             Keyboard.KEY_DELETE -> {
-                ReplayPlayer.deleteSelectedKeyframe()
+                ReplayEditorController.deleteSelectedKeyframe()
                 return
             }
             Keyboard.KEY_LEFT -> {
@@ -59,19 +60,19 @@ class ReplayUiScreen(
                 return
             }
             Keyboard.KEY_I -> {
-                ReplayPlayer.setInPoint()
+                ReplayEditorController.setInPoint()
                 return
             }
             Keyboard.KEY_O -> {
-                ReplayPlayer.setOutPoint()
+                ReplayEditorController.setOutPoint()
                 return
             }
             Keyboard.KEY_M -> {
-                ReplayPlayer.addMarker()
+                ReplayEditorController.addMarker()
                 return
             }
             Keyboard.KEY_K -> {
-                ReplayPlayer.addKeyframeToActiveTrack()
+                ReplayEditorController.addKeyframeToActiveTrack()
                 return
             }
         }

@@ -241,12 +241,28 @@ class ReplayEditorStateTest {
         state.addCameraKeyframe(ReplayCameraKeyframe(10L, 1.0, 2.0, 3.0, 4.0f, 5.0f))
         state.addCameraKeyframe(ReplayCameraKeyframe(20L, 6.0, 7.0, 8.0, 9.0f, 10.0f))
 
-        assertTrue(state.selectCameraKeyframe(10L))
-        assertTrue(state.moveSelectedCameraKeyframe(15L))
+        assertTrue(state.selectKeyframe("camera", 10L))
+        assertTrue(state.moveSelectedKeyframe(15L))
         assertEquals(15L, state.selectedKeyframeTimeNanos)
         assertEquals(1.0, state.selectedCameraKeyframe()?.x)
-        assertTrue(state.deleteSelectedCameraKeyframe())
+        assertTrue(state.deleteSelectedKeyframe())
         assertEquals(listOf(20L), state.cameraKeyframeTimes())
+    }
+
+    @Test
+    fun `generic selection moves only the selected track at a shared timestamp`() {
+        val state = ReplayEditorState(emptyList(), emptyList())
+        state.addCameraKeyframe(ReplayCameraKeyframe(10L, 1.0, 2.0, 3.0, 4.0f, 5.0f))
+        state.addFovKeyframe(10L, 70.0f)
+
+        assertTrue(state.selectKeyframe("camera", 10L))
+        assertTrue(state.moveSelectedKeyframe(20L))
+        assertEquals(listOf(20L), state.project.keyframeTimes("camera"))
+        assertEquals(listOf(10L), state.project.keyframeTimes("fov"))
+        assertTrue(state.selectKeyframe("fov", 10L))
+        assertTrue(state.deleteSelectedKeyframe())
+        assertEquals(listOf(20L), state.project.keyframeTimes("camera"))
+        assertEquals(emptyList(), state.project.keyframeTimes("fov"))
     }
 
     @Test

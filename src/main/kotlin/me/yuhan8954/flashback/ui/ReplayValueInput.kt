@@ -1,5 +1,6 @@
 package me.yuhan8954.flashback.ui
 
+import me.yuhan8954.flashback.editor.ReplayEditorController
 import me.yuhan8954.flashback.replay.ReplayPlayer
 
 object ReplayValueInput {
@@ -32,8 +33,8 @@ object ReplayValueInput {
 
     fun commit(): Boolean {
         val value = text?.toDoubleOrNull() ?: return false
-        val saved = cameraField?.let { ReplayPlayer.setSelectedCameraField(it, value) }
-            ?: ReplayPlayer.setSelectedFloatValue(value.toFloat())
+        val saved = cameraField?.let { ReplayEditorController.setSelectedCameraField(it, value) }
+            ?: ReplayEditorController.setSelectedFloatValue(value.toFloat())
         if (!saved) return false
         text = null
         cameraField = null

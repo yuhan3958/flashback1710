@@ -14,6 +14,8 @@ class ReplayEditProject {
 
     fun track(id: String): ReplayTrack<*>? = tracks().firstOrNull { it.id == id }
 
+    fun keyframeTimes(id: String): List<Long> = track(id)?.keyframes()?.map { it.timestampNanos } ?: emptyList()
+
     fun clear() {
         tracks().forEach { it.clear() }
     }

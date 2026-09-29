@@ -65,6 +65,8 @@ class ReplayEditorState(
 
     val project = ReplayEditProject()
 
+    var activeTrackId = "camera"
+
     var selectedKeyframe: ReplayKeyframeSelection? = null
         private set
 
@@ -147,16 +149,6 @@ class ReplayEditorState(
         selectedKeyframe = ReplayKeyframeSelection("camera", timestamp)
     }
 
-    fun selectCameraKeyframe(timestampNanos: Long): Boolean {
-        if (project.cameraTrack.keyframeAt(timestampNanos) == null) return false
-        selectedKeyframe = ReplayKeyframeSelection("camera", timestampNanos)
-        return true
-    }
-
-    fun clearCameraKeyframeSelection() {
-        clearKeyframeSelection()
-    }
-
     fun clearKeyframeSelection() {
         selectedKeyframe = null
     }
@@ -164,20 +156,6 @@ class ReplayEditorState(
     fun selectedCameraKeyframe(): ReplayCameraKeyframe? = selectedKeyframeTimeNanos
         ?.let { project.cameraTrack.keyframeAt(it) }
         ?.toCameraKeyframe()
-
-    fun deleteSelectedCameraKeyframe(): Boolean {
-        val timestamp = selectedKeyframeTimeNanos ?: return false
-        val removed = project.cameraTrack.delete(timestamp)
-        selectedKeyframe = null
-        return removed
-    }
-
-    fun moveSelectedCameraKeyframe(timestampNanos: Long): Boolean {
-        val selected = selectedKeyframeTimeNanos ?: return false
-        if (!project.cameraTrack.move(selected, timestampNanos)) return false
-        selectedKeyframe = ReplayKeyframeSelection("camera", timestampNanos.coerceAtLeast(0L))
-        return true
-    }
 
     fun cameraKeyframeTimes(): List<Long> = project.cameraTrack.keyframes().map { it.timestampNanos }
 
@@ -200,24 +178,14 @@ class ReplayEditorState(
     fun speedAt(timestampNanos: Long): Float = project.speedTrack.evaluate(timestampNanos) ?: 1.0f
 
     fun selectKeyframe(trackId: String, timestampNanos: Long): Boolean {
-        val exists = when (trackId) {
-            "camera" -> project.cameraTrack.keyframeAt(timestampNanos) != null
-            "fov" -> project.fovTrack.keyframeAt(timestampNanos) != null
-            "speed" -> project.speedTrack.keyframeAt(timestampNanos) != null
-            else -> false
-        }
-        if (exists) selectedKeyframe = ReplayKeyframeSelection(trackId, timestampNanos)
-        return exists
+        if (project.track(trackId)?.keyframeAt(timestampNanos) == null) return false
+        selectedKeyframe = ReplayKeyframeSelection(trackId, timestampNanos)
+        return true
     }
 
     fun deleteSelectedKeyframe(): Boolean {
         val selection = selectedKeyframe ?: return false
-        val removed = when (selection.trackId) {
-            "camera" -> project.cameraTrack.delete(selection.timestampNanos)
-            "fov" -> project.fovTrack.delete(selection.timestampNanos)
-            "speed" -> project.speedTrack.delete(selection.timestampNanos)
-            else -> false
-        }
+        val removed = project.track(selection.trackId)?.delete(selection.timestampNanos) ?: false
         if (removed) selectedKeyframe = null
         return removed
     }
@@ -225,12 +193,7 @@ class ReplayEditorState(
     fun moveSelectedKeyframe(timestampNanos: Long): Boolean {
         val selection = selectedKeyframe ?: return false
         val target = timestampNanos.coerceAtLeast(0L)
-        val moved = when (selection.trackId) {
-            "camera" -> project.cameraTrack.move(selection.timestampNanos, target)
-            "fov" -> project.fovTrack.move(selection.timestampNanos, target)
-            "speed" -> project.speedTrack.move(selection.timestampNanos, target)
-            else -> false
-        }
+        val moved = project.track(selection.trackId)?.move(selection.timestampNanos, target) ?: false
         if (moved) selectedKeyframe = selection.copy(timestampNanos = target)
         return moved
     }
@@ -252,8 +215,6 @@ class ReplayEditorState(
         }
         return true
     }
-
-    fun deleteFovKeyframe(timestampNanos: Long): Boolean = project.fovTrack.delete(timestampNanos)
 
     fun fovAt(timestampNanos: Long): Float? = project.fovTrack.evaluate(timestampNanos)
 

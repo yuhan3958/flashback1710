@@ -4,6 +4,7 @@ import com.cleanroommc.modularui.api.drawable.IKey
 import com.cleanroommc.modularui.utils.Alignment
 import com.cleanroommc.modularui.widget.ParentWidget
 import com.cleanroommc.modularui.widgets.ButtonWidget
+import me.yuhan8954.flashback.editor.ReplayEditorController
 import me.yuhan8954.flashback.replay.ReplayPlayer
 
 class ReplayControlBar : ParentWidget<ReplayControlBar>() {
@@ -87,8 +88,8 @@ class ReplayControlBar : ParentWidget<ReplayControlBar>() {
         child(
             ReplayButtonWidget().left(210).top(4).size(64, 18)
                 .background(ReplayUiStyle.buttonBackground())
-                .overlay(IKey.dynamic { "Add ${ReplayPlayer.activeTrackId}" })
-                .onMousePressed { it == 0 && ReplayPlayer.addKeyframeToActiveTrack() },
+                .overlay(IKey.dynamic { "Add ${ReplayEditorController.activeTrackId}" })
+                .onMousePressed { it == 0 && ReplayEditorController.addKeyframeToActiveTrack() },
         )
 
         child(

@@ -1,9 +1,15 @@
 package me.yuhan8954.flashback.ui
 
+import me.yuhan8954.flashback.editor.ReplayEditorTracks
 import me.yuhan8954.flashback.editor.ReplayKeyframeSelection
 import kotlin.math.abs
 
 object ReplayTimelineHitTest {
+    fun keyframeTrackAt(y: Int, rulerHeight: Int, rowHeight: Int): String? {
+        if (y < rulerHeight || rowHeight <= 0) return null
+        return ReplayEditorTracks.rows.getOrNull((y - rulerHeight) / rowHeight)?.takeIf { it.keyframed }?.id
+    }
+
     fun nearestKeyframe(
         trackId: String,
         timestamps: List<Long>,
