@@ -5,6 +5,8 @@ import com.cleanroommc.modularui.screen.CustomModularScreen
 import com.cleanroommc.modularui.screen.ModularPanel
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext
 import me.yuhan8954.flashback.Flashback1710
+import net.minecraft.client.Minecraft
+import net.minecraft.client.gui.ScaledResolution
 
 class ReplayMainPanel :
     CustomModularScreen(
@@ -17,46 +19,47 @@ class ReplayMainPanel :
         )
     }
 
-    override fun buildUI(
-        context: ModularGuiContext,
-    ): ModularPanel = ModularPanel(
-        PANEL_NAME,
-    ).fullScreenInvisible()
-        .child(
-            ReplayEditorToolbar().left(0).right(0).top(0).height(24),
-        )
-        .child(
-            ReplayContainerWidget()
-                .left(0)
-                .top(24)
-                .widthRel(0.70f)
-                .heightRel(0.35f)
-                .background(
-                    ReplayUiStyle.panelBorder(),
-                ).child(
-                    ReplayTextWidget(
-                        IKey.str(
-                            "GAME VIEW",
-                        ),
-                    ).left(8)
-                        .top(7)
-                        .color(
-                            ReplayUiStyle.MUTED_TEXT_COLOR,
-                        ),
-                ),
-        ).child(
-            ReplayInspectorPanel()
-                .right(0)
-                .top(24)
-                .widthRel(0.30f)
-                .heightRel(0.35f),
-        ).child(
-            ReplayControlBar()
-                .left(0)
-                .right(0)
-                .bottom(0)
-                .heightRel(0.55f),
-        )
+    override fun buildUI(context: ModularGuiContext): ModularPanel {
+        val minecraft = Minecraft.getMinecraft()
+        val scaled = ScaledResolution(minecraft, minecraft.displayWidth, minecraft.displayHeight)
+        val inspectorWidth = (scaled.scaledWidth * 0.26f).toInt().coerceIn(110, 240)
+        return ModularPanel(PANEL_NAME).fullScreenInvisible()
+            .child(
+                ReplayEditorToolbar().left(0).right(0).top(0).height(24),
+            )
+            .child(
+                ReplayContainerWidget()
+                    .left(0)
+                    .top(24)
+                    .right(inspectorWidth)
+                    .heightRel(0.35f)
+                    .background(
+                        ReplayUiStyle.panelBorder(),
+                    ).child(
+                        ReplayTextWidget(
+                            IKey.str(
+                                "GAME VIEW",
+                            ),
+                        ).left(8)
+                            .top(7)
+                            .color(
+                                ReplayUiStyle.MUTED_TEXT_COLOR,
+                            ),
+                    ),
+            ).child(
+                ReplayInspectorPanel()
+                    .right(0)
+                    .top(24)
+                    .width(inspectorWidth)
+                    .heightRel(0.35f),
+            ).child(
+                ReplayControlBar()
+                    .left(0)
+                    .right(0)
+                    .bottom(0)
+                    .heightRel(0.55f),
+            )
+    }
 
     companion object {
 

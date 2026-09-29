@@ -13,7 +13,6 @@ import kotlin.math.ceil
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.pow
-import kotlin.math.roundToInt
 
 class ReplayTimelineWidget :
     Widget<ReplayTimelineWidget>(),
@@ -92,14 +91,24 @@ class ReplayTimelineWidget :
                 ReplayUiStyle.RANGE_BOUNDARY_COLOR,
             )
 
-    private var visibleStartNanos =
-        0.0
+    private val viewport = ReplayTimelineViewport()
 
-    private var nanosPerPixel =
-        0.0
+    private var visibleStartNanos: Double
+        get() = viewport.visibleStartNanos
+        set(value) {
+            viewport.visibleStartNanos = value
+        }
+
+    private var nanosPerPixel: Double
+        get() = viewport.nanosPerPixel
+        set(value) {
+            viewport.nanosPerPixel = value
+        }
 
     private var lastDurationNanos =
         -1L
+
+    private var lastWidth = -1
 
     private var panning =
         false
@@ -347,7 +356,6 @@ class ReplayTimelineWidget :
         zoomAtMouse(
             scrollDirection,
             width,
-            duration,
         )
 
         return true
@@ -512,13 +520,13 @@ class ReplayTimelineWidget :
             else -> return false
         }
         val mouseX = context.absMouseX - area.x
-        val nearest = ReplayPlayer.keyframeTimes(trackId)
-            .asSequence()
-            .map { it to kotlin.math.abs(timeToX(it.toDouble()) - mouseX) }
-            .filter { it.second <= KEYFRAME_HIT_RADIUS }
-            .minByOrNull { it.second }
-            ?: return false
-        return ReplayPlayer.selectKeyframe(trackId, nearest.first)
+        val nearest = ReplayTimelineHitTest.nearestKeyframe(
+            trackId,
+            ReplayPlayer.keyframeTimes(trackId),
+            mouseX,
+            KEYFRAME_HIT_RADIUS,
+        ) { timeToX(it.toDouble()) } ?: return false
+        return ReplayPlayer.selectKeyframe(nearest.trackId, nearest.timestampNanos)
     }
 
     private fun drawRangeBoundary(
@@ -566,13 +574,7 @@ class ReplayTimelineWidget :
         lastPanMouseX =
             mouseX
 
-        visibleStartNanos -=
-            deltaX *
-            nanosPerPixel
-
-        clampViewport(
-            area.width,
-        )
+        viewport.pan(deltaX)
     }
 
     private fun panByWheel(
@@ -583,20 +585,12 @@ class ReplayTimelineWidget :
             width *
                 nanosPerPixel
 
-        visibleStartNanos -=
-            scrollDirection.modifier *
-            visibleDuration *
-            WHEEL_PAN_FRACTION
-
-        clampViewport(
-            width,
-        )
+        viewport.pan((scrollDirection.modifier * visibleDuration * WHEEL_PAN_FRACTION / nanosPerPixel).toInt())
     }
 
     private fun zoomAtMouse(
         scrollDirection: UpOrDown,
         width: Int,
-        duration: Long,
     ) {
         val relativeX =
             (
@@ -607,44 +601,7 @@ class ReplayTimelineWidget :
                 width,
             )
 
-        val anchorTime =
-            visibleStartNanos +
-                relativeX *
-                nanosPerPixel
-
-        val fitNanosPerPixel =
-            duration.toDouble() /
-                width
-
-        val minNanosPerPixel =
-            min(
-                fitNanosPerPixel,
-                MIN_NANOS_PER_PIXEL,
-            )
-
-        val newNanosPerPixel =
-            (
-                nanosPerPixel /
-                    ZOOM_FACTOR.pow(
-                        scrollDirection.modifier
-                            .toDouble(),
-                    )
-                ).coerceIn(
-                minNanosPerPixel,
-                fitNanosPerPixel,
-            )
-
-        visibleStartNanos =
-            anchorTime -
-            relativeX *
-            newNanosPerPixel
-
-        nanosPerPixel =
-            newNanosPerPixel
-
-        clampViewport(
-            width,
-        )
+        viewport.zoom(relativeX, ZOOM_FACTOR.pow(scrollDirection.modifier.toDouble()))
     }
 
     private fun drawRuler(
@@ -824,26 +781,12 @@ class ReplayTimelineWidget :
                 width,
             )
 
-        val targetTimeNanos =
-            (
-                visibleStartNanos +
-                    relativeX *
-                    nanosPerPixel
-                ).toLong()
-                .coerceIn(
-                    0L,
-                    ReplayPlayer
-                        .totalDurationNanos,
-                )
+        val targetTimeNanos = viewport.xToTime(relativeX)
 
         ReplayPlayer.seek(targetTimeNanos)
     }
 
-    private fun mouseTime(): Long = (
-        visibleStartNanos +
-            (context.absMouseX - area.x).coerceIn(0, area.width) * nanosPerPixel
-        ).toLong()
-        .coerceIn(0L, ReplayPlayer.totalDurationNanos)
+    private fun mouseTime(): Long = viewport.xToTime((context.absMouseX - area.x).coerceIn(0, area.width))
 
     private fun ensureViewport(
         width: Int,
@@ -855,32 +798,26 @@ class ReplayTimelineWidget :
             duration <= 0L ||
             width <= 0
         ) {
-            visibleStartNanos =
-                0.0
-
-            nanosPerPixel =
-                1.0
+            viewport.fit(duration, width)
 
             lastDurationNanos =
                 duration
+
+            lastWidth = width
 
             return
         }
 
         if (
             nanosPerPixel <= 0.0 ||
-            lastDurationNanos !=
-            duration
+            lastDurationNanos != duration || lastWidth != width
         ) {
-            nanosPerPixel =
-                duration.toDouble() /
-                width
-
-            visibleStartNanos =
-                0.0
+            viewport.fit(duration, width)
 
             lastDurationNanos =
                 duration
+
+            lastWidth = width
         }
 
         clampViewport(
@@ -938,27 +875,7 @@ class ReplayTimelineWidget :
     private fun clampViewport(
         width: Int,
     ) {
-        val duration =
-            ReplayPlayer.totalDurationNanos
-                .toDouble()
-
-        val visibleDuration =
-            width *
-                nanosPerPixel
-
-        val maxStart =
-            max(
-                duration -
-                    visibleDuration,
-                0.0,
-            )
-
-        visibleStartNanos =
-            visibleStartNanos
-                .coerceIn(
-                    0.0,
-                    maxStart,
-                )
+        viewport.clamp()
     }
 
     private fun visibleEndNanos(
@@ -967,15 +884,7 @@ class ReplayTimelineWidget :
         width *
         nanosPerPixel
 
-    private fun timeToX(
-        timeNanos: Double,
-    ): Int = (
-        (
-            timeNanos -
-                visibleStartNanos
-            ) /
-            nanosPerPixel
-        ).roundToInt()
+    private fun timeToX(timeNanos: Double): Int = viewport.timeToX(timeNanos.toLong())
 
     private fun chooseMajorStep(
         targetNanos: Double,
@@ -1013,9 +922,6 @@ class ReplayTimelineWidget :
 
         private const val LABEL_TARGET_PIXELS =
             72.0
-
-        private const val MIN_NANOS_PER_PIXEL =
-            5_000_000.0
 
         private const val ZOOM_FACTOR =
             1.25
