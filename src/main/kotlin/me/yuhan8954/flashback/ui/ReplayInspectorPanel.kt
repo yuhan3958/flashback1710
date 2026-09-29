@@ -39,7 +39,7 @@ class ReplayInspectorPanel : ScrollWidget<ReplayInspectorPanel>(VerticalScrollDa
                 .setEnabledIf { ReplayPlayer.selectedFloatValue != null },
         )
         child(
-            ReplayTextWidget(IKey.dynamic { ReplayValueInput.text ?: "Click Edit, type value, Enter" })
+            ReplayTextWidget(IKey.dynamic { ReplayValueInput.text?.let { "Value: $it|" } ?: "Click Edit, type value, Enter" })
                 .left(8).top(196).color(ReplayUiStyle.TEXT_COLOR)
                 .setEnabledIf { ReplayPlayer.selectedFloatValue != null },
         )

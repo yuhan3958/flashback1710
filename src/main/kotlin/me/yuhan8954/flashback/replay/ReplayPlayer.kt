@@ -140,15 +140,21 @@ object ReplayPlayer {
         private set
 
     fun selectTrack(trackId: String): Boolean {
-        if (trackId !in listOf("camera", "fov", "speed")) return false
+        if (trackId !in listOf("camera", "fov", "speed", "markers")) return false
         activeTrackId = trackId
+        editorState?.clearKeyframeSelection()
         return true
+    }
+
+    fun clearKeyframeSelection() {
+        editorState?.clearKeyframeSelection()
     }
 
     fun addKeyframeToActiveTrack(): Boolean = when (activeTrackId) {
         "camera" -> addCameraKeyframe()
         "fov" -> addFovKeyframe(editorFov() ?: Minecraft.getMinecraft().gameSettings.fovSetting)
         "speed" -> addSpeedKeyframe(automationSpeed.toFloat())
+        "markers" -> addMarker()
         else -> false
     }
 

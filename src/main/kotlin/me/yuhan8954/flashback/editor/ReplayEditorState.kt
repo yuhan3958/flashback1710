@@ -154,6 +154,10 @@ class ReplayEditorState(
     }
 
     fun clearCameraKeyframeSelection() {
+        clearKeyframeSelection()
+    }
+
+    fun clearKeyframeSelection() {
         selectedKeyframe = null
     }
 

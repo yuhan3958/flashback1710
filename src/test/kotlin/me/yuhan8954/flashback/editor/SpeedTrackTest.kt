@@ -19,6 +19,8 @@ class SpeedTrackTest {
         assertEquals(ReplayKeyframeSelection("camera", 10L), editor.selectedKeyframe)
         assertTrue(editor.selectKeyframe("fov", 10L))
         assertEquals(ReplayKeyframeSelection("fov", 10L), editor.selectedKeyframe)
+        editor.clearKeyframeSelection()
+        assertEquals(null, editor.selectedKeyframe)
         editor.addSpeedKeyframe(0L, 1.0f)
         editor.addSpeedKeyframe(10L, -1.0f)
         assertEquals(0.0f, editor.speedAt(5L))

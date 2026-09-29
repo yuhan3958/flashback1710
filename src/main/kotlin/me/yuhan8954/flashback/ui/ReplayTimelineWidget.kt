@@ -270,7 +270,10 @@ class ReplayTimelineWidget :
         0 -> {
             keyframePressed = selectKeyframeAtMouse()
             keyframeDragged = false
-            if (!keyframePressed) seekToMouse()
+            if (!keyframePressed) {
+                ReplayPlayer.clearKeyframeSelection()
+                seekToMouse()
+            }
             Interactable.Result.SUCCESS
         }
 
