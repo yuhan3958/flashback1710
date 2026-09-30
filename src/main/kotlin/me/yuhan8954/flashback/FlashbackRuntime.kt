@@ -10,9 +10,9 @@ import me.yuhan8954.flashback.recording.ReplayRecorder
 import me.yuhan8954.flashback.replay.ReplayPlayer
 import me.yuhan8954.flashback.ui.ReplayLibraryController
 import me.yuhan8954.flashback.ui.ReplayUiController
+import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.GuiButton
 import net.minecraft.client.gui.GuiMainMenu
-import net.minecraft.client.Minecraft
 import net.minecraftforge.client.ClientCommandHandler
 import net.minecraftforge.client.event.GuiScreenEvent
 import net.minecraftforge.client.event.MouseEvent
