@@ -3,19 +3,24 @@ package me.yuhan8954.flashback
 import cpw.mods.fml.common.FMLCommonHandler
 import cpw.mods.fml.common.eventhandler.SubscribeEvent
 import cpw.mods.fml.common.gameevent.TickEvent
+import cpw.mods.fml.common.network.FMLNetworkEvent
 import me.yuhan8954.flashback.command.CommandFlashback
+import me.yuhan8954.flashback.config.ReplayConfig
 import me.yuhan8954.flashback.recording.ReplayRecorder
 import me.yuhan8954.flashback.replay.ReplayPlayer
 import me.yuhan8954.flashback.ui.ReplayLibraryController
 import me.yuhan8954.flashback.ui.ReplayUiController
 import net.minecraft.client.gui.GuiButton
 import net.minecraft.client.gui.GuiMainMenu
+import net.minecraft.client.Minecraft
 import net.minecraftforge.client.ClientCommandHandler
 import net.minecraftforge.client.event.GuiScreenEvent
 import net.minecraftforge.client.event.MouseEvent
 import net.minecraftforge.common.MinecraftForge
 
 object FlashbackRuntime {
+
+    private var pendingAutoRecord = false
 
     @JvmStatic
     fun initialize() {
@@ -42,10 +47,32 @@ object FlashbackRuntime {
 
             TickEvent.Phase.END ->
                 {
+                    if (pendingAutoRecord) {
+                        val mc = Minecraft.getMinecraft()
+                        if (mc.theWorld != null && mc.thePlayer != null && !ReplayPlayer.playing) {
+                            pendingAutoRecord = false
+                            if (ReplayRecorder.currentFile == null) {
+                                ReplayRecorder.startNew(java.io.File(mc.mcDataDir, "replays"))
+                            }
+                        }
+                    }
                     ReplayPlayer.tick()
                     ReplayRecorder.tick()
                     ReplayUiController.syncHudVisibility()
                 }
+        }
+    }
+
+    @SubscribeEvent
+    fun onConnected(event: FMLNetworkEvent.ClientConnectedToServerEvent) {
+        pendingAutoRecord = ReplayConfig.autoRecordOnJoin
+    }
+
+    @SubscribeEvent
+    fun onDisconnected(event: FMLNetworkEvent.ClientDisconnectionFromServerEvent) {
+        pendingAutoRecord = false
+        if (ReplayConfig.autoStopOnLeave) {
+            ReplayRecorder.stop()
         }
     }
 

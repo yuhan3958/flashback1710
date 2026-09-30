@@ -22,17 +22,21 @@ class ReplayMainPanel :
     override fun buildUI(context: ModularGuiContext): ModularPanel {
         val minecraft = Minecraft.getMinecraft()
         val scaled = ScaledResolution(minecraft, minecraft.displayWidth, minecraft.displayHeight)
-        val inspectorWidth = (scaled.scaledWidth * 0.26f).toInt().coerceIn(110, 240)
+        val inspectorWidth = (scaled.scaledWidth * 0.23f).toInt().coerceIn(110, 220)
+        val workspaceHeight = (scaled.scaledHeight - TOOLBAR_HEIGHT).coerceAtLeast(0)
+        val timelineHeight = (workspaceHeight * 0.28f).toInt().coerceIn(MIN_TIMELINE_HEIGHT, 210)
+            .coerceAtMost((workspaceHeight * 0.6f).toInt())
+        val gameViewHeight = workspaceHeight - timelineHeight
         return ModularPanel(PANEL_NAME).fullScreenInvisible()
             .child(
-                ReplayEditorToolbar().left(0).right(0).top(0).height(24),
+                ReplayEditorToolbar().left(0).right(0).top(0).height(TOOLBAR_HEIGHT),
             )
             .child(
                 ReplayContainerWidget()
                     .left(0)
-                    .top(24)
+                    .top(TOOLBAR_HEIGHT)
                     .right(inspectorWidth)
-                    .heightRel(0.35f)
+                    .height(gameViewHeight)
                     .background(
                         ReplayUiStyle.panelBorder(),
                     ).child(
@@ -49,19 +53,22 @@ class ReplayMainPanel :
             ).child(
                 ReplayInspectorPanel()
                     .right(0)
-                    .top(24)
+                    .top(TOOLBAR_HEIGHT)
                     .width(inspectorWidth)
-                    .heightRel(0.35f),
+                    .height(gameViewHeight),
             ).child(
                 ReplayControlBar()
                     .left(0)
                     .right(0)
                     .bottom(0)
-                    .heightRel(0.55f),
+                    .height(timelineHeight),
             )
     }
 
     companion object {
+
+        private const val TOOLBAR_HEIGHT = 24
+        private const val MIN_TIMELINE_HEIGHT = 124
 
         const val PANEL_NAME =
             "replay_main"

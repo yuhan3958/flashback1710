@@ -5,6 +5,12 @@ import java.io.File
 
 object ReplayConfig {
 
+    var autoRecordOnJoin = false
+        private set
+
+    var autoStopOnLeave = true
+        private set
+
     var checkpointIntervalSeconds = 30
         private set
 
@@ -16,6 +22,20 @@ object ReplayConfig {
         val configuration = Configuration(file)
 
         configuration.load()
+
+        autoRecordOnJoin = configuration.getBoolean(
+            "autoRecordOnJoin",
+            "recording",
+            false,
+            "Automatically start recording after joining a world or server.",
+        )
+
+        autoStopOnLeave = configuration.getBoolean(
+            "autoStopOnLeave",
+            "recording",
+            true,
+            "Stop and save the current recording when leaving a world or server.",
+        )
 
         checkpointIntervalSeconds = configuration.getInt(
             "checkpointIntervalSeconds",
