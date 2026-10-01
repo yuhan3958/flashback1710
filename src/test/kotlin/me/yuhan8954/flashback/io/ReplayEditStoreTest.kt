@@ -146,7 +146,7 @@ class ReplayEditStoreTest {
             ReplayEditStore.save(replay, editor)
             DataInputStream(directory.resolve("session.fbr.fbe").inputStream()).use { input ->
                 assertEquals(2, input.readInt())
-                assertEquals(3, input.readInt())
+                assertEquals(4, input.readInt())
                 input.readUTF()
                 val cameraBytes = ByteArray(input.readInt())
                 input.readFully(cameraBytes)

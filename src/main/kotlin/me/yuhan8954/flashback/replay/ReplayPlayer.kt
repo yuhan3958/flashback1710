@@ -9,8 +9,10 @@ import me.yuhan8954.flashback.editor.ReplayCameraPose
 import me.yuhan8954.flashback.editor.ReplayEditorState
 import me.yuhan8954.flashback.editor.ReplayKeyframeSelection
 import me.yuhan8954.flashback.editor.ReplayTimelineEvent
+import me.yuhan8954.flashback.editor.track.type.TimeOfDayTrackType
 import me.yuhan8954.flashback.io.ReplayEditStore
 import me.yuhan8954.flashback.io.ReplayReader
+import me.yuhan8954.flashback.replay.visual.ReplayVisualOverrides
 import me.yuhan8954.flashback.ui.ReplayUiController
 import net.minecraft.client.Minecraft
 import net.minecraft.network.Packet
@@ -22,6 +24,9 @@ import net.minecraft.network.play.client.C0BPacketEntityAction
 import java.io.File
 
 object ReplayPlayer {
+
+    @JvmField
+    val visualOverrides = ReplayVisualOverrides()
 
     private var packets:
         List<RecordedPacket> =
@@ -125,6 +130,17 @@ object ReplayPlayer {
     val selectedFloatValue: Float?
         get() = editorState?.selectedFloatValue()
 
+    val selectedTimeOfDay: Int?
+        get() = editorState?.selectedTimeOfDay()
+
+    fun visibleTimeOfDay(): Int? = session?.world?.let { world ->
+        visualOverrides.timeOfDay() ?: Math.floorMod(world.worldTime, TimeOfDayTrackType.DAY_TICKS.toLong()).toInt()
+    }
+
+    internal fun refreshVisualOverrides() {
+        visualOverrides.setTimeOfDay(editorState?.timeOfDayAt(clock.currentTimeNanos))
+    }
+
     fun keyframeTimes(trackId: String): List<Long> = editorState?.project?.keyframeTimes(trackId) ?: emptyList()
 
     fun markers() = editorState?.markers() ?: emptyList()
@@ -218,6 +234,9 @@ object ReplayPlayer {
         playing =
             true
 
+        visualOverrides.activate()
+        refreshVisualOverrides()
+
         ReplayUiController.open()
 
         println(
@@ -233,6 +252,8 @@ object ReplayPlayer {
 
         val currentSession =
             session ?: return
+
+        refreshVisualOverrides()
 
         currentSession.cameraController.tick()
 
@@ -326,6 +347,8 @@ object ReplayPlayer {
             clock.currentTimeNanos,
         )
 
+        refreshVisualOverrides()
+
         currentSession.cameraController.beginTick()
 
         if (
@@ -347,6 +370,8 @@ object ReplayPlayer {
     fun stop() {
         playing =
             false
+
+        visualOverrides.clear()
 
         ReplayUiController.close()
 
@@ -469,6 +494,8 @@ object ReplayPlayer {
         applyCameraTrack(
             currentSession,
         )
+
+        refreshVisualOverrides()
 
         return true
     }

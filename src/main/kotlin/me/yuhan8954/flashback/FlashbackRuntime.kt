@@ -16,6 +16,7 @@ import net.minecraft.client.gui.GuiMainMenu
 import net.minecraftforge.client.ClientCommandHandler
 import net.minecraftforge.client.event.GuiScreenEvent
 import net.minecraftforge.client.event.MouseEvent
+import net.minecraftforge.client.event.RenderGameOverlayEvent
 import net.minecraftforge.common.MinecraftForge
 
 object FlashbackRuntime {
@@ -86,6 +87,11 @@ object FlashbackRuntime {
     }
 
     @SubscribeEvent
+    fun onHudRender(event: RenderGameOverlayEvent.Pre) {
+        if (ReplayPlayer.playing && !ReplayPlayer.visualOverrides.renderHud) event.isCanceled = true
+    }
+
+    @SubscribeEvent
     fun onMenuInitialized(event: GuiScreenEvent.InitGuiEvent.Post) {
         if (event.gui !is GuiMainMenu) return
         event.buttonList.add(
@@ -95,7 +101,7 @@ object FlashbackRuntime {
                 event.gui.height / 4 + 158,
                 200,
                 20,
-                "Replays",
+                ReplayLang.text("menu.replays"),
             ),
         )
     }

@@ -1,6 +1,8 @@
 package me.yuhan8954.flashback.editor
 
 import me.yuhan8954.flashback.editor.track.ReplayInterpolation
+import me.yuhan8954.flashback.ReplayLang
+import me.yuhan8954.flashback.editor.track.type.TimeOfDayTrackType
 import me.yuhan8954.flashback.replay.ReplayPlayer
 import net.minecraft.client.Minecraft
 
@@ -30,6 +32,7 @@ object ReplayEditorController {
         "camera" -> addCameraKeyframe()
         "fov" -> addFovKeyframe(ReplayPlayer.editorFov() ?: Minecraft.getMinecraft().gameSettings.fovSetting)
         "speed" -> addSpeedKeyframe(ReplayPlayer.automationSpeed.toFloat())
+        TimeOfDayTrackType.id -> addTimeOfDayKeyframe()
         "markers" -> addMarker()
         else -> false
     }
@@ -38,6 +41,7 @@ object ReplayEditorController {
         val editor = ReplayPlayer.currentEditorState ?: return false
         if (!editor.moveSelectedKeyframe(timestampNanos.coerceIn(0L, ReplayPlayer.totalDurationNanos))) return false
         ReplayPlayer.saveEditorEdits(editor)
+        ReplayPlayer.refreshVisualOverrides()
         return true
     }
 
@@ -46,6 +50,7 @@ object ReplayEditorController {
         if (!editor.deleteSelectedKeyframe()) return false
         ReplayPlayer.saveEditorEdits(editor)
         ReplayPlayer.refreshCameraTrack()
+        ReplayPlayer.refreshVisualOverrides()
         return true
     }
 
@@ -54,6 +59,7 @@ object ReplayEditorController {
         if (!editor.updateSelectedInterpolation(interpolation)) return false
         ReplayPlayer.saveEditorEdits(editor)
         if (editor.selectedKeyframe?.trackId == "camera") ReplayPlayer.refreshCameraTrack()
+        ReplayPlayer.refreshVisualOverrides()
         return true
     }
 
@@ -62,6 +68,23 @@ object ReplayEditorController {
         if (!value.isFinite()) return false
         if (!runCatching { editor.setSelectedFloatValue(value) }.getOrDefault(false)) return false
         ReplayPlayer.saveEditorEdits(editor)
+        return true
+    }
+
+    fun setSelectedTimeOfDay(ticks: Int): Boolean {
+        val editor = ReplayPlayer.currentEditorState ?: return false
+        if (!editor.setSelectedTimeOfDay(ticks)) return false
+        ReplayPlayer.saveEditorEdits(editor)
+        ReplayPlayer.refreshVisualOverrides()
+        return true
+    }
+
+    fun addTimeOfDayKeyframe(): Boolean {
+        val editor = ReplayPlayer.currentEditorState ?: return false
+        val ticks = ReplayPlayer.visibleTimeOfDay() ?: return false
+        editor.addTimeOfDayKeyframe(ReplayPlayer.currentTimeNanos, ticks)
+        ReplayPlayer.saveEditorEdits(editor)
+        ReplayPlayer.refreshVisualOverrides()
         return true
     }
 
@@ -118,7 +141,7 @@ object ReplayEditorController {
 
     fun addMarker(): Boolean {
         val editor = ReplayPlayer.currentEditorState ?: return false
-        editor.addMarker(ReplayPlayer.currentTimeNanos, "Marker ${editor.markerCount() + 1}")
+        editor.addMarker(ReplayPlayer.currentTimeNanos, ReplayLang.text("marker.default", editor.markerCount() + 1))
         ReplayPlayer.saveEditorEdits(editor)
         return true
     }

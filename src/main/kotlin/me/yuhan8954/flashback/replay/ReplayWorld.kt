@@ -528,6 +528,9 @@ class ReplayWorld(
     }
 
     override fun getCelestialAngle(partialTicks: Float): Float {
+        ReplayPlayer.visualOverrides.timeOfDay()?.let { ticks ->
+            return provider.calculateCelestialAngle(ticks.toLong(), partialTicks)
+        }
         val elapsedNanos =
             (replayTimeNanos - timeBaseReplayNanos)
                 .coerceAtLeast(0L)

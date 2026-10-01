@@ -2,6 +2,7 @@ package me.yuhan8954.flashback.editor
 
 import me.yuhan8954.flashback.editor.track.ReplayInterpolation
 import me.yuhan8954.flashback.editor.track.ReplayKeyframe
+import me.yuhan8954.flashback.editor.track.type.TimeOfDayTrackType
 
 data class ReplayMarker(
     val timestampNanos: Long,
@@ -127,7 +128,7 @@ class ReplayEditorState(
     fun addMarker(
         timestampNanos: Long,
         label: String =
-            "Marker",
+            "",
     ) {
         markers +=
             ReplayMarker(
@@ -175,6 +176,25 @@ class ReplayEditorState(
     fun addSpeedKeyframe(timestampNanos: Long, speed: Float) {
         project.speedTrack.put(ReplayKeyframe(timestampNanos, speed))
         selectedKeyframe = ReplayKeyframeSelection("speed", timestampNanos.coerceAtLeast(0L))
+    }
+
+    fun addTimeOfDayKeyframe(timestampNanos: Long, ticks: Int) {
+        val timestamp = timestampNanos.coerceAtLeast(0L)
+        val interpolation = project.timeOfDayTrack.keyframeAt(timestamp)?.interpolation ?: ReplayInterpolation.LINEAR
+        project.timeOfDayTrack.put(ReplayKeyframe(timestamp, TimeOfDayTrackType.normalize(ticks), interpolation))
+        selectedKeyframe = ReplayKeyframeSelection(TimeOfDayTrackType.id, timestamp)
+    }
+
+    fun timeOfDayAt(timestampNanos: Long): Int? = project.timeOfDayTrack.evaluate(timestampNanos)
+
+    fun selectedTimeOfDay(): Int? = selectedKeyframe?.takeIf { it.trackId == TimeOfDayTrackType.id }
+        ?.let { project.timeOfDayTrack.keyframeAt(it.timestampNanos)?.value }
+
+    fun setSelectedTimeOfDay(ticks: Int): Boolean {
+        val selection = selectedKeyframe?.takeIf { it.trackId == TimeOfDayTrackType.id } ?: return false
+        val old = project.timeOfDayTrack.keyframeAt(selection.timestampNanos) ?: return false
+        project.timeOfDayTrack.put(old.copy(value = TimeOfDayTrackType.normalize(ticks)))
+        return true
     }
 
     fun speedAt(timestampNanos: Long): Float = project.speedTrack.evaluate(timestampNanos) ?: 1.0f
