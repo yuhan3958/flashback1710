@@ -2,6 +2,8 @@
 
 A client-side replay recorder and editor for Minecraft 1.7.10 on the GTNH stack. Record a session, reopen it from the main menu, and inspect it in an isolated replay world.
 
+> **Project relationship:** Flashback 1710 is an independent reimplementation inspired by Moulberry's Flashback. It is not a source port or source-level backport of the original mod, and its replay, editor, snapshot, checkpoint, and reverse-playback systems are independently implemented for the Minecraft 1.7.10 / Forge / GTNH environment. This project is not affiliated with or endorsed by Moulberry.
+
 > Flashback 1710 is experimental. Replay accuracy and performance across the full GTNH mod set are still being validated.
 
 ## Start here
