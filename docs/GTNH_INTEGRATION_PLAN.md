@@ -284,13 +284,15 @@ A GTNH proposal should not require users to manually manage one hard-coded devel
 
 ## Gate 8: Playback UX
 
-The current playback UI uses the reference three-region editor workspace, with an approximately 2/3-height workspace above a 1/3-height full-width timeline. The upper workspace is split approximately 2/3 VIEW and 1/3 SETTINGS:
+The current playback UI uses a three-region editor workspace, with an approximately 72%-height workspace above a 28%-height full-width timeline below the toolbar. The upper workspace is split approximately 70% VIEW and 30% SETTINGS:
 
 - replay view in the upper-left,
 - settings/camera panel in the upper-right,
 - full-width timeline editor across the bottom.
 
 The timeline is a horizontal viewport rather than a fixed full-duration progress bar. It supports cursor-anchored wheel zoom with the mouse alone, Shift+wheel horizontal scrolling, middle-mouse drag panning, adaptive ruler spacing, and real replay-time labels on major marks. The bottom timeline spans the full window width to preserve the editing-surface feel of desktop NLEs.
+
+The current editor exposes Camera, FOV, Speed, Time of Day, and Markers rows. Time of Day is a visual override of the rendered sky; it does not alter the recorded world clock. Editor shortcuts require Alt, and UI labels have English and Korean translations. These controls still need replay compatibility and layout validation before proposal readiness.
 
 Minimum proposal-ready controls:
 
@@ -312,7 +314,7 @@ Additional useful controls:
 - jump backward/forward,
 - previous/next checkpoint,
 - configurable seek step,
-- hotkeys,
+- broader configurable hotkeys beyond the current Alt-modified editor shortcuts,
 - camera path keyframes,
 - hide replay UI for capture,
 - resizable or user-configurable workspace splits.

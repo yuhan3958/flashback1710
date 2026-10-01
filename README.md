@@ -11,32 +11,34 @@ A client-side replay recorder and editor for Minecraft 1.7.10 on the GTNH stack.
 1. Join a world or server and run `/flashback record`.
 2. Play normally, then run `/flashback stop` to finish the recording.
 3. Return to the main menu and choose **Replays**. Pick a recording and press **Play**. You can also use `/flashback library` from a world.
-4. Use the replay editor to seek, change speed, move the camera, and add camera keyframes. **Stop** returns to your previous world or the main menu.
+4. Use the replay editor to seek, change speed, move the camera, and edit keyframes. The **Exit** button returns to your previous world or the main menu.
 
-Recordings are stored in the Minecraft instance's `replays/` directory as `.fbr` files. Camera keyframes, markers, and playback ranges are saved beside them as `.fbr.fbe` files. Keep both files if you want to move an edited replay to another instance.
+Recordings are stored in the Minecraft instance's `replays/` directory as `.fbr` files. Camera, FOV, Speed, and Time of Day keyframes, markers, and playback ranges are saved beside them as `.fbr.fbe` files. Keep both files if you want to move an edited replay to another instance.
 
 ## Replay editor
 
-The editor has a game view, toolbar, inspector, transport strip, track list, and four timeline rows: Camera, FOV, Speed, and Markers. Playback opens paused. The free camera is enabled initially; **Player** follows the recorded player. While the editor is open, hold the right mouse button to look around with the free camera.
+The editor has a game view, toolbar, inspector, transport strip, track list, and five timeline rows: Camera, FOV, Speed, Time of Day, and Markers. Playback opens paused. The free camera is enabled initially; **Player** follows the recorded player. While the editor is open, hold the right mouse button to look around with the free camera. Buttons use your selected Minecraft language; English and Korean translations are included.
 
 | Action | Control |
 | --- | --- |
-| Play or pause | Transport button or Space |
+| Play or pause | Transport button or Alt+Space |
 | Seek | Left click or drag on the timeline |
 | Zoom around cursor | Mouse wheel over the timeline |
 | Pan the visible timeline | Shift + mouse wheel or middle mouse drag |
-| Add a keyframe | Select Camera, FOV, or Speed in the track list, seek, then press **Add** or K |
+| Add a keyframe | Select Camera, FOV, Speed, or Time of Day in the track list, seek, then press **Add** or Alt+K |
 | Select or move a keyframe | Click or drag its mark in its timeline row |
 | Change a FOV or Speed value | Select its key, click **Edit value** in the inspector, type a number, and press Enter |
 | Update a camera keyframe's pose | Move the free camera, then press **Use camera pose** in the inspector |
 | Edit a camera coordinate or angle | Select a camera key, click its X/Y/Z/Yaw/Pitch value in the inspector, type a number, and press Enter |
-| Delete a selected keyframe | **Delete key** in the inspector or Delete |
-| Set or clear a playback range | Toolbar **In**, **Out**, and **Clear**, or I and O |
-| Add a marker | Toolbar **Marker** or M |
-| Seek by one tick or one second | Left/Right or Shift+Left/Right |
-| Leave replay | **Stop** in the timeline transport |
+| Edit a Time of Day keyframe | Select its key, then enter a tick from `0` to `23999` or choose a dawn/noon/dusk/midnight preset in the inspector |
+| Delete a selected keyframe | **Delete key** in the inspector or Alt+Delete |
+| Set or clear a playback range | Inspector **In**, **Out**, and **Clear**, or Alt+I and Alt+O |
+| Add a marker | Select Markers and press **Add**, or press Alt+M |
+| Seek by one tick or one second | Alt+Left/Right or Alt+Shift+Left/Right |
+| Hide or show the editor with Minecraft's HUD | Alt+F1 |
+| Leave replay | **Exit** in the toolbar or **X** in the timeline transport |
 
-Camera and FOV keyframes interpolate their values. Speed automation interpolates between multipliers from -8 to 8. The effective playback speed is the manual transport multiplier times the Speed track value; an empty Speed track means 1.0. A zero value freezes replay time while the editor stays interactive. Seeking always targets the requested replay time directly. Moving a keyframe changes its time while keeping its value. Adding another keyframe on the same track and time replaces the previous one.
+Camera and FOV keyframes interpolate their values. Speed automation interpolates between multipliers from -8 to 8. Time of Day interpolates around the 24,000-tick day and changes the rendered sky without changing recorded world time. The inspector's HUD switch controls in-game overlays during replay. The effective playback speed is the manual transport multiplier times the Speed track value; an empty Speed track means 1.0. A zero value freezes replay time while the editor stays interactive. Seeking always targets the requested replay time directly. Moving a keyframe changes its time while keeping its value. Adding another keyframe on the same track and time replaces the previous one.
 
 ## Commands
 
@@ -68,7 +70,7 @@ The current replay format is v8, with framed records, CRC32 checks, and recovery
 - Modded custom packets, tile entities, and other client-owned state need broader GTNH compatibility testing.
 - Long recordings still need storage, memory, and seek-latency measurements.
 - Reverse restoration is not exact for every block, tile entity, particle, sound, or mod-owned state change.
-- Camera edits use a separate sidecar file. Exporting rendered video is not implemented.
+- Editor edits use a separate sidecar file. Exporting rendered video is not implemented.
 - The library opens recordings from the current instance's `replays/` directory.
 
 The [GTNH integration plan](docs/GTNH_INTEGRATION_PLAN.md) tracks the work needed before considering wider use.

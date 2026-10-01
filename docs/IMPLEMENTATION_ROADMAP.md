@@ -262,13 +262,12 @@ Keep the current editor-style timeline model:
 
 Do not spend the next phase on cosmetic restructuring.
 
-Functional additions should come later:
+The editor already has camera, FOV, Speed, and Time of Day keyframes, timeline markers, replay-only HUD control, and Alt-modified editor shortcuts. Remaining functional additions include:
 
-- frame/tick stepping,
+- frame stepping beyond the current tick seek and `/flashback step` controls,
 - previous/next checkpoint,
 - configurable seek step,
-- camera keyframes,
-- optional timeline markers.
+- broader capture-oriented visual controls.
 
 Keep timeline drawing based on one consistent `time -> viewport x` transformation so future markers reuse the same coordinate model.
 
