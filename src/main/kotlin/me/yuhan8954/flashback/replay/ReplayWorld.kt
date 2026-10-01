@@ -352,6 +352,12 @@ class ReplayWorld(
         return changed
     }
 
+    private fun getExistingTileEntity(
+        x: Int,
+        y: Int,
+        z: Int,
+    ): TileEntity? = getChunkFromBlockCoords(x, z).getTileEntityUnsafe(x and 15, y, z and 15)
+
     override fun setTileEntity(
         x: Int,
         y: Int,
@@ -363,7 +369,7 @@ class ReplayWorld(
                 mutationJournal.recording
             ) {
                 captureTileEntity(
-                    getTileEntity(
+                    getExistingTileEntity(
                         x,
                         y,
                         z,
@@ -408,7 +414,7 @@ class ReplayWorld(
                 mutationJournal.recording
             ) {
                 captureTileEntity(
-                    getTileEntity(
+                    getExistingTileEntity(
                         x,
                         y,
                         z,
