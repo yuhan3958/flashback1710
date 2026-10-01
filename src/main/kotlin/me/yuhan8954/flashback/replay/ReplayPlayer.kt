@@ -6,6 +6,8 @@ import io.netty.buffer.Unpooled
 import me.yuhan8954.flashback.Flashback1710
 import me.yuhan8954.flashback.editor.ReplayCameraKeyframe
 import me.yuhan8954.flashback.editor.ReplayCameraPose
+import me.yuhan8954.flashback.editor.ReplayCameraOrbit
+import me.yuhan8954.flashback.editor.ReplayCameraEvaluator
 import me.yuhan8954.flashback.editor.ReplayEditorState
 import me.yuhan8954.flashback.editor.ReplayKeyframeSelection
 import me.yuhan8954.flashback.editor.ReplayTimelineEvent
@@ -149,6 +151,11 @@ object ReplayPlayer {
 
     val selectedCameraKeyframe: ReplayCameraKeyframe?
         get() = editorState?.selectedCameraKeyframe()
+
+    val selectedCameraOrbit: ReplayCameraOrbit?
+        get() = editorState?.selectedCameraOrbit()
+
+    fun currentOrbit(): ReplayCameraOrbit? = editorState?.project?.cameraOrbitTrack?.evaluate(currentTimeNanos)
 
     val freeCameraActive: Boolean
         get() =
@@ -603,10 +610,7 @@ object ReplayPlayer {
             return
         }
 
-        val pose =
-            editorState?.cameraPoseAt(
-                currentTimeNanos,
-            ) ?: return
+        val pose = editorState?.let { ReplayCameraEvaluator.evaluate(it, currentTimeNanos) } ?: return
 
         currentSession.cameraController
             .applyPose(
