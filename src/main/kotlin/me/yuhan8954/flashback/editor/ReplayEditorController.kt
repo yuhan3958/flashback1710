@@ -1,5 +1,6 @@
 package me.yuhan8954.flashback.editor
 
+import me.yuhan8954.flashback.editor.track.ReplayInterpolation
 import me.yuhan8954.flashback.replay.ReplayPlayer
 import net.minecraft.client.Minecraft
 
@@ -45,6 +46,14 @@ object ReplayEditorController {
         if (!editor.deleteSelectedKeyframe()) return false
         ReplayPlayer.saveEditorEdits(editor)
         ReplayPlayer.refreshCameraTrack()
+        return true
+    }
+
+    fun updateSelectedInterpolation(interpolation: ReplayInterpolation): Boolean {
+        val editor = ReplayPlayer.currentEditorState ?: return false
+        if (!editor.updateSelectedInterpolation(interpolation)) return false
+        ReplayPlayer.saveEditorEdits(editor)
+        if (editor.selectedKeyframe?.trackId == "camera") ReplayPlayer.refreshCameraTrack()
         return true
     }
 

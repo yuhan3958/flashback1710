@@ -1,31 +1,50 @@
 package me.yuhan8954.flashback.editor.track.type
 
 import me.yuhan8954.flashback.editor.ReplayCameraPose
+import me.yuhan8954.flashback.editor.track.ReplayInterpolation
+import me.yuhan8954.flashback.editor.track.ReplayInterpolationMath
 import me.yuhan8954.flashback.editor.track.ReplayKeyframe
 import me.yuhan8954.flashback.editor.track.ReplayTrackType
 import java.io.DataInput
 import java.io.DataOutput
-import kotlin.math.abs
 
 object CameraTrackType : ReplayTrackType<ReplayCameraPose> {
     override val id = "camera"
 
-    override fun evaluate(keyframes: List<ReplayKeyframe<ReplayCameraPose>>, timestampNanos: Long): ReplayCameraPose? {
+    override fun evaluate(keyframes: List<ReplayKeyframe<ReplayCameraPose>>, beforeIndex: Int, timestampNanos: Long): ReplayCameraPose? {
         if (keyframes.isEmpty()) return null
-        val before = keyframes.lastOrNull { it.timestampNanos <= timestampNanos } ?: keyframes.first()
-        val after = keyframes.firstOrNull { it.timestampNanos >= timestampNanos } ?: keyframes.last()
-        if (before.timestampNanos == after.timestampNanos) return before.value
-
-        val fraction = (timestampNanos - before.timestampNanos).toDouble() /
-            (after.timestampNanos - before.timestampNanos).toDouble()
-        val older = before.value
-        val newer = after.value
+        val before = keyframes[beforeIndex]
+        if (timestampNanos <= before.timestampNanos || beforeIndex == keyframes.lastIndex) return before.value
+        val after = keyframes[beforeIndex + 1]
+        if (timestampNanos >= after.timestampNanos) return after.value
+        if (before.interpolation == ReplayInterpolation.HOLD) return before.value
+        val fraction = (timestampNanos - before.timestampNanos).toDouble() / (after.timestampNanos - before.timestampNanos).toDouble()
+        val a = before.value
+        val b = after.value
+        if (before.interpolation == ReplayInterpolation.LINEAR) {
+            return ReplayCameraPose(
+                ReplayInterpolationMath.lerp(a.x, b.x, fraction),
+                ReplayInterpolationMath.lerp(a.y, b.y, fraction),
+                ReplayInterpolationMath.lerp(a.z, b.z, fraction),
+                ReplayInterpolationMath.lerpAngle(a.yaw.toDouble(), b.yaw.toDouble(), fraction).toFloat(),
+                ReplayInterpolationMath.lerp(a.pitch.toDouble(), b.pitch.toDouble(), fraction).toFloat(),
+            )
+        }
+        val previous = keyframes.getOrNull(beforeIndex - 1) ?: before
+        val next = keyframes.getOrNull(beforeIndex + 2) ?: after
+        fun curve(p: Double, start: Double, end: Double, n: Double) = ReplayInterpolationMath.smooth(
+            p, start, end, n, previous.timestampNanos, before.timestampNanos, after.timestampNanos, next.timestampNanos, timestampNanos,
+        )
+        val yawStart = a.yaw.toDouble()
+        val yawEnd = ReplayInterpolationMath.unwrap(yawStart, b.yaw.toDouble())
+        val yawPrevious = ReplayInterpolationMath.unwrap(yawStart, previous.value.yaw.toDouble())
+        val yawNext = ReplayInterpolationMath.unwrap(yawEnd, next.value.yaw.toDouble())
         return ReplayCameraPose(
-            lerp(older.x, newer.x, fraction),
-            lerp(older.y, newer.y, fraction),
-            lerp(older.z, newer.z, fraction),
-            lerpAngle(older.yaw, newer.yaw, fraction),
-            lerp(older.pitch.toDouble(), newer.pitch.toDouble(), fraction).toFloat(),
+            curve(previous.value.x, a.x, b.x, next.value.x),
+            curve(previous.value.y, a.y, b.y, next.value.y),
+            curve(previous.value.z, a.z, b.z, next.value.z),
+            curve(yawPrevious, yawStart, yawEnd, yawNext).toFloat(),
+            curve(previous.value.pitch.toDouble(), a.pitch.toDouble(), b.pitch.toDouble(), next.value.pitch.toDouble()).toFloat(),
         )
     }
 
@@ -44,14 +63,4 @@ object CameraTrackType : ReplayTrackType<ReplayCameraPose> {
         input.readFloat(),
         input.readFloat(),
     )
-
-    private fun lerp(older: Double, newer: Double, fraction: Double): Double = older + (newer - older) * fraction.coerceIn(0.0, 1.0)
-
-    private fun lerpAngle(older: Float, newer: Float, fraction: Double): Float {
-        var difference = newer - older
-        while (difference < -180.0f) difference += 360.0f
-        while (difference >= 180.0f) difference -= 360.0f
-        val result = older + difference * fraction.coerceIn(0.0, 1.0)
-        return if (abs(result) < 0.000001) 0.0f else result.toFloat()
-    }
 }

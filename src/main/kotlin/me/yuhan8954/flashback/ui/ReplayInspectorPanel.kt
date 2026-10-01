@@ -5,12 +5,13 @@ import com.cleanroommc.modularui.widget.ScrollWidget
 import com.cleanroommc.modularui.widget.scroll.VerticalScrollData
 import me.yuhan8954.flashback.editor.ReplayEditorController
 import me.yuhan8954.flashback.editor.ReplayTimelineEventType
+import me.yuhan8954.flashback.editor.track.ReplayInterpolation
 import me.yuhan8954.flashback.replay.ReplayPlayer
 import java.util.Locale
 
 class ReplayInspectorPanel : ScrollWidget<ReplayInspectorPanel>(VerticalScrollData(false, 4)) {
     init {
-        scrollArea.scrollY.scrollSize = 270
+        scrollArea.scrollY.scrollSize = 300
         background(ReplayUiStyle.panelBackground(), ReplayUiStyle.panelBorder())
         child(ReplayTextWidget("INSPECTOR").left(8).top(7).color(ReplayUiStyle.TEXT_COLOR))
         child(ReplayTextWidget(IKey.dynamic { title() }).left(8).top(26).color(ReplayUiStyle.TEXT_COLOR))
@@ -26,6 +27,18 @@ class ReplayInspectorPanel : ScrollWidget<ReplayInspectorPanel>(VerticalScrollDa
         child(
             editorButton("Delete key", 8, 108, 100) { ReplayEditorController.deleteSelectedKeyframe() }
                 .setEnabledIf { ReplayPlayer.selectedKeyframe != null },
+        )
+        child(
+            ReplayTextWidget(IKey.dynamic { "Interpolation: ${ReplayPlayer.selectedInterpolation?.name ?: ""}" })
+                .left(8).top(248).color(ReplayUiStyle.TEXT_COLOR)
+                .setEnabledIf { ReplayPlayer.selectedKeyframe != null },
+        )
+        child(
+            editorButton("Change mode", 8, 266, 100) {
+                val current = ReplayPlayer.selectedInterpolation ?: return@editorButton false
+                val next = ReplayInterpolation.entries[(current.ordinal + 1) % ReplayInterpolation.entries.size]
+                ReplayEditorController.updateSelectedInterpolation(next)
+            }.setEnabledIf { ReplayPlayer.selectedKeyframe != null },
         )
         listOf("X", "Y", "Z", "Yaw", "Pitch").forEachIndexed { index, field ->
             child(

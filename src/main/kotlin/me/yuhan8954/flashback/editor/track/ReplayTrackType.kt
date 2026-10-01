@@ -8,7 +8,7 @@ interface ReplayTrackType<T> {
 
     fun validate(value: T) {}
 
-    fun evaluate(keyframes: List<ReplayKeyframe<T>>, timestampNanos: Long): T?
+    fun evaluate(keyframes: List<ReplayKeyframe<T>>, beforeIndex: Int, timestampNanos: Long): T?
 
     fun writeValue(output: DataOutput, value: T)
 

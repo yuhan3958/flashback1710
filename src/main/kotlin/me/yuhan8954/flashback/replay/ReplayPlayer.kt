@@ -119,6 +119,9 @@ object ReplayPlayer {
     val selectedKeyframe: ReplayKeyframeSelection?
         get() = editorState?.selectedKeyframe
 
+    val selectedInterpolation: me.yuhan8954.flashback.editor.track.ReplayInterpolation?
+        get() = editorState?.selectedInterpolation()
+
     val selectedFloatValue: Float?
         get() = editorState?.selectedFloatValue()
 

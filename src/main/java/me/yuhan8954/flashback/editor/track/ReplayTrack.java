@@ -73,22 +73,23 @@ public final class ReplayTrack<T> {
         return true;
     }
 
+    public boolean updateInterpolation(long timestampNanos, ReplayInterpolation interpolation) {
+        int index = findIndex(timestampNanos);
+        if (index < 0) {
+            return false;
+        }
+        ReplayKeyframe<T> keyframe = entries.get(index);
+        entries.set(index, keyframe.copy(timestampNanos, keyframe.getValue(), interpolation));
+        return true;
+    }
+
     public T evaluate(long timestampNanos) {
         if (entries.isEmpty()) {
             return null;
         }
         int index = findIndex(timestampNanos);
-        int start;
-        int end;
-        if (index >= 0) {
-            start = index;
-            end = index + 1;
-        } else {
-            int insertion = -index - 1;
-            start = Math.max(0, insertion - 1);
-            end = Math.min(entries.size(), insertion + 1);
-        }
-        return type.evaluate(entries.subList(start, end), timestampNanos);
+        int beforeIndex = index >= 0 ? index : Math.max(0, -index - 2);
+        return type.evaluate(entries, beforeIndex, timestampNanos);
     }
 
     public void writeKeyframes(DataOutput output) throws IOException {

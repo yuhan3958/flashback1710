@@ -1,7 +1,9 @@
 package me.yuhan8954.flashback.editor.track
 
 enum class ReplayInterpolation(val serializedId: String) {
+    HOLD("hold"),
     LINEAR("linear"),
+    SMOOTH("smooth"),
     ;
 
     companion object {

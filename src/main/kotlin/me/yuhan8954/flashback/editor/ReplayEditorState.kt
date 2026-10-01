@@ -1,5 +1,6 @@
 package me.yuhan8954.flashback.editor
 
+import me.yuhan8954.flashback.editor.track.ReplayInterpolation
 import me.yuhan8954.flashback.editor.track.ReplayKeyframe
 
 data class ReplayMarker(
@@ -145,7 +146,8 @@ class ReplayEditorState(
         keyframe: ReplayCameraKeyframe,
     ) {
         val timestamp = keyframe.timestampNanos.coerceAtLeast(0L)
-        project.cameraTrack.put(ReplayKeyframe(timestamp, keyframe.toPose()))
+        val interpolation = project.cameraTrack.keyframeAt(timestamp)?.interpolation ?: ReplayInterpolation.LINEAR
+        project.cameraTrack.put(ReplayKeyframe(timestamp, keyframe.toPose(), interpolation))
         selectedKeyframe = ReplayKeyframeSelection("camera", timestamp)
     }
 
@@ -183,6 +185,15 @@ class ReplayEditorState(
         return true
     }
 
+    fun selectedInterpolation(): ReplayInterpolation? = selectedKeyframe?.let { selection ->
+        project.track(selection.trackId)?.keyframeAt(selection.timestampNanos)?.interpolation
+    }
+
+    fun updateSelectedInterpolation(interpolation: ReplayInterpolation): Boolean {
+        val selection = selectedKeyframe ?: return false
+        return project.track(selection.trackId)?.updateInterpolation(selection.timestampNanos, interpolation) ?: false
+    }
+
     fun deleteSelectedKeyframe(): Boolean {
         val selection = selectedKeyframe ?: return false
         val removed = project.track(selection.trackId)?.delete(selection.timestampNanos) ?: false
@@ -209,8 +220,14 @@ class ReplayEditorState(
     fun setSelectedFloatValue(value: Float): Boolean {
         val selection = selectedKeyframe ?: return false
         when (selection.trackId) {
-            "fov" -> project.fovTrack.put(ReplayKeyframe(selection.timestampNanos, value))
-            "speed" -> project.speedTrack.put(ReplayKeyframe(selection.timestampNanos, value))
+            "fov" -> {
+                val old = project.fovTrack.keyframeAt(selection.timestampNanos) ?: return false
+                project.fovTrack.put(old.copy(value = value))
+            }
+            "speed" -> {
+                val old = project.speedTrack.keyframeAt(selection.timestampNanos) ?: return false
+                project.speedTrack.put(old.copy(value = value))
+            }
             else -> return false
         }
         return true
