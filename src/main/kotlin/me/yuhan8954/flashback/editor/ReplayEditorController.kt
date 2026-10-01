@@ -3,6 +3,7 @@ package me.yuhan8954.flashback.editor
 import me.yuhan8954.flashback.editor.track.ReplayInterpolation
 import me.yuhan8954.flashback.ReplayLang
 import me.yuhan8954.flashback.editor.track.type.TimeOfDayTrackType
+import me.yuhan8954.flashback.editor.track.type.CameraOrbitTrackType
 import me.yuhan8954.flashback.replay.ReplayPlayer
 import net.minecraft.client.Minecraft
 
@@ -30,6 +31,7 @@ object ReplayEditorController {
 
     fun addKeyframeToActiveTrack(): Boolean = when (activeTrackId) {
         "camera" -> addCameraKeyframe()
+        CameraOrbitTrackType.id -> addCameraOrbitKeyframe()
         "fov" -> addFovKeyframe(ReplayPlayer.editorFov() ?: Minecraft.getMinecraft().gameSettings.fovSetting)
         "speed" -> addSpeedKeyframe(ReplayPlayer.automationSpeed.toFloat())
         TimeOfDayTrackType.id -> addTimeOfDayKeyframe()
@@ -41,6 +43,7 @@ object ReplayEditorController {
         val editor = ReplayPlayer.currentEditorState ?: return false
         if (!editor.moveSelectedKeyframe(timestampNanos.coerceIn(0L, ReplayPlayer.totalDurationNanos))) return false
         ReplayPlayer.saveEditorEdits(editor)
+        ReplayPlayer.refreshCameraTrack()
         ReplayPlayer.refreshVisualOverrides()
         return true
     }
@@ -58,7 +61,7 @@ object ReplayEditorController {
         val editor = ReplayPlayer.currentEditorState ?: return false
         if (!editor.updateSelectedInterpolation(interpolation)) return false
         ReplayPlayer.saveEditorEdits(editor)
-        if (editor.selectedKeyframe?.trackId == "camera") ReplayPlayer.refreshCameraTrack()
+        if (editor.selectedKeyframe?.trackId == "camera" || editor.selectedKeyframe?.trackId == CameraOrbitTrackType.id) ReplayPlayer.refreshCameraTrack()
         ReplayPlayer.refreshVisualOverrides()
         return true
     }
@@ -120,6 +123,51 @@ object ReplayEditorController {
         val editor = ReplayPlayer.currentEditorState ?: return false
         editor.addCameraKeyframe(ReplayCameraKeyframe(ReplayPlayer.currentTimeNanos, pose.x, pose.y, pose.z, pose.yaw, pose.pitch))
         ReplayPlayer.saveEditorEdits(editor)
+        return true
+    }
+
+    fun addCameraOrbitKeyframe(): Boolean {
+        val pose = ReplayPlayer.currentCameraPose() ?: return false
+        val editor = ReplayPlayer.currentEditorState ?: return false
+        val existing = ReplayPlayer.currentOrbit()
+        val orbit = if (existing == null) {
+            ReplayCameraOrbitMath.fromCameraLook(pose, 8.0)
+        } else {
+            ReplayCameraOrbitMath.fromCameraPose(pose, existing.centerX, existing.centerY, existing.centerZ, existing.yaw) ?: return false
+        }
+        editor.addCameraOrbitKeyframe(ReplayPlayer.currentTimeNanos, orbit)
+        ReplayPlayer.saveEditorEdits(editor)
+        ReplayPlayer.refreshCameraTrack()
+        return true
+    }
+
+    fun setSelectedCameraOrbitField(field: String, value: Double): Boolean {
+        if (!value.isFinite()) return false
+        val editor = ReplayPlayer.currentEditorState ?: return false
+        val orbit = editor.selectedCameraOrbit() ?: return false
+        val updated = when (field) {
+            "centerX" -> orbit.copy(centerX = value)
+            "centerY" -> orbit.copy(centerY = value)
+            "centerZ" -> orbit.copy(centerZ = value)
+            "distance" -> orbit.copy(distance = value)
+            "yaw" -> orbit.copy(yaw = value.toFloat())
+            "pitch" -> orbit.copy(pitch = value.toFloat())
+            else -> return false
+        }
+        if (!runCatching { editor.setSelectedCameraOrbit(updated) }.getOrDefault(false)) return false
+        ReplayPlayer.saveEditorEdits(editor)
+        ReplayPlayer.refreshCameraTrack()
+        return true
+    }
+
+    fun useCurrentCameraForOrbit(): Boolean {
+        val pose = ReplayPlayer.currentCameraPose() ?: return false
+        val editor = ReplayPlayer.currentEditorState ?: return false
+        val orbit = editor.selectedCameraOrbit() ?: return false
+        val updated = ReplayCameraOrbitMath.fromCameraPose(pose, orbit.centerX, orbit.centerY, orbit.centerZ, orbit.yaw) ?: return false
+        if (!editor.setSelectedCameraOrbit(updated)) return false
+        ReplayPlayer.saveEditorEdits(editor)
+        ReplayPlayer.refreshCameraTrack()
         return true
     }
 

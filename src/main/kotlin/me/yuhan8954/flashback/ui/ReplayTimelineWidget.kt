@@ -82,6 +82,7 @@ class ReplayTimelineWidget :
 
     private val fovKeyframeEvent = Rectangle().color(ReplayUiStyle.FOV_KEYFRAME_COLOR)
     private val speedKeyframeEvent = Rectangle().color(ReplayUiStyle.SPEED_KEYFRAME_COLOR)
+    private val orbitKeyframeEvent = Rectangle().color(ReplayUiStyle.ORBIT_KEYFRAME_COLOR)
     private val timeKeyframeEvent = Rectangle().color(ReplayUiStyle.TIME_KEYFRAME_COLOR)
     private val rangeShade = Rectangle().color(0x88000000.toInt())
 
@@ -417,7 +418,7 @@ class ReplayTimelineWidget :
                         markerEvent.draw(
                             context,
                             x,
-                            RULER_HEIGHT + 4 * ROW_HEIGHT,
+                            RULER_HEIGHT + 5 * ROW_HEIGHT,
                             2,
                             ROW_HEIGHT,
                             widgetTheme.theme,
@@ -427,18 +428,22 @@ class ReplayTimelineWidget :
                         drawKeyframe(context, widgetTheme, "camera", event.timestampNanos, x, 0, cameraKeyframeEvent)
 
                     ReplayTimelineEventType.FOV_KEYFRAME ->
-                        drawKeyframe(context, widgetTheme, "fov", event.timestampNanos, x, 1, fovKeyframeEvent)
+                        drawKeyframe(context, widgetTheme, "fov", event.timestampNanos, x, 2, fovKeyframeEvent)
                 }
             }
         ReplayPlayer.keyframeTimes("speed").forEach { time ->
             val x = timeToX(time.toDouble())
             if (x in 0 until width) {
-                drawKeyframe(context, widgetTheme, "speed", time, x, 2, speedKeyframeEvent)
+                drawKeyframe(context, widgetTheme, "speed", time, x, 3, speedKeyframeEvent)
             }
+        }
+        ReplayPlayer.keyframeTimes("camera_orbit").forEach { time ->
+            val x = timeToX(time.toDouble())
+            if (x in 0 until width) drawKeyframe(context, widgetTheme, "camera_orbit", time, x, 1, orbitKeyframeEvent)
         }
         ReplayPlayer.keyframeTimes("time_of_day").forEach { time ->
             val x = timeToX(time.toDouble())
-            if (x in 0 until width) drawKeyframe(context, widgetTheme, "time_of_day", time, x, 3, timeKeyframeEvent)
+            if (x in 0 until width) drawKeyframe(context, widgetTheme, "time_of_day", time, x, 4, timeKeyframeEvent)
         }
         ReplayPlayer.markers().forEach { marker ->
             val x = timeToX(marker.timestampNanos.toDouble())
@@ -446,7 +451,7 @@ class ReplayTimelineWidget :
                 Minecraft.getMinecraft().fontRenderer.drawString(
                     marker.label.ifBlank { ReplayLang.text("marker.unnamed") },
                     x + 3,
-                    RULER_HEIGHT + 4 * ROW_HEIGHT + 2,
+                    RULER_HEIGHT + 5 * ROW_HEIGHT + 2,
                     ReplayUiStyle.MARKER_EVENT_COLOR,
                 )
             }

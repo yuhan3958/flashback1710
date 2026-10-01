@@ -5,6 +5,7 @@ import me.yuhan8954.flashback.replay.ReplayPlayer
 
 object ReplayValueInput {
     private var cameraField: String? = null
+    private var orbitField: String? = null
     private var timeOfDay = false
 
     var text: String? = null
@@ -13,6 +14,7 @@ object ReplayValueInput {
     fun begin(): Boolean {
         if (ReplayPlayer.selectedFloatValue == null) return false
         cameraField = null
+        orbitField = null
         timeOfDay = false
         text = ""
         return true
@@ -21,6 +23,7 @@ object ReplayValueInput {
     fun beginCamera(field: String): Boolean {
         if (ReplayPlayer.selectedCameraKeyframe == null) return false
         cameraField = field
+        orbitField = null
         timeOfDay = false
         text = ""
         return true
@@ -29,7 +32,17 @@ object ReplayValueInput {
     fun beginTimeOfDay(): Boolean {
         if (ReplayPlayer.selectedTimeOfDay == null) return false
         cameraField = null
+        orbitField = null
         timeOfDay = true
+        text = ""
+        return true
+    }
+
+    fun beginOrbit(field: String): Boolean {
+        if (ReplayPlayer.selectedCameraOrbit == null) return false
+        cameraField = null
+        orbitField = field
+        timeOfDay = false
         text = ""
         return true
     }
@@ -49,11 +62,13 @@ object ReplayValueInput {
         } else {
             val value = text?.toDoubleOrNull() ?: return false
             cameraField?.let { ReplayEditorController.setSelectedCameraField(it, value) }
+                ?: orbitField?.let { ReplayEditorController.setSelectedCameraOrbitField(it, value) }
                 ?: ReplayEditorController.setSelectedFloatValue(value.toFloat())
         }
         if (!saved) return false
         text = null
         cameraField = null
+        orbitField = null
         timeOfDay = false
         return true
     }
@@ -61,6 +76,7 @@ object ReplayValueInput {
     fun cancel() {
         text = null
         cameraField = null
+        orbitField = null
         timeOfDay = false
     }
 }

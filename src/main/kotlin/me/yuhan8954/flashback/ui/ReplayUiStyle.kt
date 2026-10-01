@@ -50,6 +50,7 @@ object ReplayUiStyle {
         0xFFCC9DFF.toInt()
 
     const val SPEED_KEYFRAME_COLOR = 0xFFFFB86C.toInt()
+    const val ORBIT_KEYFRAME_COLOR = 0xFF7EE0D0.toInt()
     const val TIME_KEYFRAME_COLOR = 0xFFFFD66F.toInt()
 
     const val RANGE_BOUNDARY_COLOR =

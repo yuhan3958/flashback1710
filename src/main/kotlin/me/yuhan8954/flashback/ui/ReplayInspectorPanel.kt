@@ -12,7 +12,7 @@ import java.util.Locale
 
 class ReplayInspectorPanel : ScrollWidget<ReplayInspectorPanel>(VerticalScrollData(false, 4)) {
     init {
-        scrollArea.scrollY.scrollSize = 308
+        scrollArea.scrollY.scrollSize = 350
         background(ReplayUiStyle.panelBackground(), ReplayUiStyle.panelBorder())
         child(ReplayTextWidget(ReplayLang.key("ui.inspector")).left(8).top(7).color(ReplayUiStyle.MUTED_TEXT_COLOR))
         child(ReplayTextWidget(IKey.dynamic { title() }).left(8).top(26).color(ReplayUiStyle.TEXT_COLOR))
@@ -84,6 +84,25 @@ class ReplayInspectorPanel : ScrollWidget<ReplayInspectorPanel>(VerticalScrollDa
             })
                 .left(8).top(224).color(ReplayUiStyle.TEXT_COLOR)
                 .setEnabledIf { ReplayPlayer.selectedKeyframe?.trackId == "camera" },
+        )
+        listOf("centerX", "centerY", "centerZ", "distance", "yaw", "pitch").forEachIndexed { index, field ->
+            child(
+                ReplayButtonWidget().left(8).top(134 + index * 17).size(132, 16)
+                    .background(ReplayUiStyle.buttonBackground())
+                    .overlay(IKey.dynamic { orbitField(field) })
+                    .onMousePressed { it == 0 && ReplayValueInput.beginOrbit(field) }
+                    .setEnabledIf { ReplayPlayer.selectedCameraOrbit != null },
+            )
+        }
+        child(
+            editorButton("ui.orbit.use_camera", 8, 290, 132) { ReplayEditorController.useCurrentCameraForOrbit() }
+                .setEnabledIf { ReplayPlayer.selectedCameraOrbit != null },
+        )
+        child(
+            ReplayTextWidget(IKey.dynamic {
+                ReplayValueInput.text?.let { ReplayLang.text("ui.value_input", it) } ?: ReplayLang.text("ui.camera_hint")
+            }).left(8).top(314).color(ReplayUiStyle.TEXT_COLOR)
+                .setEnabledIf { ReplayPlayer.selectedCameraOrbit != null },
         )
         child(
             ReplayTextWidget(ReplayLang.key("ui.value")).left(8).top(134).color(ReplayUiStyle.MUTED_TEXT_COLOR)
@@ -188,6 +207,7 @@ class ReplayInspectorPanel : ScrollWidget<ReplayInspectorPanel>(VerticalScrollDa
 
     private fun title(): String = when (ReplayPlayer.selectedKeyframe?.trackId) {
         "camera" -> ReplayLang.text("ui.camera_keyframe")
+        "camera_orbit" -> ReplayLang.text("ui.orbit_keyframe")
         "fov" -> ReplayLang.text("ui.fov_keyframe")
         "speed" -> ReplayLang.text("ui.speed_keyframe")
         "time_of_day" -> ReplayLang.text("ui.time_keyframe")
@@ -210,6 +230,19 @@ class ReplayInspectorPanel : ScrollWidget<ReplayInspectorPanel>(VerticalScrollDa
             else -> pose.pitch.toDouble()
         }
         return ReplayLang.text("ui.field_value", ReplayLang.text("ui.field.${field.lowercase(Locale.ROOT)}"), String.format(Locale.ROOT, "%.2f", value))
+    }
+
+    private fun orbitField(field: String): String {
+        val orbit = ReplayPlayer.selectedCameraOrbit ?: return ""
+        val value = when (field) {
+            "centerX" -> orbit.centerX
+            "centerY" -> orbit.centerY
+            "centerZ" -> orbit.centerZ
+            "distance" -> orbit.distance
+            "yaw" -> orbit.yaw.toDouble()
+            else -> orbit.pitch.toDouble()
+        }
+        return ReplayLang.text("ui.field_value", ReplayLang.text("ui.orbit.$field"), String.format(Locale.ROOT, "%.2f", value))
     }
 
     private fun adjust(delta: Float): Boolean {
