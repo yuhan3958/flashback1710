@@ -13,11 +13,11 @@ A client-side replay recorder and editor for Minecraft 1.7.10 on the GTNH stack.
 3. Return to the main menu and choose **Replays**. Pick a recording and press **Play**. You can also use `/flashback library` from a world.
 4. Use the replay editor to seek, change speed, move the camera, and edit keyframes. The **Exit** button returns to your previous world or the main menu.
 
-Recordings are stored in the Minecraft instance's `replays/` directory as `.fbr` files. Camera, FOV, Speed, and Time of Day keyframes, markers, and playback ranges are saved beside them as `.fbr.fbe` files. Keep both files if you want to move an edited replay to another instance.
+Recordings are stored in the Minecraft instance's `replays/` directory as `.fbr` files. Camera, Orbit, FOV, Speed, and Time of Day keyframes, markers, and playback ranges are saved beside them as `.fbr.fbe` files. Keep both files if you want to move an edited replay to another instance.
 
 ## Replay editor
 
-The editor has a game view, toolbar, inspector, transport strip, track list, and five timeline rows: Camera, FOV, Speed, Time of Day, and Markers. Playback opens paused. The free camera is enabled initially; **Player** follows the recorded player. While the editor is open, hold the right mouse button to look around with the free camera. Buttons use your selected Minecraft language; English and Korean translations are included.
+The editor has a game view, toolbar, inspector, transport strip, track list, and six timeline rows: Camera, Orbit, FOV, Speed, Time of Day, and Markers. Playback opens paused. The free camera is enabled initially; **Player** follows the recorded player. While the editor is open, hold the right mouse button to look around with the free camera. Buttons use your selected Minecraft language; English and Korean translations are included.
 
 | Action | Control |
 | --- | --- |
@@ -25,7 +25,9 @@ The editor has a game view, toolbar, inspector, transport strip, track list, and
 | Seek | Left click or drag on the timeline |
 | Zoom around cursor | Mouse wheel over the timeline |
 | Pan the visible timeline | Shift + mouse wheel or middle mouse drag |
-| Add a keyframe | Select Camera, FOV, Speed, or Time of Day in the track list, seek, then press **Add** or Alt+K |
+| Add a keyframe | Select Camera, Orbit, FOV, Speed, or Time of Day in the track list, seek, then press **Add** or Alt+K |
+| Add an Orbit key | Aim the free camera at a subject, select Orbit, and press **Add**. The first center is eight blocks along the look direction; later Orbit keys retain the current center. |
+| Edit an Orbit key | Select it to edit Center X/Y/Z, Distance, Yaw, and Pitch in the inspector. **Use Current Camera** recalculates distance, yaw, and pitch relative to its center. |
 | Select or move a keyframe | Click or drag its mark in its timeline row |
 | Change a FOV or Speed value | Select its key, click **Edit value** in the inspector, type a number, and press Enter |
 | Update a camera keyframe's pose | Move the free camera, then press **Use camera pose** in the inspector |

@@ -262,7 +262,7 @@ Keep the current editor-style timeline model:
 
 Do not spend the next phase on cosmetic restructuring.
 
-The editor already has camera, FOV, Speed, and Time of Day keyframes, timeline markers, replay-only HUD control, and Alt-modified editor shortcuts. Remaining functional additions include:
+The editor already has Camera, Orbit, FOV, Speed, and Time of Day keyframes, timeline markers, replay-only HUD control, and Alt-modified editor shortcuts. Remaining functional additions include:
 
 - frame stepping beyond the current tick seek and `/flashback step` controls,
 - previous/next checkpoint,

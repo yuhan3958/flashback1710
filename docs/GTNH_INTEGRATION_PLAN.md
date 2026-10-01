@@ -292,7 +292,7 @@ The current playback UI uses a three-region editor workspace, with an approximat
 
 The timeline is a horizontal viewport rather than a fixed full-duration progress bar. It supports cursor-anchored wheel zoom with the mouse alone, Shift+wheel horizontal scrolling, middle-mouse drag panning, adaptive ruler spacing, and real replay-time labels on major marks. The bottom timeline spans the full window width to preserve the editing-surface feel of desktop NLEs.
 
-The current editor exposes Camera, FOV, Speed, Time of Day, and Markers rows. Time of Day sets the replay world's displayed clock to an absolute time of day while leaving the saved recording untouched. Editor shortcuts require Alt, and UI labels have English and Korean translations. These controls still need replay compatibility and layout validation before proposal readiness.
+The current editor exposes Camera, Orbit, FOV, Speed, Time of Day, and Markers rows. Time of Day sets the replay world's displayed clock to an absolute time of day while leaving the saved recording untouched. Editor shortcuts require Alt, and UI labels have English and Korean translations. These controls still need replay compatibility and layout validation before proposal readiness.
 
 Minimum proposal-ready controls:
 
