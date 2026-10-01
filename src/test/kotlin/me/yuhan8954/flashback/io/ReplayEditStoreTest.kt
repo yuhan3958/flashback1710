@@ -146,14 +146,15 @@ class ReplayEditStoreTest {
             ReplayEditStore.save(replay, editor)
             DataInputStream(directory.resolve("session.fbr.fbe").inputStream()).use { input ->
                 assertEquals(2, input.readInt())
-                assertEquals(4, input.readInt())
-                input.readUTF()
-                val cameraBytes = ByteArray(input.readInt())
-                input.readFully(cameraBytes)
-                assertEquals("fov", input.readUTF())
-                val fovBytes = ByteArray(input.readInt())
-                input.readFully(fovBytes)
-                DataInputStream(ByteArrayInputStream(fovBytes)).use { track ->
+                assertEquals(5, input.readInt())
+                var fovBytes: ByteArray? = null
+                repeat(5) {
+                    val trackId = input.readUTF()
+                    val bytes = ByteArray(input.readInt())
+                    input.readFully(bytes)
+                    if (trackId == "fov") fovBytes = bytes
+                }
+                DataInputStream(ByteArrayInputStream(requireNotNull(fovBytes))).use { track ->
                     assertEquals(1, track.readInt())
                     assertEquals(10L, track.readLong())
                     assertEquals("linear", track.readUTF())

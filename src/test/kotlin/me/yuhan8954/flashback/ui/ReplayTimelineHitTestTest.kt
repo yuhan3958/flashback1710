@@ -31,10 +31,11 @@ class ReplayTimelineHitTestTest {
     fun `row hit testing excludes ruler and marker row`() {
         assertNull(ReplayTimelineHitTest.keyframeTrackAt(17, 18, 14))
         assertEquals("camera", ReplayTimelineHitTest.keyframeTrackAt(18, 18, 14))
-        assertEquals("fov", ReplayTimelineHitTest.keyframeTrackAt(32, 18, 14))
-        assertEquals("speed", ReplayTimelineHitTest.keyframeTrackAt(46, 18, 14))
-        assertEquals("time_of_day", ReplayTimelineHitTest.keyframeTrackAt(60, 18, 14))
-        assertNull(ReplayTimelineHitTest.keyframeTrackAt(74, 18, 14))
+        assertEquals("camera_orbit", ReplayTimelineHitTest.keyframeTrackAt(32, 18, 14))
+        assertEquals("fov", ReplayTimelineHitTest.keyframeTrackAt(46, 18, 14))
+        assertEquals("speed", ReplayTimelineHitTest.keyframeTrackAt(60, 18, 14))
+        assertEquals("time_of_day", ReplayTimelineHitTest.keyframeTrackAt(74, 18, 14))
+        assertNull(ReplayTimelineHitTest.keyframeTrackAt(88, 18, 14))
         assertNull(ReplayTimelineHitTest.keyframeTrackAt(18, 18, 0))
     }
 
