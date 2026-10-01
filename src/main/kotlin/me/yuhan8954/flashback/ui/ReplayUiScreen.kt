@@ -34,10 +34,9 @@ class ReplayUiScreen(
             }
             return
         }
-        when (keyCode) {
-            Keyboard.KEY_ESCAPE ->
-                return
+        if (keyCode == Keyboard.KEY_ESCAPE) return
 
+        if (Keyboard.isKeyDown(Keyboard.KEY_LMENU) || Keyboard.isKeyDown(Keyboard.KEY_RMENU)) when (keyCode) {
             Keyboard.KEY_F1 -> {
                 ReplayUiController.toggleHudVisibility()
                 return
