@@ -63,6 +63,7 @@ object ReplayUiController {
     fun close() {
         hiddenByHud = false
         openRequested = false
+        ReplayValueInput.cancel()
 
         if (
             minecraft.currentScreen is

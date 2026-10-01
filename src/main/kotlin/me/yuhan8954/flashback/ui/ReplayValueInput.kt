@@ -43,11 +43,11 @@ object ReplayValueInput {
     }
 
     fun commit(): Boolean {
-        val value = text?.toDoubleOrNull() ?: return false
         val saved = if (timeOfDay) {
             val ticks = text?.toIntOrNull() ?: return false
             ReplayEditorController.setSelectedTimeOfDay(ticks)
         } else {
+            val value = text?.toDoubleOrNull() ?: return false
             cameraField?.let { ReplayEditorController.setSelectedCameraField(it, value) }
                 ?: ReplayEditorController.setSelectedFloatValue(value.toFloat())
         }

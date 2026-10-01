@@ -72,6 +72,7 @@ object ReplayEditorController {
     }
 
     fun setSelectedTimeOfDay(ticks: Int): Boolean {
+        if (ticks !in 0 until TimeOfDayTrackType.DAY_TICKS) return false
         val editor = ReplayPlayer.currentEditorState ?: return false
         if (!editor.setSelectedTimeOfDay(ticks)) return false
         ReplayPlayer.saveEditorEdits(editor)
