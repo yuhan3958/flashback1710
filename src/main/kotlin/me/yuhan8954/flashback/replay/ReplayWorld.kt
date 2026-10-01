@@ -2,6 +2,7 @@ package me.yuhan8954.flashback.replay
 
 import me.yuhan8954.flashback.snapshot.ReplayTileEntitySnapshot
 import me.yuhan8954.flashback.snapshot.SnapshotCapture
+import me.yuhan8954.flashback.editor.track.type.TimeOfDayTrackType
 import net.minecraft.block.Block
 import net.minecraft.client.multiplayer.WorldClient
 import net.minecraft.entity.Entity
@@ -41,6 +42,8 @@ class ReplayWorld(
 
     private var daylightCycle =
         true
+
+    private var visualTimeOfDay: Int? = null
 
     private var completedSimulationTicks =
         0L
@@ -102,6 +105,11 @@ class ReplayWorld(
         replayTimeNanos = currentReplayTimeNanos
         completedSimulationTicks = currentReplayTimeNanos / ReplayClock.MINECRAFT_TICK_NANOS
         simulationTicks = 0
+        applyReplayTime()
+    }
+
+    fun setVisualTimeOfDay(ticks: Int?) {
+        visualTimeOfDay = ticks
         applyReplayTime()
     }
 
@@ -528,16 +536,9 @@ class ReplayWorld(
     }
 
     override fun getCelestialAngle(partialTicks: Float): Float {
-        ReplayPlayer.visualOverrides.timeOfDay()?.let { ticks ->
-            return provider.calculateCelestialAngle(ticks.toLong(), partialTicks)
-        }
         val elapsedNanos =
             (replayTimeNanos - timeBaseReplayNanos)
                 .coerceAtLeast(0L)
-
-        val elapsedTicks =
-            elapsedNanos /
-                ReplayClock.MINECRAFT_TICK_NANOS
 
         val replayPartialTick =
             if (daylightCycle) {
@@ -551,13 +552,8 @@ class ReplayWorld(
             }
 
         return provider.calculateCelestialAngle(
-            timeBaseWorldTime +
-                if (daylightCycle) {
-                    elapsedTicks
-                } else {
-                    0L
-                },
-            replayPartialTick,
+            worldTime,
+            if (visualTimeOfDay == null) replayPartialTick else 0.0f,
         )
     }
 
@@ -588,9 +584,11 @@ class ReplayWorld(
                 timeBaseWorldTime
             }
 
-        setWorldTime(
-            worldTime,
-        )
+        val displayedWorldTime = visualTimeOfDay?.let { ticks ->
+            Math.floorDiv(worldTime, TimeOfDayTrackType.DAY_TICKS.toLong()) * TimeOfDayTrackType.DAY_TICKS + ticks
+        } ?: worldTime
+
+        setWorldTime(displayedWorldTime)
 
         func_82738_a(
             timeBaseTotalWorldTime + elapsedTicks,

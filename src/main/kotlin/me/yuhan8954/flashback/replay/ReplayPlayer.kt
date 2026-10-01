@@ -138,7 +138,9 @@ object ReplayPlayer {
     }
 
     internal fun refreshVisualOverrides() {
-        visualOverrides.setTimeOfDay(editorState?.timeOfDayAt(clock.currentTimeNanos))
+        val timeOfDay = editorState?.timeOfDayAt(clock.currentTimeNanos)
+        visualOverrides.setTimeOfDay(timeOfDay)
+        session?.world?.setVisualTimeOfDay(timeOfDay)
     }
 
     fun keyframeTimes(trackId: String): List<Long> = editorState?.project?.keyframeTimes(trackId) ?: emptyList()
