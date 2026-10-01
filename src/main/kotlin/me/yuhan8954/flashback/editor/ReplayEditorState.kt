@@ -2,6 +2,7 @@ package me.yuhan8954.flashback.editor
 
 import me.yuhan8954.flashback.editor.track.ReplayInterpolation
 import me.yuhan8954.flashback.editor.track.ReplayKeyframe
+import me.yuhan8954.flashback.editor.track.type.CameraOrbitTrackType
 import me.yuhan8954.flashback.editor.track.type.TimeOfDayTrackType
 
 data class ReplayMarker(
@@ -167,6 +168,23 @@ class ReplayEditorState(
     fun cameraPoseAt(
         timestampNanos: Long,
     ): ReplayCameraPose? = project.cameraTrack.evaluate(timestampNanos)
+
+    fun addCameraOrbitKeyframe(timestampNanos: Long, orbit: ReplayCameraOrbit) {
+        val timestamp = timestampNanos.coerceAtLeast(0L)
+        val interpolation = project.cameraOrbitTrack.keyframeAt(timestamp)?.interpolation ?: ReplayInterpolation.LINEAR
+        project.cameraOrbitTrack.put(ReplayKeyframe(timestamp, orbit, interpolation))
+        selectedKeyframe = ReplayKeyframeSelection(CameraOrbitTrackType.id, timestamp)
+    }
+
+    fun selectedCameraOrbit(): ReplayCameraOrbit? = selectedKeyframe?.takeIf { it.trackId == CameraOrbitTrackType.id }
+        ?.let { project.cameraOrbitTrack.keyframeAt(it.timestampNanos)?.value }
+
+    fun setSelectedCameraOrbit(orbit: ReplayCameraOrbit): Boolean {
+        val selection = selectedKeyframe?.takeIf { it.trackId == CameraOrbitTrackType.id } ?: return false
+        val old = project.cameraOrbitTrack.keyframeAt(selection.timestampNanos) ?: return false
+        project.cameraOrbitTrack.put(old.copy(value = orbit))
+        return true
+    }
 
     fun addFovKeyframe(timestampNanos: Long, fov: Float) {
         project.fovTrack.put(ReplayKeyframe(timestampNanos, fov))
