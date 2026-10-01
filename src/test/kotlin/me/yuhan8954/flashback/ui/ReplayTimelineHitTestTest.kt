@@ -33,7 +33,8 @@ class ReplayTimelineHitTestTest {
         assertEquals("camera", ReplayTimelineHitTest.keyframeTrackAt(18, 18, 14))
         assertEquals("fov", ReplayTimelineHitTest.keyframeTrackAt(32, 18, 14))
         assertEquals("speed", ReplayTimelineHitTest.keyframeTrackAt(46, 18, 14))
-        assertNull(ReplayTimelineHitTest.keyframeTrackAt(60, 18, 14))
+        assertEquals("time_of_day", ReplayTimelineHitTest.keyframeTrackAt(60, 18, 14))
+        assertNull(ReplayTimelineHitTest.keyframeTrackAt(74, 18, 14))
         assertNull(ReplayTimelineHitTest.keyframeTrackAt(18, 18, 0))
     }
 

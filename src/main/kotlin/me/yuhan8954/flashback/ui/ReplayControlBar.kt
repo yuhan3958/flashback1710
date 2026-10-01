@@ -5,6 +5,7 @@ import com.cleanroommc.modularui.utils.Alignment
 import com.cleanroommc.modularui.widget.ParentWidget
 import com.cleanroommc.modularui.widgets.ButtonWidget
 import me.yuhan8954.flashback.editor.ReplayEditorController
+import me.yuhan8954.flashback.ReplayLang
 import me.yuhan8954.flashback.replay.ReplayPlayer
 
 class ReplayControlBar : ParentWidget<ReplayControlBar>() {
@@ -17,7 +18,7 @@ class ReplayControlBar : ParentWidget<ReplayControlBar>() {
 
         child(
             ReplayTextWidget(
-                "TRANSPORT",
+                ReplayLang.key("ui.transport"),
             ).left(8)
                 .top(7)
                 .color(
@@ -86,26 +87,22 @@ class ReplayControlBar : ParentWidget<ReplayControlBar>() {
             },
         )
         child(
-            ReplayButtonWidget().left(210).top(4).size(64, 18)
+            ReplayButtonWidget().right(8).top(4).size(72, 18)
                 .background(ReplayUiStyle.buttonBackground())
-                .overlay(IKey.dynamic { "Add ${ReplayEditorController.activeTrackId}" })
+                .overlay(IKey.dynamic {
+                    ReplayLang.text("ui.add_track", ReplayLang.text("track.${ReplayEditorController.activeTrackId}"))
+                })
                 .onMousePressed { it == 0 && ReplayEditorController.addKeyframeToActiveTrack() },
         )
 
         child(
             ReplayTextWidget(
                 IKey.dynamic {
-                    ReplayTimeFormatter.format(
-                        ReplayPlayer.currentTimeNanos,
-                    ) +
-                        " / " +
-                        ReplayTimeFormatter.format(
-                            ReplayPlayer.totalDurationNanos,
-                        )
+                    ReplayTimeFormatter.format(ReplayPlayer.currentTimeNanos)
                 },
             ).left(8)
                 .top(27)
-                .width(210)
+                .width(160)
                 .height(10)
                 .color(
                     ReplayUiStyle.MUTED_TEXT_COLOR,
@@ -131,8 +128,8 @@ class ReplayControlBar : ParentWidget<ReplayControlBar>() {
                 ),
         )
 
-        child(ReplayTrackList().left(8).top(42).bottom(8).width(82))
-        child(ReplayTimelineWidget().left(90).right(8).top(42).bottom(8))
+        child(ReplayTrackList().left(8).top(38).bottom(4).width(82))
+        child(ReplayTimelineWidget().left(90).right(8).top(38).bottom(4))
     }
 
     private fun transportButton(

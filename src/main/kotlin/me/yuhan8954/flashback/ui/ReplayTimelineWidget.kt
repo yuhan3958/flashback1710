@@ -7,6 +7,8 @@ import com.cleanroommc.modularui.screen.viewport.ModularGuiContext
 import com.cleanroommc.modularui.theme.WidgetThemeEntry
 import com.cleanroommc.modularui.widget.Widget
 import me.yuhan8954.flashback.editor.ReplayEditorController
+import me.yuhan8954.flashback.ReplayLang
+import me.yuhan8954.flashback.editor.ReplayEditorTracks
 import me.yuhan8954.flashback.editor.ReplayTimelineEventType
 import me.yuhan8954.flashback.replay.ReplayPlayer
 import net.minecraft.client.Minecraft
@@ -80,6 +82,7 @@ class ReplayTimelineWidget :
 
     private val fovKeyframeEvent = Rectangle().color(ReplayUiStyle.FOV_KEYFRAME_COLOR)
     private val speedKeyframeEvent = Rectangle().color(ReplayUiStyle.SPEED_KEYFRAME_COLOR)
+    private val timeKeyframeEvent = Rectangle().color(ReplayUiStyle.TIME_KEYFRAME_COLOR)
     private val rangeShade = Rectangle().color(0x88000000.toInt())
 
     private val selectedKeyframeEvent =
@@ -177,7 +180,7 @@ class ReplayTimelineWidget :
             widgetTheme.theme,
         )
 
-        for (row in 0 until 4) {
+        for (row in ReplayEditorTracks.rows.indices) {
             if (row % 2 == 1) {
                 track.draw(context, 0, RULER_HEIGHT + row * ROW_HEIGHT, width, ROW_HEIGHT, widgetTheme.theme)
             }
@@ -414,7 +417,7 @@ class ReplayTimelineWidget :
                         markerEvent.draw(
                             context,
                             x,
-                            RULER_HEIGHT + 3 * ROW_HEIGHT,
+                            RULER_HEIGHT + 4 * ROW_HEIGHT,
                             2,
                             ROW_HEIGHT,
                             widgetTheme.theme,
@@ -433,13 +436,17 @@ class ReplayTimelineWidget :
                 drawKeyframe(context, widgetTheme, "speed", time, x, 2, speedKeyframeEvent)
             }
         }
+        ReplayPlayer.keyframeTimes("time_of_day").forEach { time ->
+            val x = timeToX(time.toDouble())
+            if (x in 0 until width) drawKeyframe(context, widgetTheme, "time_of_day", time, x, 3, timeKeyframeEvent)
+        }
         ReplayPlayer.markers().forEach { marker ->
             val x = timeToX(marker.timestampNanos.toDouble())
             if (x in 0 until width - 20) {
                 Minecraft.getMinecraft().fontRenderer.drawString(
-                    marker.label,
+                    marker.label.ifBlank { ReplayLang.text("marker.unnamed") },
                     x + 3,
-                    RULER_HEIGHT + 3 * ROW_HEIGHT + 2,
+                    RULER_HEIGHT + 4 * ROW_HEIGHT + 2,
                     ReplayUiStyle.MARKER_EVENT_COLOR,
                 )
             }

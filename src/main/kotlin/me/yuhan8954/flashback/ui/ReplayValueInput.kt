@@ -5,6 +5,7 @@ import me.yuhan8954.flashback.replay.ReplayPlayer
 
 object ReplayValueInput {
     private var cameraField: String? = null
+    private var timeOfDay = false
 
     var text: String? = null
         private set
@@ -12,6 +13,7 @@ object ReplayValueInput {
     fun begin(): Boolean {
         if (ReplayPlayer.selectedFloatValue == null) return false
         cameraField = null
+        timeOfDay = false
         text = ""
         return true
     }
@@ -19,6 +21,15 @@ object ReplayValueInput {
     fun beginCamera(field: String): Boolean {
         if (ReplayPlayer.selectedCameraKeyframe == null) return false
         cameraField = field
+        timeOfDay = false
+        text = ""
+        return true
+    }
+
+    fun beginTimeOfDay(): Boolean {
+        if (ReplayPlayer.selectedTimeOfDay == null) return false
+        cameraField = null
+        timeOfDay = true
         text = ""
         return true
     }
@@ -33,16 +44,23 @@ object ReplayValueInput {
 
     fun commit(): Boolean {
         val value = text?.toDoubleOrNull() ?: return false
-        val saved = cameraField?.let { ReplayEditorController.setSelectedCameraField(it, value) }
-            ?: ReplayEditorController.setSelectedFloatValue(value.toFloat())
+        val saved = if (timeOfDay) {
+            val ticks = text?.toIntOrNull() ?: return false
+            ReplayEditorController.setSelectedTimeOfDay(ticks)
+        } else {
+            cameraField?.let { ReplayEditorController.setSelectedCameraField(it, value) }
+                ?: ReplayEditorController.setSelectedFloatValue(value.toFloat())
+        }
         if (!saved) return false
         text = null
         cameraField = null
+        timeOfDay = false
         return true
     }
 
     fun cancel() {
         text = null
         cameraField = null
+        timeOfDay = false
     }
 }

@@ -1,10 +1,10 @@
 package me.yuhan8954.flashback.ui
 
-import com.cleanroommc.modularui.api.drawable.IKey
 import com.cleanroommc.modularui.screen.CustomModularScreen
 import com.cleanroommc.modularui.screen.ModularPanel
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext
 import me.yuhan8954.flashback.Flashback1710
+import me.yuhan8954.flashback.ReplayLang
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.ScaledResolution
 
@@ -22,7 +22,8 @@ class ReplayMainPanel :
     override fun buildUI(context: ModularGuiContext): ModularPanel {
         val minecraft = Minecraft.getMinecraft()
         val scaled = ScaledResolution(minecraft, minecraft.displayWidth, minecraft.displayHeight)
-        val inspectorWidth = (scaled.scaledWidth * 0.23f).toInt().coerceIn(110, 220)
+        val inspectorWidth = (scaled.scaledWidth * 0.30f).toInt().coerceIn(140, 220)
+            .coerceAtMost((scaled.scaledWidth / 2).coerceAtLeast(0))
         val workspaceHeight = (scaled.scaledHeight - TOOLBAR_HEIGHT).coerceAtLeast(0)
         val timelineHeight = (workspaceHeight * 0.28f).toInt().coerceIn(MIN_TIMELINE_HEIGHT, 210)
             .coerceAtMost((workspaceHeight * 0.6f).toInt())
@@ -41,9 +42,7 @@ class ReplayMainPanel :
                         ReplayUiStyle.panelBorder(),
                     ).child(
                         ReplayTextWidget(
-                            IKey.str(
-                                "GAME VIEW",
-                            ),
+                            ReplayLang.key("ui.game_view"),
                         ).left(8)
                             .top(7)
                             .color(
@@ -68,7 +67,7 @@ class ReplayMainPanel :
     companion object {
 
         private const val TOOLBAR_HEIGHT = 24
-        private const val MIN_TIMELINE_HEIGHT = 124
+        private const val MIN_TIMELINE_HEIGHT = 120
 
         const val PANEL_NAME =
             "replay_main"
