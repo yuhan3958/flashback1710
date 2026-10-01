@@ -42,7 +42,7 @@ Zoom changes only the viewport scale; replay time itself is unchanged.
 
 ## Tracks and inspector
 
-The timeline has Camera, FOV, Speed, Time of Day, and Markers rows. Select a row before adding a keyframe. The Time of Day track changes the rendered sky on a 24,000-tick clock without editing recorded world time. Its inspector accepts integer ticks from `0` through `23999` and offers dawn, noon, dusk, and midnight presets. The inspector also has a replay-only HUD overlay switch. Track edits, markers, and playback range are saved in the `.fbr.fbe` sidecar file.
+The timeline has Camera, FOV, Speed, Time of Day, and Markers rows. Select a row before adding a keyframe. The Time of Day track sets the replay world's displayed time of day directly on a 24,000-tick clock; removing the override restores the recorded clock. The saved recording is unchanged. Its inspector accepts integer ticks from `0` through `23999` and offers dawn, noon, dusk, and midnight presets. The inspector also has a replay-only HUD overlay switch. Track edits, markers, and playback range are saved in the `.fbr.fbe` sidecar file.
 
 Replay editor keyboard actions require Alt: Alt+Space toggles playback, Alt+Left/Right seeks one tick, Alt+Shift+Left/Right seeks one second, Alt+K adds a keyframe to the selected row, Alt+Delete removes the selected keyframe, Alt+I/O sets the playback range, Alt+M adds a marker, and Alt+F1 toggles Minecraft's HUD visibility. Enter, Backspace, and Escape still operate normally while typing an inspector value.
 

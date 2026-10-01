@@ -38,7 +38,7 @@ The editor has a game view, toolbar, inspector, transport strip, track list, and
 | Hide or show the editor with Minecraft's HUD | Alt+F1 |
 | Leave replay | **Exit** in the toolbar or **X** in the timeline transport |
 
-Camera and FOV keyframes interpolate their values. Speed automation interpolates between multipliers from -8 to 8. Time of Day interpolates around the 24,000-tick day and changes the rendered sky without changing recorded world time. The inspector's HUD switch controls in-game overlays during replay. The effective playback speed is the manual transport multiplier times the Speed track value; an empty Speed track means 1.0. A zero value freezes replay time while the editor stays interactive. Seeking always targets the requested replay time directly. Moving a keyframe changes its time while keeping its value. Adding another keyframe on the same track and time replaces the previous one.
+Camera and FOV keyframes interpolate their values. Speed automation interpolates between multipliers from -8 to 8. Time of Day interpolates around the 24,000-tick day and sets the replay world's displayed clock to that absolute time of day; it does not alter the saved recording. The inspector's HUD switch controls in-game overlays during replay. The effective playback speed is the manual transport multiplier times the Speed track value; an empty Speed track means 1.0. A zero value freezes replay time while the editor stays interactive. Seeking always targets the requested replay time directly. Moving a keyframe changes its time while keeping its value. Adding another keyframe on the same track and time replaces the previous one.
 
 ## Commands
 
