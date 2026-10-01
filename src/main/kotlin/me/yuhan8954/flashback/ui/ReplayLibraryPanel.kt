@@ -5,6 +5,7 @@ import com.cleanroommc.modularui.screen.CustomModularScreen
 import com.cleanroommc.modularui.screen.ModularPanel
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext
 import me.yuhan8954.flashback.Flashback1710
+import me.yuhan8954.flashback.ReplayLang
 import me.yuhan8954.flashback.io.ReplayLibraryEntry
 import me.yuhan8954.flashback.io.ReplayReadStatus
 
@@ -37,7 +38,7 @@ class ReplayLibraryPanel(
 
         panel.child(
             ReplayTextWidget(
-                "REPLAY LIBRARY",
+                ReplayLang.key("library.title"),
             ).left(10)
                 .top(8)
                 .color(
@@ -51,13 +52,7 @@ class ReplayLibraryPanel(
                     val pageCount =
                         pageCount()
 
-                    "Page " +
-                        (
-                            page +
-                                1
-                            ) +
-                        " / " +
-                        pageCount
+                    ReplayLang.text("library.page", page + 1, pageCount)
                 },
             ).right(10)
                 .top(8)
@@ -108,7 +103,7 @@ class ReplayLibraryPanel(
                                 )?.playable ==
                                 true
                             ) {
-                                "Play"
+                                ReplayLang.text("library.play")
                             } else {
                                 "-"
                             }
@@ -140,9 +135,7 @@ class ReplayLibraryPanel(
                     ReplayUiStyle.buttonBackground(),
                 )
                 .overlay(
-                    IKey.str(
-                        "< Prev",
-                    ),
+                    ReplayLang.key("library.previous"),
                 ).onMousePressed {
                     if (
                         it == 0 &&
@@ -164,9 +157,7 @@ class ReplayLibraryPanel(
                     ReplayUiStyle.buttonBackground(),
                 )
                 .overlay(
-                    IKey.str(
-                        "Next >",
-                    ),
+                    ReplayLang.key("library.next"),
                 ).onMousePressed {
                     if (
                         it == 0 &&
@@ -185,7 +176,7 @@ class ReplayLibraryPanel(
             ReplayButtonWidget()
                 .right(10).bottom(10).size(60, 18)
                 .background(ReplayUiStyle.buttonBackground())
-                .overlay(IKey.str("Back"))
+                .overlay(ReplayLang.key("library.back"))
                 .onMousePressed {
                     if (it == 0) panel.closeIfOpen()
                     it == 0
@@ -229,7 +220,7 @@ class ReplayLibraryPanel(
         return statusPrefix(
             entry.status,
         ) +
-            entry.status.name +
+            ReplayLang.text("library.status.${entry.status.name.lowercase(java.util.Locale.ROOT)}") +
             " §f" +
             fileName +
             " §7" +

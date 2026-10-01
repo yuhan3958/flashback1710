@@ -1,6 +1,7 @@
 package me.yuhan8954.flashback.command
 
 import me.yuhan8954.flashback.camera.ReplayCameraController
+import me.yuhan8954.flashback.ReplayLang
 import me.yuhan8954.flashback.recording.ReplayRecorder
 import me.yuhan8954.flashback.replay.ReplayClock
 import me.yuhan8954.flashback.replay.ReplayPlayer
@@ -22,7 +23,7 @@ class CommandFlashback : CommandBase() {
 
     override fun getCommandName(): String = "flashback"
 
-    override fun getCommandUsage(sender: ICommandSender): String = "/flashback <record|stop|library|play|pause|resume|toggle|speed|step|camera|ui>"
+    override fun getCommandUsage(sender: ICommandSender): String = ReplayLang.text("command.usage")
 
     override fun getRequiredPermissionLevel(): Int = 0
 
@@ -32,10 +33,7 @@ class CommandFlashback : CommandBase() {
     ) {
         if (args.isEmpty()) {
             send(
-                "Usage: " +
-                    getCommandUsage(
-                        sender,
-                    ),
+                ReplayLang.text("command.usage_prefix", getCommandUsage(sender)),
             )
             return
         }
@@ -48,8 +46,7 @@ class CommandFlashback : CommandBase() {
                     )
 
                 send(
-                    "Recording started: " +
-                        file.name,
+                    ReplayLang.text("command.record_started", file.name),
                 )
             }
 
@@ -57,7 +54,7 @@ class CommandFlashback : CommandBase() {
                 ReplayRecorder.stop()
                 ReplayPlayer.stop()
 
-                send("Recording and playback stopped")
+                send(ReplayLang.text("command.stopped"))
             }
 
             "library" -> {
@@ -91,7 +88,7 @@ class CommandFlashback : CommandBase() {
                         ignoreCase = true,
                     )
                 ) {
-                    send("Replay file not found")
+                    send(ReplayLang.text("command.file_not_found"))
                     return
                 }
 
@@ -100,8 +97,7 @@ class CommandFlashback : CommandBase() {
                 )
 
                 send(
-                    "Playback started paused: " +
-                        file.name,
+                    ReplayLang.text("command.play_started", file.name),
                 )
             }
 
@@ -109,37 +105,37 @@ class CommandFlashback : CommandBase() {
                 if (
                     !ReplayPlayer.pause()
                 ) {
-                    send("No replay is playing")
+                    send(ReplayLang.text("command.no_replay"))
                     return
                 }
 
-                send("Playback paused")
+                send(ReplayLang.text("command.paused"))
             }
 
             "resume" -> {
                 if (
                     !ReplayPlayer.resume()
                 ) {
-                    send("No replay is playing")
+                    send(ReplayLang.text("command.no_replay"))
                     return
                 }
 
-                send("Playback resumed")
+                send(ReplayLang.text("command.resumed"))
             }
 
             "toggle" -> {
                 if (
                     !ReplayPlayer.togglePause()
                 ) {
-                    send("No replay is playing")
+                    send(ReplayLang.text("command.no_replay"))
                     return
                 }
 
                 send(
                     if (ReplayPlayer.paused) {
-                        "Playback paused"
+                        ReplayLang.text("command.paused")
                     } else {
-                        "Playback resumed"
+                        ReplayLang.text("command.resumed")
                     },
                 )
             }
@@ -154,18 +150,18 @@ class CommandFlashback : CommandBase() {
                 if (
                     !ReplayPlayer.playing
                 ) {
-                    send("No replay is playing")
+                    send(ReplayLang.text("command.no_replay"))
                     return
                 }
 
                 if (
                     !ReplayPlayer.step()
                 ) {
-                    send("Pause playback before stepping")
+                    send(ReplayLang.text("command.pause_before_step"))
                     return
                 }
 
-                send("Playback advanced by one tick")
+                send(ReplayLang.text("command.stepped"))
             }
 
             "camera" -> {
@@ -176,7 +172,7 @@ class CommandFlashback : CommandBase() {
 
             "ui" -> {
                 if (!ReplayPlayer.playing) {
-                    send("No replay is playing")
+                    send(ReplayLang.text("command.no_replay"))
                     return
                 }
 
@@ -184,7 +180,7 @@ class CommandFlashback : CommandBase() {
             }
 
             else -> {
-                send("Unknown subcommand: ${args[0]}")
+                send(ReplayLang.text("command.unknown", args[0]))
             }
         }
     }
@@ -271,7 +267,7 @@ class CommandFlashback : CommandBase() {
 
     private fun controlCamera(args: Array<String>) {
         if (!ReplayPlayer.playing) {
-            send("No replay is playing")
+            send(ReplayLang.text("command.no_replay"))
             return
         }
 
@@ -282,22 +278,22 @@ class CommandFlashback : CommandBase() {
         ) {
             "free" -> {
                 if (ReplayPlayer.freeCameraActive) {
-                    send("Free camera is already active")
+                    send(ReplayLang.text("command.free_already"))
                     return
                 }
 
                 ReplayPlayer.enableFreeCamera()
-                send("Free camera enabled")
+                send(ReplayLang.text("command.free_enabled"))
             }
 
             "player" -> {
                 if (!ReplayPlayer.freeCameraActive) {
-                    send("Player camera is already active")
+                    send(ReplayLang.text("command.player_already"))
                     return
                 }
 
                 ReplayPlayer.disableFreeCamera()
-                send("Player camera enabled")
+                send(ReplayLang.text("command.player_enabled"))
             }
 
             "speed" ->
@@ -307,7 +303,7 @@ class CommandFlashback : CommandBase() {
 
             else ->
                 send(
-                    "Usage: /flashback camera <free|player|speed>",
+                    ReplayLang.text("command.camera_usage"),
                 )
         }
     }
@@ -326,8 +322,11 @@ class CommandFlashback : CommandBase() {
             speed.isInfinite()
         ) {
             send(
-                "Invalid camera speed. Use ${ReplayCameraController.MIN_MOVEMENT_SPEED} to " +
+                ReplayLang.text(
+                    "command.invalid_camera_speed",
+                    ReplayCameraController.MIN_MOVEMENT_SPEED,
                     ReplayCameraController.MAX_MOVEMENT_SPEED,
+                ),
             )
 
             return
@@ -338,13 +337,13 @@ class CommandFlashback : CommandBase() {
         )
 
         send(
-            "Free camera speed set to $speed",
+            ReplayLang.text("command.camera_speed_set", speed),
         )
     }
 
     private fun setPlaybackSpeed(args: Array<String>) {
         if (!ReplayPlayer.playing) {
-            send("No replay is playing")
+            send(ReplayLang.text("command.no_replay"))
             return
         }
 
@@ -360,9 +359,7 @@ class CommandFlashback : CommandBase() {
             )
         ) {
             send(
-                "Invalid speed. Supported values: " +
-                    ReplayClock.SUPPORTED_SPEEDS
-                        .joinToString(", "),
+                ReplayLang.text("command.invalid_speed", ReplayClock.SUPPORTED_SPEEDS.joinToString(", ")),
             )
 
             return
@@ -373,14 +370,14 @@ class CommandFlashback : CommandBase() {
         )
 
         send(
-            "Playback speed set to ${speed}x",
+            ReplayLang.text("command.speed_set", speed),
         )
     }
 
     private fun send(message: String) {
         mc.thePlayer?.addChatMessage(
             ChatComponentText(
-                "§b[Flashback] §f$message",
+                "§b${ReplayLang.text("command.prefix")} §f$message",
             ),
         )
     }
